@@ -8,11 +8,13 @@ pub struct DoglegMinimizer<F> {
     delta_initial: F,
 }
 
+pub struct MinimizationReport;
+
 impl<F> DoglegMinimizer<F>
 where
     F: RealField + Scalar + Copy + Float + ConstOne,
 {
-    pub fn minimize<M, N, P>(&self, problem: P)
+    pub fn minimize<M, N, P>(&self, problem: P) -> (P, MinimizationReport)
     where
         P: LeastSquaresProblem<F, M, N>,
         M: Dim + DimMin<N>,
@@ -49,6 +51,7 @@ where
         } else {
             let j_owned = j.clone_owned();
 
+            //PERF: we can actually reuse this computation in the case where we don't accept the step.
             let svd = SVD::try_new_unordered(
                 j_owned,
                 true,
@@ -82,5 +85,6 @@ where
         }
 
         let x_next = problem.params() + p_star;
+        todo!()
     }
 }

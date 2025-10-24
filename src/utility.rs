@@ -106,3 +106,15 @@ where
         x3max * Float::sqrt(s3)
     }
 }
+
+/// squared euclidean norm of a vector. This is actually not more
+/// efficient than calculating `enorm(v).powi(2)`, but it's provided
+/// for convenience.
+pub(crate) fn enorm_squared<F, N, VS>(v: &Vector<F, N, VS>) -> F
+where
+    F: nalgebra::RealField + Float + Copy,
+    N: Dim,
+    VS: Storage<F, N, U1>,
+{
+    Float::powi(enorm(v), 2)
+}

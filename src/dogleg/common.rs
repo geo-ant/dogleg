@@ -1,7 +1,10 @@
-use crate::utility::enorm;
+use crate::{
+    utility::{enorm, enorm_squared},
+    Error,
+};
 use nalgebra::{
-    allocator::Allocator, Const, DefaultAllocator, Dim, IsContiguous, Matrix, OVector, RawStorage,
-    RealField, Scalar, Storage, Vector,
+    allocator::Allocator, Const, DefaultAllocator, Dim, DimMin, IsContiguous, Matrix, OMatrix,
+    OVector, RawStorage, RealField, Scalar, Storage, Vector,
 };
 use num_traits::{float::TotalOrder, ConstOne, Float};
 
@@ -9,16 +12,16 @@ use num_traits::{float::TotalOrder, ConstOne, Float};
 /// of this trait should store A or some decomposition of A and then the associated
 /// function can be used to calculate ||A*v||^2, where A is a matrix, v is a
 /// suitably sized vector and ||.||^2 is the squared euclidean norm.
-pub(crate) trait MatMulVecNorm<T, D>
+pub trait MatMulVecNorm<T, C>
 where
-    D: Dim,
-    T: RealField,
+    C: Dim,
+    T: Scalar,
 {
     /// calculate ||A*v||^2 using the given vector v and the internally stored
     /// information about A.
-    fn mul_vec_enorm<S>(&self, v: &Vector<T, D, S>) -> T
+    fn mul_vec_enorm<S>(&self, v: &Vector<T, C, S>) -> T
     where
-        S: Storage<T, D> + IsContiguous;
+        S: Storage<T, C> + IsContiguous;
 }
 
 impl<T, R, C, S> MatMulVecNorm<T, C> for Matrix<T, R, C, S>
@@ -41,37 +44,81 @@ where
     }
 }
 
-pub(crate) enum DoglegComponents<T, R, C, MM>
+/// The components for constructing the dogleg path for the next iteration,
+/// as well as some additional information that is used in the following
+/// step.
+/// We use the Notation of Nocedal & Wright (2nd) ed, pp 66 - 76.
+///
+/// We also let the solver already
+pub enum DoglegComponents<T, C>
 where
-    T: Scalar + RealField,
-    R: Dim,
+    T: Scalar,
     C: Dim,
-    MM: MatMulVecNorm<T, R>,
-    DefaultAllocator: Allocator<R> + Allocator<C>,
+    DefaultAllocator: Allocator<C>,
 {
     /// Rndicates that the gtol criterium was satisfied, which means the iteration
     /// was finished successfully. The contained value is the actual value
     /// that satisfied gtol.
     GtolSatisfied(T),
-    /// The components for constructing the dogleg path for the next iteration,
-    /// as well as some additional information that is used in the following
-    /// step.
-    /// We use the Notation of Nocedal & Wright (2nd) ed, pp 66 - 76.
-    Components {
-        /// the gradient of the objective function f = 1/2 ||r(x)||^2. See below,
-        /// this can be used to calculate the p_u component of the dogleg path.
-        g: OVector<T, R>,
-        /// a scalar u, where p_u = u*g, where p_u is the first dogleg path
-        /// component. We don't return p_u directly because we might need
-        /// g for further calculations.
-        u: T,
+
+    /// the solver has already decided that the first segment p_u of the
+    /// dogleg path lies inside the trust region
+    FirstSegmentInside {
+        /// p_u
+        p_u: OVector<T, C>,
+        /// ||p_u|| <= delta
+        pu_norm: T,
+    },
+    PathComponents {
+        /// vector p_u for forming the first part of the dogleg segment
+        p_u: OVector<T, C>,
         /// the p_b vector used to form the second part (p_b - p_u) of the
         /// dogleg path.
         p_b: OVector<T, C>,
-        /// utility to calculate ||J*v||^2, which is used in downstream
-        /// calculations, where J is the Jacobi matrix of the residuals.
-        jacmul: MM,
     },
+}
+
+/// abstracts part of the algorithm whose responsibility it is to calculate
+/// the dogleg components.
+pub trait DoglegComponentsSolver<T, R, C>
+where
+    C: Dim,
+    T: Scalar,
+    R: Dim,
+    DefaultAllocator: nalgebra::allocator::Allocator<R>,
+    DefaultAllocator: nalgebra::allocator::Allocator<R, C>,
+    DefaultAllocator: nalgebra::allocator::Allocator<C>,
+{
+    /// the responsibility of this method is to calculate the dogleg components
+    /// from the given inputs.
+    /// See Nocedal and Wright, pp. 73 - 74 (for the dogleg part) and
+    /// p. 246 for important notes that are particular for least squares, namely
+    /// g = J^T r and B = J^T J (approx.), which togehter with the formulas
+    /// on pp. 73 give the following:
+    ///
+    /// p_u is calculated as
+    ///
+    ///              ||g||^2
+    /// p_u = -1 * -----------    g = u * g, where u: scalar, g: vector
+    ///            ||J^T g||^2
+    ///
+    /// where g is the gradient of f : g = J^T r
+    ///
+    /// and p_b is the solution of min ||J p_b - (-r)||^2, where it
+    /// makes sense to use some matrix decomposition rather than using the
+    /// normal equations p_b = (J^T J)^-1 J^T r.
+    ///
+    /// We also return the matrix J or (if it makes sense) its decomposition
+    /// so that we can use it to calculate ||J v||^2 for suitably sized vectors
+    /// v in the downstream code.
+    fn dogleg_components<S1>(
+        jacobian: OMatrix<T, R, C>,
+        residuals: &Vector<T, R, S1>,
+        delta: T,
+        gtol: T,
+    ) -> Result<DoglegComponents<T, C>, Error>
+    where
+        S1: Storage<T, R>;
 }
 
 /// this performs the calculation which gives us the value to compare against
@@ -163,7 +210,7 @@ where
         let a = Float::powi(pu_norm, 2);
         let pb_pu = &p_b - &p_u;
         let b = p_u.dot(&pb_pu);
-        let c = Float::powi(enorm(&pb_pu), 2);
+        let c = enorm_squared(&pb_pu);
         let d = Float::powi(delta, 2);
         let b_c = b / c;
 

@@ -36,7 +36,9 @@ where
         DefaultAllocator: Allocator<<<M as DimMin<N>>::Output as DimSub<Const<1>>>::Output>,
     {
         // J: Jacobian matrix
-        let j = problem.jacobian().unwrap();
+        // we have to call into_owned here unfortunately, because all the solvers that we use
+        // will actually need the matrix to be Owned.
+        let j = problem.jacobian().unwrap().into_owned();
         // r: residual vector. Actually, this contains -r
         let r = -problem.residuals().unwrap();
 

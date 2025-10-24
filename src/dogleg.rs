@@ -1,16 +1,23 @@
 use crate::problem::LeastSquaresProblem;
 use nalgebra::allocator::Allocator;
-use nalgebra::{Const, DefaultAllocator, Dim, DimMin, DimSub, RealField, Scalar, SVD};
+use nalgebra::{
+    Const, DefaultAllocator, Dim, DimMin, DimSub, IsContiguous, Matrix, RealField, Scalar, Storage,
+    Vector, SVD,
+};
 use num_traits::{ConstOne, Float};
 
-pub struct DoglegMinimizer<F> {
+mod common;
+mod qr_impl;
+mod svd_impl;
+
+pub struct Dogleg<F> {
     /// initial radius of the trust region boundary
     delta_initial: F,
 }
 
 pub struct MinimizationReport;
 
-impl<F> DoglegMinimizer<F>
+impl<F> Dogleg<F>
 where
     F: RealField + Scalar + Copy + Float + ConstOne,
 {

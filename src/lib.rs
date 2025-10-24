@@ -2,3 +2,4 @@
 
 mod dogleg;
 mod problem;
+mod utility;

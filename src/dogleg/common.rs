@@ -1,10 +1,9 @@
+use crate::utility::enorm;
 use nalgebra::{
     allocator::Allocator, Const, DefaultAllocator, Dim, IsContiguous, Matrix, OVector, RawStorage,
     RealField, Scalar, Storage, Vector,
 };
-use num_traits::{float::TotalOrder, Float};
-
-use crate::utility::enorm;
+use num_traits::{float::TotalOrder, ConstOne, Float};
 
 /// helper trait to calculate ||A*v||^2 in an abstract fashion. Implementors
 /// of this trait should store A or some decomposition of A and then the associated
@@ -42,7 +41,7 @@ where
     }
 }
 
-pub(crate) enum DoglegComponentsIteration<T, R, C, MM>
+pub(crate) enum DoglegComponents<T, R, C, MM>
 where
     T: Scalar + RealField,
     R: Dim,
@@ -95,10 +94,7 @@ where
 /// between the vectors, so gval_i = cos(theta_i) = (j_i^T r)/(||j_i||*||r||).
 /// What we return is gval_i which is a better criterion for checking against
 /// the gradient being zero due to the normalization
-pub(crate) fn gtol_calc<T, R, C, S, S2>(
-    jacobian: &Matrix<T, R, C, S>,
-    residuals: &Vector<T, R, S2>,
-) -> T
+pub fn gtol_calc<T, R, C, S, S2>(jacobian: &Matrix<T, R, C, S>, residuals: &Vector<T, R, S2>) -> T
 where
     T: RealField + Float + TotalOrder,
     R: Dim,
@@ -118,4 +114,66 @@ where
         })
         .max_by(TotalOrder::total_cmp)
         .unwrap_or(Float::infinity())
+}
+
+/// this calculates the dogleg step from the component vectors p_b, p_u,
+/// and the current trust region radius delta.
+///
+/// The dogleg path is parametrized using a real numer tau in [0,2]
+///
+///          { tau* p_u                    ; tau in [0,1]
+/// p(tau) = {
+///          { p_u + (tau-1) * (p_b - p_u) ; in (1,2]
+///
+/// We return the largest step for which p(tau) <= detla
+pub fn dogleg_step<T, C, S1, S2>(p_u: OVector<T, C>, p_b: OVector<T, C>, delta: T) -> OVector<T, C>
+where
+    T: RealField + Float,
+    C: Dim,
+    // S1: RawStorage<T, C> + Storage<T, C>,
+    // S2: RawStorage<T, C> + Storage<T, C>,
+    DefaultAllocator: nalgebra::allocator::Allocator<C>,
+{
+    let pu_norm = enorm(&p_u);
+    let pb_norm = enorm(&p_b);
+
+    // we have to treat 3 cases differently:
+    if pb_norm <= delta {
+        // 1) in this case the entire dogleg lies inside the trust region radius
+        // and we can just return the value for tau = 2, which is p_b
+        p_b.clone_owned()
+    } else if pu_norm >= delta {
+        // 2) in this case the first part of the dogleg path lies inside
+        // the trust region, so we can just find the tau in [0,1] for
+        // which ||p|| = delta, which is just tau = delta/pu_norm.
+        p_u * (delta / pu_norm)
+    } else {
+        // 3) in this case the rust region intersects somewhere inside the
+        // second part of the dogleg and we have to do some algebra
+        // to find the correct tau in [1,2].
+        //
+        // This boils down to solving the quadratic equation
+        //
+        // ||p_u + (tau-1) * (p_b - p_u)||^2 = delta^2
+        //
+        // => ||p_u||^2 + 2(tau-1) p_u^T (p_b-p_u) + (tau-1)^2 ||p_b - p_u||^2 = delta^2
+        //
+        // If we substitue x = tau-1, we see that this is a quadratic equation
+        // in x and then with a little bit of rearranging, we can find a solution
+        let a = Float::powi(pu_norm, 2);
+        let pb_pu = &p_b - &p_u;
+        let b = p_u.dot(&pb_pu);
+        let c = Float::powi(enorm(&pb_pu), 2);
+        let d = Float::powi(delta, 2);
+        let b_c = b / c;
+
+        // this just checks for division by zero above which can't happen
+        // mathematically, but numerically c can be small. The case c-> 0 implies
+        // b/c -> inf, such that tau-1 = 0.
+        if !b_c.is_finite() || b_c >= Float::sqrt(<T as Float>::max_value()) {
+            return p_u;
+        }
+        let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
+        p_u + pb_pu * tau_minus_one
+    }
 }

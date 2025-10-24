@@ -50,7 +50,7 @@ where
     MM: MatMulVecNorm<T, R>,
     DefaultAllocator: Allocator<R> + Allocator<C>,
 {
-    /// indicates that the gtol criterium was satisfied, which means the iteration
+    /// Rndicates that the gtol criterium was satisfied, which means the iteration
     /// was finished successfully. The contained value is the actual value
     /// that satisfied gtol.
     GtolSatisfied(T),
@@ -59,7 +59,8 @@ where
     /// step.
     /// We use the Notation of Nocedal & Wright (2nd) ed, pp 66 - 76.
     Components {
-        /// the gradient of the objective function f = 1/2 ||r(x)||^2
+        /// the gradient of the objective function f = 1/2 ||r(x)||^2. See below,
+        /// this can be used to calculate the p_u component of the dogleg path.
         g: OVector<T, R>,
         /// a scalar u, where p_u = u*g, where p_u is the first dogleg path
         /// component. We don't return p_u directly because we might need
@@ -96,14 +97,14 @@ where
 /// the gradient being zero due to the normalization
 pub(crate) fn gtol_calc<T, R, C, S, S2>(
     jacobian: &Matrix<T, R, C, S>,
-    residuals: &Vector<T, C, S2>,
+    residuals: &Vector<T, R, S2>,
 ) -> T
 where
     T: RealField + Float + TotalOrder,
     R: Dim,
     C: Dim,
     S: RawStorage<T, R, C> + Storage<T, R, C>,
-    S2: RawStorage<T, C> + Storage<T, C>,
+    S2: RawStorage<T, R> + Storage<T, R>,
 {
     let rnorm = enorm(&residuals);
 

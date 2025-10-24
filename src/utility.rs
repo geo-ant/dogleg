@@ -23,24 +23,36 @@ fn unlikely(b: bool) -> bool {
 
 #[inline]
 #[allow(clippy::unreadable_literal)]
+/// Machine epsilon
+/// Directly taken from the `levenberg_marquardt` crate, which in turn translated it
+/// from the FORTRAN implementation in MINPACK.
 pub(crate) fn epsmch<F: RealField>() -> F {
     F::default_epsilon()
 }
 
 #[inline]
 #[allow(clippy::unreadable_literal)]
+/// A very large number
+/// Directly taken from the `levenberg_marquardt` crate, which in turn translated it
+/// from the FORTRAN implementation in MINPACK.
 pub(crate) fn giant<F: Float>() -> F {
     F::max_value()
 }
 
 #[inline]
 #[allow(clippy::unreadable_literal)]
+/// A very small number
+/// Directly taken from the `levenberg_marquardt` crate, which in turn translated it
+/// from the FORTRAN implementation in MINPACK.
 pub(crate) fn dwarf<F: Float>() -> F {
     F::min_positive_value()
 }
 
 #[inline]
-/// numerically more stable euclidean_norm of a vector
+/// Numerically more stable euclidean_norm of a vector.
+///
+/// Directly taken from the `levenberg_marquardt` crate, which in turn translated it
+/// from the FORTRAN implementation in MINPACK.
 pub(crate) fn enorm<F, N, VS>(v: &Vector<F, N, VS>) -> F
 where
     F: nalgebra::RealField + Float + Copy,

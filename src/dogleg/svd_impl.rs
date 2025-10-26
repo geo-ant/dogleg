@@ -21,12 +21,14 @@ where
     DefaultAllocator: Allocator<C, C>,
     DefaultAllocator: Allocator<<C as DimSub<Const<1>>>::Output>,
 {
+    type Cache = OMatrix<T, R, C>;
+
     fn dogleg_components<S1>(
         jacobian: nalgebra::OMatrix<T, R, C>,
         residuals: &nalgebra::Vector<T, R, S1>,
         delta: T,
         gtol: T,
-    ) -> Result<super::common::DoglegComponents<T, C>, crate::Error>
+    ) -> Result<super::common::DoglegComponents<T, C, Self::Cache>, crate::Error>
     where
         S1: Storage<T, R>,
     {
@@ -48,7 +50,11 @@ where
 
         // this is an optimization that can save us from having to calculate the SVD
         if pu_norm < delta {
-            return Ok(DoglegComponents::FirstSegmentInside { p_u, pu_norm });
+            return Ok(DoglegComponents::FirstSegmentInside {
+                p_u,
+                pu_norm,
+                cached: todo!(),
+            });
         }
 
         let svd = SVD::new_unordered(jacobian, true, true);

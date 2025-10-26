@@ -50,17 +50,17 @@ where
 /// We use the Notation of Nocedal & Wright (2nd) ed, pp 66 - 76.
 ///
 /// We also let the solver already
-pub enum DoglegComponents<T, C>
+pub enum DoglegComponents<T, C, MVN>
 where
     T: Scalar,
     C: Dim,
     DefaultAllocator: Allocator<C>,
+    MVN: MatMulVecNorm<T, C>,
 {
     /// Rndicates that the gtol criterium was satisfied, which means the iteration
     /// was finished successfully. The contained value is the actual value
     /// that satisfied gtol.
     GtolSatisfied(T),
-
     /// the solver has already decided that the first segment p_u of the
     /// dogleg path lies inside the trust region
     FirstSegmentInside {
@@ -68,6 +68,11 @@ where
         p_u: OVector<T, C>,
         /// ||p_u|| <= delta
         pu_norm: T,
+        /// a state cache that the solver implementation can use to store
+        /// arbitrary information. This thing must also be able to calculate
+        /// the result of ||J v||, where J is the jacobian of the residuals and
+        /// v is a suitably sized vector.
+        cached: MVN,
     },
     PathComponents {
         /// vector p_u for forming the first part of the dogleg segment
@@ -75,8 +80,15 @@ where
         /// the p_b vector used to form the second part (p_b - p_u) of the
         /// dogleg path.
         p_b: OVector<T, C>,
+        /// a state cache that the solver implementation can use to store
+        /// arbitrary information. This thing must also be able to calculate
+        /// the result of ||J v||, where J is the jacobian of the residuals and
+        /// v is a suitably sized vector.
+        cached: MVN,
     },
 }
+
+// pub enum DoglegComponentSolverInput {}
 
 /// abstracts part of the algorithm whose responsibility it is to calculate
 /// the dogleg components.
@@ -89,6 +101,13 @@ where
     DefaultAllocator: nalgebra::allocator::Allocator<R, C>,
     DefaultAllocator: nalgebra::allocator::Allocator<C>,
 {
+    /// type of the instance that allows us to calculate
+    /// ||J*v|| for suitably sized vectors v, where J is the
+    /// Jacobian of the residuals. Depending on the implementation, this
+    /// thing could be the Jacobian itself or a matrix decomposition, which
+    /// allows us to calculate the norm more efficiently.
+    type Cache: MatMulVecNorm<T, C>;
+
     /// the responsibility of this method is to calculate the dogleg components
     /// from the given inputs.
     /// See Nocedal and Wright, pp. 73 - 74 (for the dogleg part) and
@@ -116,7 +135,7 @@ where
         residuals: &Vector<T, R, S1>,
         delta: T,
         gtol: T,
-    ) -> Result<DoglegComponents<T, C>, Error>
+    ) -> Result<DoglegComponents<T, C, Self::Cache>, Error>
     where
         S1: Storage<T, R>;
 }

@@ -1,2 +1,2 @@
 [workspace]
-members = ["./dogleg"]
+members = ["./dogleg", "dogleg-matx"]

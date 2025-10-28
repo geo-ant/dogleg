@@ -8,23 +8,23 @@ use nalgebra::{
 };
 use num_traits::{float::TotalOrder, ConstOne, Float};
 
-/// helper trait to calculate ||A*v||^2 in an abstract fashion. Implementors
-/// of this trait should store A or some decomposition of A and then the associated
-/// function can be used to calculate ||A*v||^2, where A is a matrix, v is a
-/// suitably sized vector and ||.||^2 is the squared euclidean norm.
-pub trait MatMulVecNorm<T, C>
+/// helper trait to calculate ||J*v|| in an abstract fashion, where J is the
+/// (scaled) jacobian matrix for the problem and v is a vector of suitable size.
+/// Implementors of this trait typically store J directly or some decomposition
+/// of J.
+pub trait JacMatMulVecNorm<T, C>
 where
     C: Dim,
     T: Scalar,
 {
     /// calculate ||A*v||^2 using the given vector v and the internally stored
     /// information about A.
-    fn mul_vec_enorm<S>(&self, v: &Vector<T, C, S>) -> T
+    fn jac_mul_vec_enorm<S>(&self, v: &Vector<T, C, S>) -> T
     where
         S: Storage<T, C> + IsContiguous;
 }
 
-impl<T, R, C, S> MatMulVecNorm<T, C> for Matrix<T, R, C, S>
+impl<T, R, C, S> JacMatMulVecNorm<T, C> for Matrix<T, R, C, S>
 where
     T: RealField + Float,
     R: Dim,
@@ -35,7 +35,7 @@ where
     DefaultAllocator: nalgebra::allocator::Allocator<R, Const<1>>,
 {
     #[inline]
-    fn mul_vec_enorm<S2>(&self, v: &Vector<T, C, S2>) -> T
+    fn jac_mul_vec_enorm<S2>(&self, v: &Vector<T, C, S2>) -> T
     where
         S2: Storage<T, C> + IsContiguous,
     {
@@ -55,7 +55,7 @@ where
     T: Scalar,
     C: Dim,
     DefaultAllocator: Allocator<C>,
-    MVN: MatMulVecNorm<T, C>,
+    MVN: JacMatMulVecNorm<T, C>,
 {
     /// Rndicates that the gtol criterium was satisfied, which means the iteration
     /// was finished successfully. The contained value is the actual value
@@ -88,7 +88,37 @@ where
     },
 }
 
-// pub enum DoglegComponentSolverInput {}
+/// abstracts over the solution to the trust-region subproblem of finding the
+/// optimal dogleg step given the current trust region radius.
+/// This is returned by a dogled solver.
+pub trait DoglegStepSolution<T, C>
+where
+    T: Scalar,
+    C: Dim,
+    DefaultAllocator: Allocator<C>,
+{
+    /// the solver can use this for internal caching and store whatever information
+    /// it needs here. Importantly, this needs to be able to calculate ||J*v||,
+    /// where J is the (scaled) Jacobian used to calculate the dogleg step
+    /// and v is a suitably sized vector.
+    type Cache: JacMatMulVecNorm<T, C>;
+    fn unpack(self) -> (DoglegStep<T, C>, Self::Cache);
+}
+
+/// this is the solution to the dogleg steps as determined by the dogleg step
+/// solver, where p is the optimal next dogleg
+pub struct DoglegStep<T, C>
+where
+    T: Scalar,
+    C: Dim,
+    DefaultAllocator: Allocator<C>,
+{
+    /// next dogleg step, meaning x_{k+1} = x_k + p is the new iterate
+    p: OVector<T, C>,
+    /// the euclidean norm of ||p||, where it must be guaranteed that ||p|| <= delta,
+    /// where delta is the trust region radius belonging to this step.
+    p_norm: T,
+}
 
 /// abstracts part of the algorithm whose responsibility it is to calculate
 /// the dogleg components.
@@ -106,7 +136,7 @@ where
     /// Jacobian of the residuals. Depending on the implementation, this
     /// thing could be the Jacobian itself or a matrix decomposition, which
     /// allows us to calculate the norm more efficiently.
-    type Cache: MatMulVecNorm<T, C>;
+    type Cache: JacMatMulVecNorm<T, C>;
 
     /// the responsibility of this method is to calculate the dogleg components
     /// from the given inputs.

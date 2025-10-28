@@ -149,7 +149,7 @@ where
     ///
     ///              ||g||^2
     /// p_u = -1 * -----------    g = u * g, where u: scalar, g: vector
-    ///            ||J^T g||^2
+    ///             ||J g||^2
     ///
     /// where g is the gradient of f : g = J^T r
     ///

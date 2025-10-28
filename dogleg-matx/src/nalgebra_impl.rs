@@ -44,9 +44,10 @@ where
     T: Scalar + RealField,
     R: Dim,
     DefaultAllocator: Allocator<R>,
-    S: Storage<T, R> + RawStorageMut<T, R>,
+    S: Storage<T, R> + RawStorageMut<T, R> + RawStorage<T, R>,
+    DefaultAllocator: Allocator<R>,
 {
-    type Owned = OVector<T, R>;
+    type Ownedx = OVector<T, R>;
 
     fn enormx(&self) -> T {
         todo!()
@@ -57,8 +58,12 @@ where
         self
     }
 
-    fn clone_ownedx(&self) -> Self::Owned {
+    fn clone_ownedx(&self) -> Self::Ownedx {
         self.clone_owned()
+    }
+
+    fn into_ownedx(self) -> OVector<T, R> {
+        self.into_owned()
     }
 }
 
@@ -99,7 +104,7 @@ impl<T, R, S1, S2> Dotx<T, Vector<T, R, S1>> for Vector<T, R, S2>
 where
     T: Scalar + RealField + Zero + ClosedAddAssign + ClosedMulAssign,
     R: nalgebra::Dim,
-    DefaultAllocator: nalgebra::allocator::Allocator<R>,
+    DefaultAllocator: Allocator<R>,
     S1: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
     S2: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
 {
@@ -112,22 +117,18 @@ impl<T, R, S1, S2> Addx<T, Vector<T, R, S2>> for Vector<T, R, S1>
 where
     T: Scalar + RealField + ClosedAddAssign + Copy,
     R: nalgebra::Dim,
-    DefaultAllocator: nalgebra::allocator::Allocator<R>,
+    DefaultAllocator: Allocator<R>,
     S1: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
     S2: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
 {
-    fn addx(mut self, other: &Vector<T, R, S2>) -> Option<Self> {
+    fn axpyx(mut self, a: T, y: &Vector<T, R, S2>, b: T) -> Option<Self> {
         let (r1, _) = self.shape_generic();
-        let (r2, _) = other.shape_generic();
+        let (r2, _) = y.shape_generic();
         if r1 != r2 {
             return None;
         }
 
-        // this is exactly what I hate about nalgebra. There should be a way to
-        // just do that with "+", but I can't seem to find it.
-        self.iter_mut()
-            .zip(other.iter().copied())
-            .for_each(|(this, other)| *this += other);
+        self.axpy(a, y, b);
         Some(self)
     }
 }

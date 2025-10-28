@@ -2,6 +2,7 @@ use crate::{
     utility::{enorm, enorm_squared},
     Error,
 };
+use dogleg_matx::{Addx, Colx, Dotx};
 use nalgebra::{
     allocator::Allocator, Const, DefaultAllocator, Dim, DimMin, IsContiguous, Matrix, OMatrix,
     OVector, RawStorage, RealField, Scalar, Storage, Vector,
@@ -222,27 +223,28 @@ where
 ///          { p_u + (tau-1) * (p_b - p_u) ; in (1,2]
 ///
 /// We return the largest step for which p(tau) <= detla
-pub fn dogleg_step<T, C, S1, S2>(p_u: OVector<T, C>, p_b: OVector<T, C>, delta: T) -> OVector<T, C>
+//@note(geo) we can also make this for different types PB, PU, in which case
+// we have to use into_ownedx() for the return types and Option<PU::Ownedx> and
+// constrain the PU : Colx<T, Ownedx= PB::Ownedx>. But I won't do it unless I
+// have to.
+pub fn dogleg_step<T, P>(p_u: P, p_b: P, delta: T) -> Option<P>
 where
-    T: RealField + Float,
-    C: Dim,
-    // S1: RawStorage<T, C> + Storage<T, C>,
-    // S2: RawStorage<T, C> + Storage<T, C>,
-    DefaultAllocator: nalgebra::allocator::Allocator<C>,
+    T: RealField + Float + ConstOne,
+    P: Colx<T> + Addx<T, P> + Dotx<T, P>,
 {
-    let pu_norm = enorm(&p_u);
-    let pb_norm = enorm(&p_b);
+    let pu_norm = p_u.enormx();
+    let pb_norm = p_b.enormx();
 
     // we have to treat 3 cases differently:
     if pb_norm <= delta {
         // 1) in this case the entire dogleg lies inside the trust region radius
         // and we can just return the value for tau = 2, which is p_b
-        p_b.clone_owned()
+        Some(p_b)
     } else if pu_norm >= delta {
         // 2) in this case the first part of the dogleg path lies inside
         // the trust region, so we can just find the tau in [0,1] for
         // which ||p|| = delta, which is just tau = delta/pu_norm.
-        p_u * (delta / pu_norm)
+        Some(p_u.scalex(delta / pu_norm))
     } else {
         // 3) in this case the rust region intersects somewhere inside the
         // second part of the dogleg and we have to do some algebra
@@ -257,9 +259,11 @@ where
         // If we substitue x = tau-1, we see that this is a quadratic equation
         // in x and then with a little bit of rearranging, we can find a solution
         let a = Float::powi(pu_norm, 2);
-        let pb_pu = &p_b - &p_u;
-        let b = p_u.dot(&pb_pu);
-        let c = enorm_squared(&pb_pu);
+        // pb - pu
+        let pb_pu = p_b.axpyx(T::ONE, &p_u, -T::ONE)?;
+        let b = p_u.dotv(&pb_pu);
+
+        let c = Float::powi(pb_pu.enormx(), 2);
         let d = Float::powi(delta, 2);
         let b_c = b / c;
 
@@ -267,9 +271,9 @@ where
         // mathematically, but numerically c can be small. The case c-> 0 implies
         // b/c -> inf, such that tau-1 = 0.
         if !b_c.is_finite() || b_c >= Float::sqrt(<T as Float>::max_value()) {
-            return p_u;
+            return Some(p_u);
         }
         let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
-        p_u + pb_pu * tau_minus_one
+        p_u.axpyx(T::ONE, &pb_pu.scalex(tau_minus_one), T::ONE)
     }
 }

@@ -10,17 +10,19 @@ pub trait Matx<T> {
 
 /// vector abstraction
 pub trait Colx<T> {
-    type Owned: Ownedx;
+    type Ownedx: Ownedx;
     fn enormx(&self) -> T;
     fn scalex(self, factor: T) -> Self;
-    fn clone_ownedx(&self) -> Self::Owned;
+    fn clone_ownedx(&self) -> Self::Ownedx;
+    fn into_ownedx(self) -> Self::Ownedx;
 }
 
 pub trait Addx<T, V>: Colx<T> + Sized
 where
     V: Colx<T>,
 {
-    fn addx(self, other: &V) -> Option<Self>;
+    /// calculate self = a*self + b*y
+    fn axpyx(self, a: T, y: &V, b: T) -> Option<Self>;
 }
 
 pub trait Dotx<T, V>: Colx<T>

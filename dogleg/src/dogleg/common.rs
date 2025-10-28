@@ -260,8 +260,8 @@ where
         // in x and then with a little bit of rearranging, we can find a solution
         let a = Float::powi(pu_norm, 2);
         // pb - pu
-        let pb_pu = p_b.axpyx(T::ONE, &p_u, -T::ONE)?;
-        let b = p_u.dotv(&pb_pu);
+        let pb_pu = p_b.axpy(T::ONE, &p_u, -T::ONE)?;
+        let b = p_u.dot(&pb_pu);
 
         let c = Float::powi(pb_pu.enormx(), 2);
         let d = Float::powi(delta, 2);
@@ -274,6 +274,6 @@ where
             return Some(p_u);
         }
         let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
-        p_u.axpyx(T::ONE, &pb_pu.scalex(tau_minus_one), T::ONE)
+        p_u.axpy(T::ONE, &pb_pu.scalex(tau_minus_one), T::ONE)
     }
 }

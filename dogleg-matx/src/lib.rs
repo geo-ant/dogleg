@@ -22,14 +22,14 @@ where
     V: Colx<T>,
 {
     /// calculate self = a*self + b*y
-    fn axpyx(self, a: T, y: &V, b: T) -> Option<Self>;
+    fn axpy(self, a: T, y: &V, b: T) -> Option<Self>;
 }
 
 pub trait Dotx<T, V>: Colx<T>
 where
     V: Colx<T>,
 {
-    fn dotv(&self, v: &V) -> T;
+    fn dot(&self, v: &V) -> T;
 }
 
 /// A matrix `A` that implements this can calculate the matrix-vector

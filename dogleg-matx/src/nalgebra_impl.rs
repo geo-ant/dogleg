@@ -108,8 +108,8 @@ where
     S1: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
     S2: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
 {
-    fn dotv(&self, v: &Vector<T, R, S1>) -> T {
-        self.dot(v)
+    fn dot(&self, v: &Vector<T, R, S1>) -> T {
+        Vector::<_, _, _>::dot(self, v)
     }
 }
 
@@ -121,14 +121,14 @@ where
     S1: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
     S2: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
 {
-    fn axpyx(mut self, a: T, y: &Vector<T, R, S2>, b: T) -> Option<Self> {
+    fn axpy(mut self, a: T, y: &Vector<T, R, S2>, b: T) -> Option<Self> {
         let (r1, _) = self.shape_generic();
         let (r2, _) = y.shape_generic();
         if r1 != r2 {
             return None;
         }
 
-        self.axpy(a, y, b);
+        Vector::<_, _, _>::axpy(&mut self, a, y, b);
         Some(self)
     }
 }

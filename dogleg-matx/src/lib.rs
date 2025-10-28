@@ -8,15 +8,16 @@ pub trait Matx<T> {
     type Owned: Ownedx;
 }
 
-/// vector abstraction
+/// column vector abstraction
 pub trait Colx<T> {
-    type Ownedx: Ownedx;
+    type Owned: Ownedx;
     fn enormx(&self) -> T;
     fn scalex(self, factor: T) -> Self;
-    fn clone_ownedx(&self) -> Self::Ownedx;
-    fn into_ownedx(self) -> Self::Ownedx;
+    fn clone_ownedx(&self) -> Self::Owned;
+    fn into_ownedx(self) -> Self::Owned;
 }
 
+/// add / subtract from this vector
 pub trait Addx<T, V>: Colx<T> + Sized
 where
     V: Colx<T>,
@@ -25,10 +26,12 @@ where
     fn axpy(self, a: T, y: &V, b: T) -> Option<Self>;
 }
 
+/// scalar (dot) product of two column vectors
 pub trait Dotx<T, V>: Colx<T>
 where
     V: Colx<T>,
 {
+    /// calculate the scalar (dot) product <self,v>
     fn dot(&self, v: &V) -> T;
 }
 

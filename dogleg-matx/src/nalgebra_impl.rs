@@ -47,7 +47,7 @@ where
     S: Storage<T, R> + RawStorageMut<T, R> + RawStorage<T, R>,
     DefaultAllocator: Allocator<R>,
 {
-    type Ownedx = OVector<T, R>;
+    type Owned = OVector<T, R>;
 
     fn enormx(&self) -> T {
         todo!()
@@ -58,7 +58,7 @@ where
         self
     }
 
-    fn clone_ownedx(&self) -> Self::Ownedx {
+    fn clone_ownedx(&self) -> Self::Owned {
         self.clone_owned()
     }
 

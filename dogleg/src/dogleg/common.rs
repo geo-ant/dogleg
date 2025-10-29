@@ -118,9 +118,24 @@ where
     p_norm: T,
 }
 
+pub enum DoglegSolverInput<Jac, Res, Cache> {
+    Init(Jac, Res),
+    Cached(Cache),
+}
+
+pub struct DoglegSolverOutput<T, V> {
+    /// optimal next step `p` to take in this iteration
+    p: V,
+    /// euclidean norm of this step
+    p_norm: T,
+    /// predicted reduction `m(0) - m(p)` of the model function
+    /// if the step `p` was to be taken.
+    predicted_reduction: T,
+}
+
 /// abstracts part of the algorithm whose responsibility it is to calculate
 /// the dogleg components.
-pub trait DoglegComponentsSolver<T, R, C>
+pub trait DoglegStepSolver<T, R, C>
 where
     C: Dim,
     T: Scalar,
@@ -162,7 +177,6 @@ where
         jacobian: OMatrix<T, R, C>,
         residuals: &Vector<T, R, S1>,
         delta: T,
-        gtol: T,
     ) -> Result<DoglegComponents<T, C, Self::Cache>, Error>
     where
         S1: Storage<T, R>;

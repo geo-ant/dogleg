@@ -232,8 +232,8 @@ where
     T: RealField + Float + ConstOne,
     P: Colx<T> + Addx<T, P> + Dotx<T, P>,
 {
-    let pu_norm = p_u.enormx();
-    let pb_norm = p_b.enormx();
+    let pu_norm = p_u.enorm();
+    let pb_norm = p_b.enorm();
 
     // we have to treat 3 cases differently:
     if pb_norm <= delta {
@@ -244,7 +244,7 @@ where
         // 2) in this case the first part of the dogleg path lies inside
         // the trust region, so we can just find the tau in [0,1] for
         // which ||p|| = delta, which is just tau = delta/pu_norm.
-        Some(p_u.scalex(delta / pu_norm))
+        Some(p_u.scale(delta / pu_norm))
     } else {
         // 3) in this case the rust region intersects somewhere inside the
         // second part of the dogleg and we have to do some algebra
@@ -263,7 +263,7 @@ where
         let pb_pu = p_b.axpy(T::ONE, &p_u, -T::ONE)?;
         let b = p_u.dot(&pb_pu);
 
-        let c = Float::powi(pb_pu.enormx(), 2);
+        let c = Float::powi(pb_pu.enorm(), 2);
         let d = Float::powi(delta, 2);
         let b_c = b / c;
 
@@ -274,6 +274,6 @@ where
             return Some(p_u);
         }
         let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
-        p_u.axpy(T::ONE, &pb_pu.scalex(tau_minus_one), T::ONE)
+        p_u.axpy(T::ONE, &pb_pu.scale(tau_minus_one), T::ONE)
     }
 }

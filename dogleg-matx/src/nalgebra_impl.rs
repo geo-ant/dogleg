@@ -3,31 +3,26 @@ use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{AreMultipliable, DimEq, SameNumberOfRows, ShapeConstraint};
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, Const, DMatrix, DVector, DefaultAllocator, Matrix, OMatrix,
-    OVector, RawStorage, Storage, U1, UninitVector, Vector,
+    OVector, Owned, RawStorage, Storage, U1, UninitVector, Vector,
 };
 use nalgebra::{Dim, Scalar};
 use nalgebra::{RawStorageMut, RealField};
 use num_traits::{One, Zero};
 use std::process::Output;
 
-impl<T, C, R, S> Matx<T> for Matrix<T, C, R, S>
+impl<T, C, R, S> Matx<T> for Matrix<T, R, C, S>
 where
     T: Scalar,
     R: Dim,
     C: Dim,
     DefaultAllocator: Allocator<R, C>,
+    S: Storage<T, R, C>,
 {
     type Owned = OMatrix<T, R, C>;
-}
 
-impl<T, C, R, S> Matx<T> for &Matrix<T, C, R, S>
-where
-    T: Scalar,
-    R: Dim,
-    C: Dim,
-    DefaultAllocator: Allocator<R, C>,
-{
-    type Owned = OMatrix<T, R, C>;
+    fn into_owned(self) -> Self::Owned {
+        Matrix::<_, _, _, _>::into_owned(self)
+    }
 }
 
 impl<T, R, C> Ownedx for OMatrix<T, R, C>
@@ -49,25 +44,25 @@ where
 {
     type Owned = OVector<T, R>;
 
-    fn enormx(&self) -> T {
+    fn enorm(&self) -> T {
         todo!()
     }
 
-    fn scalex(mut self, factor: T) -> Self {
+    fn scale(mut self, factor: T) -> Self {
         self.scale_mut(factor);
         self
     }
 
-    fn clone_ownedx(&self) -> Self::Owned {
+    fn clone_owned(&self) -> Self::Owned {
         self.clone_owned()
     }
 
-    fn into_ownedx(self) -> OVector<T, R> {
-        self.into_owned()
+    fn into_owned(self) -> OVector<T, R> {
+        Vector::<_, _, _>::into_owned(self)
     }
 }
 
-impl<T, R, C, S, SV> TrMatVecMulx<T, Vector<T, R, SV>> for &Matrix<T, R, C, S>
+impl<T, R, C, S, SV> TrMatVecMulx<T, Vector<T, R, SV>> for Matrix<T, R, C, S>
 where
     T: Scalar + RealField + ClosedAddAssign + ClosedMulAssign + Zero + One,
     R: Dim,
@@ -83,7 +78,7 @@ where
 {
     type Output = OVector<T, C>;
 
-    fn tr_mulv(self, v: &Vector<T, R, SV>) -> Option<Self::Output> {
+    fn tr_mulv(&self, v: &Vector<T, R, SV>) -> Option<Self::Output> {
         let (r, c) = self.shape_generic();
         let (d, _) = v.shape_generic();
         // we always have to add this check if one of the dimensions is
@@ -133,7 +128,7 @@ where
     }
 }
 
-fn test_tr_mat_vec_mulx<T, M, V>(mat: M, v: V)
+fn test_tr_mat_vec_mulx<T, M, V>(mat: &M, v: V)
 where
     M: Matx<T> + TrMatVecMulx<T, V>,
 {

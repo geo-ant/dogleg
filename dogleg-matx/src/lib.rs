@@ -6,15 +6,17 @@ pub trait Ownedx {}
 /// matrix abstraction
 pub trait Matx<T> {
     type Owned: Ownedx;
+
+    fn into_owned(self) -> Self::Owned;
 }
 
 /// column vector abstraction
 pub trait Colx<T> {
     type Owned: Ownedx;
-    fn enormx(&self) -> T;
-    fn scalex(self, factor: T) -> Self;
-    fn clone_ownedx(&self) -> Self::Owned;
-    fn into_ownedx(self) -> Self::Owned;
+    fn enorm(&self) -> T;
+    fn scale(self, factor: T) -> Self;
+    fn clone_owned(&self) -> Self::Owned;
+    fn into_owned(self) -> Self::Owned;
 }
 
 /// add / subtract from this vector
@@ -41,5 +43,5 @@ pub trait TrMatVecMulx<T, V>: Matx<T> {
     type Output: Colx<T>;
     /// calculate `A^T v`. Returns `None` if there is a
     /// dimensions mismatch.
-    fn tr_mulv(self, v: &V) -> Option<Self::Output>;
+    fn tr_mulv(&self, v: &V) -> Option<Self::Output>;
 }

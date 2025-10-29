@@ -1,6 +1,10 @@
-use crate::{Addx, Colx, Dotx, Matx, Ownedx, Scalex, TrMatVecMulx};
+use crate::{
+    Addx, Colx, Dotx, Matx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+};
 use faer::col::AsColMut;
+use faer::linalg::solvers::Svd;
 use faer::mat::AsMatRef;
+use faer::prelude::SolveLstsq;
 use faer::{col::AsColRef, traits::RealField, Col, ColMut, ColRef, Mat, Scale};
 use faer::{Accum, MatMut, MatRef, Shape};
 use num_traits::ConstOne;
@@ -275,10 +279,61 @@ where
     }
 }
 
-// impl<T, R, M, V> TransformedVecNorm<T, V> for M
-// where
-//     T: RealField,
-//     R: Shape,
-//     V1: FaerType + AsColRef<T = T, Rows = R>,
-// {
-// }
+impl<T, R, C, M, V> TransformedVecNorm<T, V> for M
+where
+    T: RealField + ConstOne,
+    R: Shape,
+    C: Shape,
+    M: FaerType + AsMatRef<T = T, Rows = R, Cols = C>,
+    V: AsColRef<T = T, Rows = C> + Colx<T>,
+{
+    fn mulv_enorm(&self, v: &V) -> Option<T> {
+        let v = v.as_col_ref();
+        let m = self.as_mat_ref();
+
+        if m.ncols() != v.nrows() {
+            return None;
+        }
+
+        //@todo(geo-ant) PERFORMANCE: is there a way to have uninitialized
+        // values here?
+        let mut mv = Col::<T, R>::zeros(m.nrows());
+
+        faer::linalg::matmul::matmul(
+            &mut mv,
+            Accum::Replace,
+            m,
+            v,
+            T::ONE,
+            faer::get_global_parallelism(),
+        );
+
+        Some(mv.enorm())
+    }
+}
+
+impl<T, M> ToSvdx<T> for M
+where
+    T: RealField,
+    M: AsMatRef<T = T, Rows = usize, Cols = usize> + FaerType,
+{
+    type Svd = Svd<T>;
+
+    fn calc_svd(self) -> Option<Self::Svd> {
+        Svd::new_thin(self.as_mat_ref()).ok()
+    }
+}
+
+impl<T, V> Svdx<T, V> for Svd<T>
+where
+    T: RealField,
+    V: Colx<T> + AsColRef<T = T, Rows = usize>,
+    // V::Owned: AsColMut<T = T, Rows = usize>,
+{
+    type Output = Col<T>;
+
+    fn solve_lsqr(&self, v: &V) -> Option<Self::Output> {
+        let x = self.solve_lstsq(v.as_col_ref());
+        Some(x)
+    }
+}

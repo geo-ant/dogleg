@@ -1,6 +1,6 @@
 use std::ops::AddAssign;
 
-use crate::{Addx, Colx, Matx, Ownedx, Scalex};
+use crate::{Addx, Colx, Dotx, Matx, Ownedx, Scalex};
 use faer::Shape;
 use faer::{col::AsColRef, traits::RealField, Col, ColMut, ColRef, Mat, Scale};
 
@@ -127,5 +127,28 @@ where
         #[allow(unused_mut)]
         faer::zip!(&mut self, yref).for_each(|faer::unzip!(mut this, rhs)| *this += factor * *rhs);
         Some(self)
+    }
+}
+
+impl<T, V, R> Dotx<T, V> for Col<T, R>
+where
+    T: RealField,
+    R: Shape,
+    V: Colx<T> + AsColRef<T = T, Rows = R>,
+{
+    fn dot(&self, v: &V) -> Option<T> {
+        let v = v.as_col_ref();
+        if self.nrows() != v.nrows() {
+            return None;
+        }
+
+        let this = self.as_col_ref();
+
+        Some(faer::linalg::matmul::dot::inner_prod(
+            this.transpose(),
+            faer::Conj::No,
+            v,
+            faer::Conj::No,
+        ))
     }
 }

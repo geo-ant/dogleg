@@ -1,5 +1,5 @@
 use crate::{
-    Addx, Colx, Dotx, Matx, Ownedx, Scalex, SvdSolverx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    Addx, Colx, Dotx, Matx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{AreMultipliable, ShapeConstraint};
@@ -196,7 +196,7 @@ where
     }
 }
 
-impl<T, R, C, SV> SvdSolverx<T, Vector<T, R, SV>> for nalgebra::SVD<T, R, C>
+impl<T, R, C, SV> Svdx<T, Vector<T, R, SV>> for nalgebra::SVD<T, R, C>
 where
     R: Dim + DimMin<C>,
     T: RealField + Scalar + Float,
@@ -213,7 +213,7 @@ where
 {
     type Output = OVector<T, C>;
 
-    fn solve(&self, v: &Vector<T, R, SV>) -> Option<Self::Output> {
+    fn solve_lsqr(&self, v: &Vector<T, R, SV>) -> Option<Self::Output> {
         // since we expect non-singular matrices, this is okay. Otherwise
         // we could also be smarter and use a fraction of the largest eigenvalue,
         // like we do in nalgebra-lapack (for the QR decomposition).

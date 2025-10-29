@@ -77,7 +77,10 @@ pub trait ToSvdx<T> {
     fn calc_svd(self) -> Option<Self::Svd>;
 }
 
-pub trait SvdSolverx<T, V> {
+/// Abstracts over the singular value decomposition of a matrix `A`
+pub trait Svdx<T, V> {
     type Output: Colx<T>;
-    fn solve(&self, v: &V) -> Option<Self::Output>;
+    /// Solve ||A x - v||^2 -> min for x. This solves the system
+    /// A x = v in a least squares sense.
+    fn solve_lsqr(&self, v: &V) -> Option<Self::Output>;
 }

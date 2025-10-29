@@ -1,5 +1,5 @@
 use crate::problem::LeastSquaresProblem;
-use dogleg_matx::{Colx, Matx, Scalex, SvdSolverx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
+use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use nalgebra::allocator::Allocator;
 use nalgebra::{Const, DefaultAllocator, Dim, DimMin, DimSub, RealField, Scalar};
 use num_traits::{ConstOne, Float};
@@ -56,7 +56,7 @@ where
     Jac::Owned: TrMatVecMulx<F, Res, Output: Scalex<F>>,
     Jac::Owned: TransformedVecNorm<F, <Jac::Owned as TrMatVecMulx<F, Res>>::Output>,
     Jac::Owned: Clone + ToSvdx<F>,
-    <Jac::Owned as ToSvdx<F>>::Svd: SvdSolverx<F, Res>,
+    <Jac::Owned as ToSvdx<F>>::Svd: Svdx<F, Res>,
     Res: Colx<F> + Scalex<F>,
 {
     // J: Jacobian matrix
@@ -98,7 +98,7 @@ where
         //     0,
         // )
         // .unwrap();
-        let _pb = svd.solve(&r).unwrap();
+        let _pb = svd.solve_lsqr(&r).unwrap();
     }
     todo!()
 }

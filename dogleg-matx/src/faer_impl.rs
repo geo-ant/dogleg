@@ -1,4 +1,4 @@
-use crate::{Addx, Colx, Dotx, Matx, Ownedx, Scalex, TrMatVecMulx, TransformedVecNorm};
+use crate::{Addx, Colx, Dotx, Matx, Ownedx, Scalex, TrMatVecMulx};
 use faer::col::AsColMut;
 use faer::mat::AsMatRef;
 use faer::{col::AsColRef, traits::RealField, Col, ColMut, ColRef, Mat, Scale};
@@ -217,14 +217,14 @@ where
     }
 }
 
-impl<T, V, R, V1> Dotx<T, V> for V1
+impl<T, R, V1, V2> Dotx<T, V2> for V1
 where
     V1: FaerType + AsColRef<T = T, Rows = R> + Colx<T>,
     T: RealField,
     R: Shape,
-    V: Colx<T> + AsColRef<T = T, Rows = R>,
+    V2: Colx<T> + AsColRef<T = T, Rows = R>,
 {
-    fn dot(&self, v: &V) -> Option<T> {
+    fn dot(&self, v: &V2) -> Option<T> {
         let v = v.as_col_ref();
         let this = self.as_col_ref();
         if this.nrows() != v.nrows() {
@@ -274,3 +274,11 @@ where
         Some(dest)
     }
 }
+
+// impl<T, R, M, V> TransformedVecNorm<T, V> for M
+// where
+//     T: RealField,
+//     R: Shape,
+//     V1: FaerType + AsColRef<T = T, Rows = R>,
+// {
+// }

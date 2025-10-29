@@ -6,6 +6,7 @@ pub trait Ownedx {}
 
 /// matrix abstraction
 pub trait Matx<T> {
+    /// the equivalent type that owns its own storage
     type Owned: Ownedx;
 
     /// consume `self` and give a copy in an owned type
@@ -13,6 +14,14 @@ pub trait Matx<T> {
     /// clone into an owned type
     fn clone_owned(&self) -> Self::Owned;
 }
+
+/// A matrix that owns its own storage
+pub trait OwnedMatx<T> {}
+impl<T, M> OwnedMatx<T> for M where M: Matx<T, Owned = Self> {}
+
+/// A column vector that owns its own storage
+pub trait OwnedColx<T> {}
+impl<T, V> OwnedColx<T> for V where V: Colx<T, Owned = Self> {}
 
 /// column vector abstraction
 pub trait Colx<T> {

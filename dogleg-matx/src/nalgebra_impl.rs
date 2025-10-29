@@ -1,14 +1,13 @@
 use crate::{Addx, Colx, Dotx, Matx, Ownedx, TrMatVecMulx};
 use nalgebra::allocator::Allocator;
-use nalgebra::constraint::{AreMultipliable, DimEq, SameNumberOfRows, ShapeConstraint};
+use nalgebra::constraint::{AreMultipliable, ShapeConstraint};
 use nalgebra::{
-    ClosedAddAssign, ClosedMulAssign, Const, DMatrix, DVector, DefaultAllocator, Matrix, OMatrix,
-    OVector, Owned, RawStorage, Storage, U1, UninitVector, Vector,
+    ClosedAddAssign, ClosedMulAssign, DMatrix, DVector, DefaultAllocator, Matrix, OMatrix, OVector,
+    RawStorage, Storage, U1, UninitVector, Vector,
 };
 use nalgebra::{Dim, Scalar};
 use nalgebra::{RawStorageMut, RealField};
 use num_traits::{One, Zero};
-use std::process::Output;
 
 impl<T, C, R, S> Matx<T> for Matrix<T, R, C, S>
 where
@@ -73,7 +72,7 @@ where
     S: RawStorage<T, R, C>,
     DefaultAllocator: Allocator<C>,
     S: Storage<T, R, C>,
-    SV: Storage<T, R>,
+    SV: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
     ShapeConstraint: AreMultipliable<C, R, R, U1>,
 {
     type Output = OVector<T, C>;
@@ -128,13 +127,16 @@ where
     }
 }
 
+#[allow(dead_code)]
 fn test_tr_mat_vec_mulx<T, M, V>(mat: &M, v: V)
 where
     M: Matx<T> + TrMatVecMulx<T, V>,
+    V: Colx<T>,
 {
     mat.tr_mulv(&v);
 }
 
+#[allow(dead_code)]
 fn some_tests() {
     let mat = DMatrix::<f64>::zeros(3, 4);
     let v = DVector::<f64>::from_element(4, 1.0);

@@ -1,9 +1,6 @@
 use crate::problem::LeastSquaresProblem;
 use nalgebra::allocator::Allocator;
-use nalgebra::{
-    Const, DefaultAllocator, Dim, DimMin, DimSub, IsContiguous, Matrix, RealField, Scalar, Storage,
-    Vector, SVD,
-};
+use nalgebra::{Const, DefaultAllocator, Dim, DimMin, DimSub, RealField, Scalar, SVD};
 use num_traits::{ConstOne, Float};
 
 mod common;
@@ -93,7 +90,7 @@ where
             }
         }
 
-        let x_next = problem.params() + p_star;
+        let _x_next = problem.params() + p_star;
         todo!()
     }
 }

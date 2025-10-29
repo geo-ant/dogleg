@@ -37,11 +37,21 @@ where
     fn dot(&self, v: &V) -> T;
 }
 
-/// A matrix `A` that implements this can calculate the matrix-vector
+/// For a matrix `A` that implements this, we can calculate the matrix-vector
 /// product `A^T v` with a suitably sized vector.
-pub trait TrMatVecMulx<T, V>: Matx<T> {
+pub trait TrMatVecMulx<T, V>: Matx<T>
+where
+    V: Colx<T>,
+{
     type Output: Colx<T>;
     /// calculate `A^T v`. Returns `None` if there is a
     /// dimensions mismatch.
     fn tr_mulv(&self, v: &V) -> Option<Self::Output>;
+}
+
+/// For a matrix `A` that implements this, we can calculate the
+/// euclidean norm ||A v|| of the matrix-vector product, for a suitably
+/// sized vector.
+pub trait TransformedVecNorm<T, V>: Matx<T> {
+    // fn mulv_enorm(&self, v:&V)
 }

@@ -1,11 +1,8 @@
-use crate::{
-    utility::{enorm, enorm_squared},
-    Error,
-};
+use crate::{utility::enorm, Error};
 use dogleg_matx::{Addx, Colx, Dotx};
 use nalgebra::{
-    allocator::Allocator, Const, DefaultAllocator, Dim, DimMin, IsContiguous, Matrix, OMatrix,
-    OVector, RawStorage, RealField, Scalar, Storage, Vector,
+    allocator::Allocator, Const, DefaultAllocator, Dim, IsContiguous, Matrix, OMatrix, OVector,
+    RawStorage, RealField, Scalar, Storage, Vector,
 };
 use num_traits::{float::TotalOrder, ConstOne, Float};
 

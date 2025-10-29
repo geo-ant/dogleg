@@ -53,11 +53,11 @@ where
             return Ok(DoglegComponents::FirstSegmentInside {
                 p_u,
                 pu_norm,
-                cached: todo!(),
+                cached: jacobian.clone_owned(),
             });
         }
 
-        let svd = SVD::new_unordered(jacobian, true, true);
+        let _svd = SVD::new_unordered(jacobian, true, true);
 
         todo!()
     }

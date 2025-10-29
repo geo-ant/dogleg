@@ -34,7 +34,7 @@ where
     V: Colx<T>,
 {
     /// calculate the scalar (dot) product <self,v>
-    fn dot(&self, v: &V) -> T;
+    fn dot(&self, v: &V) -> Option<T>;
 }
 
 /// For a matrix `A` that implements this, we can calculate the matrix-vector
@@ -51,7 +51,24 @@ where
 
 /// For a matrix `A` that implements this, we can calculate the
 /// euclidean norm ||A v|| of the matrix-vector product, for a suitably
-/// sized vector.
-pub trait TransformedVecNorm<T, V>: Matx<T> {
-    // fn mulv_enorm(&self, v:&V)
+/// sized vector. This can obviously be implemented for a matrix A, but
+/// it can also be implemented for matrix decompositions. For QR decomposition
+/// of A we have e.g.: ||A v|| = ||Q R v|| = ||R v||, because of Q^T Q = Id.
+/// `R v` is cheaper to compute then `A v` because `R` is upper triangular.
+pub trait TransformedVecNorm<T, V>: Matx<T>
+where
+    V: Colx<T>,
+{
+    fn mulv_enorm(&self, v: &V) -> Option<T>;
+}
+
+pub trait ToSvdx<T, V> {
+    type Output: SvdSolverx<T, V>;
+
+    fn svd(self) -> Option<Self::Output>;
+}
+
+pub trait SvdSolverx<T, V> {
+    type Output: Colx<T>;
+    fn solve(&self, v: &V) -> Option<Self::Output>;
 }

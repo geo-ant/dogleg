@@ -1,13 +1,13 @@
-use crate::{Addx, Colx, Dotx, Matx, Ownedx, TrMatVecMulx};
+use crate::{Addx, Colx, Dotx, Matx, Ownedx, SvdSolverx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{AreMultipliable, ShapeConstraint};
 use nalgebra::{
-    ClosedAddAssign, ClosedMulAssign, DMatrix, DVector, DefaultAllocator, Matrix, OMatrix, OVector,
-    RawStorage, Storage, U1, UninitVector, Vector,
+    ClosedAddAssign, ClosedMulAssign, Const, DefaultAllocator, DimMin, DimSub, Matrix, OMatrix,
+    OVector, RawStorage, Storage, UninitVector, Vector, SVD, U1,
 };
 use nalgebra::{Dim, Scalar};
 use nalgebra::{RawStorageMut, RealField};
-use num_traits::{One, Zero};
+use num_traits::{Float, One, Zero};
 
 impl<T, C, R, S> Matx<T> for Matrix<T, R, C, S>
 where
@@ -37,7 +37,6 @@ impl<T, R, S> Colx<T> for Vector<T, R, S>
 where
     T: Scalar + RealField,
     R: Dim,
-    DefaultAllocator: Allocator<R>,
     S: Storage<T, R> + RawStorageMut<T, R> + RawStorage<T, R>,
     DefaultAllocator: Allocator<R>,
 {
@@ -67,7 +66,6 @@ where
     R: Dim,
     C: Dim,
     DefaultAllocator: Allocator<R, C>,
-    DefaultAllocator: Allocator<C, R>,
     DefaultAllocator: Allocator<R>,
     S: RawStorage<T, R, C>,
     DefaultAllocator: Allocator<C>,
@@ -102,8 +100,14 @@ where
     S1: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
     S2: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
 {
-    fn dot(&self, v: &Vector<T, R, S1>) -> T {
-        Vector::<_, _, _>::dot(self, v)
+    fn dot(&self, v: &Vector<T, R, S1>) -> Option<T> {
+        let (r1, _) = self.shape_generic();
+        let (r2, _) = v.shape_generic();
+        if r1 != r2 {
+            return None;
+        }
+
+        Some(Vector::<_, _, _>::dot(self, v))
     }
 }
 
@@ -127,18 +131,79 @@ where
     }
 }
 
-#[allow(dead_code)]
-fn test_tr_mat_vec_mulx<T, M, V>(mat: &M, v: V)
+impl<T, R, C, S, SV> TransformedVecNorm<T, Vector<T, C, SV>> for Matrix<T, R, C, S>
 where
-    M: Matx<T> + TrMatVecMulx<T, V>,
-    V: Colx<T>,
+    T: Scalar + RealField + ClosedAddAssign + ClosedMulAssign + Zero + One,
+    R: Dim,
+    C: Dim,
+    DefaultAllocator: Allocator<R, C>,
+    DefaultAllocator: Allocator<C>,
+    S: Storage<T, R, C>,
+    SV: Storage<T, C> + RawStorage<T, C> + RawStorageMut<T, C>,
+    ShapeConstraint: AreMultipliable<R, C, R, U1>,
+    DefaultAllocator: nalgebra::allocator::Allocator<R>,
 {
-    mat.tr_mulv(&v);
+    fn mulv_enorm(&self, v: &Vector<T, C, SV>) -> Option<T> {
+        let (_, c) = self.shape_generic();
+        let (d, _) = v.shape_generic();
+        if c != d {
+            return None;
+        }
+
+        Some((self * v).enorm())
+    }
 }
 
-#[allow(dead_code)]
-fn some_tests() {
-    let mat = DMatrix::<f64>::zeros(3, 4);
-    let v = DVector::<f64>::from_element(4, 1.0);
-    test_tr_mat_vec_mulx(&mat, v);
+impl<T, R, C, SV> ToSvdx<T, Vector<T, R, SV>> for OMatrix<T, R, C>
+where
+    R: Dim + DimMin<C>,
+    T: RealField + Scalar + Float,
+    C: Dim,
+    DefaultAllocator: Allocator<R, C>,
+    DefaultAllocator: Allocator<R>,
+    DefaultAllocator: Allocator<C>,
+    DefaultAllocator: Allocator<R, <R as DimMin<C>>::Output>,
+    DefaultAllocator: Allocator<<R as DimMin<C>>::Output>,
+    DefaultAllocator: Allocator<<R as DimMin<C>>::Output, C>,
+    <R as DimMin<C>>::Output: DimSub<Const<1>>,
+    DefaultAllocator: Allocator<<<R as DimMin<C>>::Output as DimSub<Const<1>>>::Output>,
+    SV: nalgebra::Storage<T, R>,
+{
+    type Output = SVD<T, R, C>;
+
+    fn svd(self) -> Option<Self::Output> {
+        SVD::try_new_unordered(
+            self,
+            true,
+            true,
+            // these are the parameters that SVD::new() uses in the nalgebra code
+            <T as Float>::epsilon() * nalgebra::convert(5.0),
+            0,
+        )
+    }
+}
+
+impl<T, R, C, SV> SvdSolverx<T, Vector<T, R, SV>> for nalgebra::SVD<T, R, C>
+where
+    R: Dim + DimMin<C>,
+    T: RealField + Scalar + Float,
+    C: Dim,
+    DefaultAllocator: Allocator<R, C>,
+    DefaultAllocator: Allocator<R>,
+    DefaultAllocator: Allocator<C>,
+    DefaultAllocator: Allocator<R, <R as DimMin<C>>::Output>,
+    DefaultAllocator: Allocator<<R as DimMin<C>>::Output>,
+    DefaultAllocator: Allocator<<R as DimMin<C>>::Output, C>,
+    <R as DimMin<C>>::Output: DimSub<Const<1>>,
+    DefaultAllocator: Allocator<<<R as DimMin<C>>::Output as DimSub<Const<1>>>::Output>,
+    SV: nalgebra::Storage<T, R>,
+{
+    type Output = OVector<T, C>;
+
+    fn solve(&self, v: &Vector<T, R, SV>) -> Option<Self::Output> {
+        // since we expect non-singular matrices, this is okay. Otherwise
+        // we could also be smarter and use a fraction of the largest eigenvalue,
+        // like we do in nalgebra-lapack (for the QR decomposition).
+        self.solve(v, Float::sqrt(Float::epsilon())).ok()
+    }
 }

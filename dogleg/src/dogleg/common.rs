@@ -258,7 +258,7 @@ where
         let a = Float::powi(pu_norm, 2);
         // pb - pu
         let pb_pu = p_b.axpy(T::ONE, &p_u, -T::ONE)?;
-        let b = p_u.dot(&pb_pu);
+        let b = p_u.dot(&pb_pu)?;
 
         let c = Float::powi(pb_pu.enorm(), 2);
         let d = Float::powi(delta, 2);

@@ -1,13 +1,16 @@
 mod faer_impl;
 mod nalgebra_impl;
 
+/// indicates that a matrix or vector type owns its storage
 pub trait Ownedx {}
 
 /// matrix abstraction
 pub trait Matx<T> {
     type Owned: Ownedx;
 
+    /// consume `self` and give a copy in an owned type
     fn into_owned(self) -> Self::Owned;
+    /// clone into an owned type
     fn clone_owned(&self) -> Self::Owned;
 }
 
@@ -15,13 +18,17 @@ pub trait Matx<T> {
 pub trait Colx<T> {
     type Owned: Ownedx;
     fn enorm(&self) -> T;
-    fn scale(self, factor: T) -> Self;
     fn clone_owned(&self) -> Self::Owned;
     fn into_owned(self) -> Self::Owned;
 }
 
+/// multiply a matrix or vector type by a constant factor
+pub trait Scalex<T> {
+    fn scale(self, factor: T) -> Self;
+}
+
 /// add / subtract from this vector
-pub trait Addx<T, V>: Colx<T> + Sized
+pub trait Addx<T, V>: Sized
 where
     V: Colx<T>,
 {
@@ -40,7 +47,7 @@ where
 
 /// For a matrix `A` that implements this, we can calculate the matrix-vector
 /// product `A^T v` with a suitably sized vector.
-pub trait TrMatVecMulx<T, V>: Matx<T>
+pub trait TrMatVecMulx<T, V>
 where
     V: Colx<T>,
 {
@@ -56,7 +63,7 @@ where
 /// it can also be implemented for matrix decompositions. For QR decomposition
 /// of A we have e.g.: ||A v|| = ||Q R v|| = ||R v||, because of Q^T Q = Id.
 /// `R v` is cheaper to compute then `A v` because `R` is upper triangular.
-pub trait TransformedVecNorm<T, V>: Matx<T>
+pub trait TransformedVecNorm<T, V>
 where
     V: Colx<T>,
 {
@@ -64,7 +71,7 @@ where
 }
 
 /// The singular value decomposition of this matrix can be calculated
-pub trait ToSvdx<T>: Matx<T> {
+pub trait ToSvdx<T> {
     type Svd;
 
     fn calc_svd(self) -> Option<Self::Svd>;

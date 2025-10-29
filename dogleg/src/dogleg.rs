@@ -1,10 +1,7 @@
 use crate::problem::LeastSquaresProblem;
-use dogleg_matx::{Colx, Matx, SvdSolverx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
+use dogleg_matx::{Colx, Matx, Scalex, SvdSolverx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use nalgebra::allocator::Allocator;
-use nalgebra::{
-    Const, DefaultAllocator, Dim, DimMin, DimSub, Matrix, RawStorage, RawStorageMut, RealField,
-    Scalar, Storage, Vector, SVD,
-};
+use nalgebra::{Const, DefaultAllocator, Dim, DimMin, DimSub, RealField, Scalar};
 use num_traits::{ConstOne, Float};
 
 mod common;
@@ -56,11 +53,11 @@ pub fn minimize_impl<F, Jac, Res>(
 where
     F: Scalar + RealField + Float + ConstOne,
     Jac: Matx<F>,
-    Jac::Owned: TrMatVecMulx<F, Res>,
+    Jac::Owned: TrMatVecMulx<F, Res, Output: Scalex<F>>,
     Jac::Owned: TransformedVecNorm<F, <Jac::Owned as TrMatVecMulx<F, Res>>::Output>,
     Jac::Owned: Clone + ToSvdx<F>,
     <Jac::Owned as ToSvdx<F>>::Svd: SvdSolverx<F, Res>,
-    Res: Colx<F>,
+    Res: Colx<F> + Scalex<F>,
 {
     // J: Jacobian matrix
     // we have to call into_owned here unfortunately, because all the solvers that we use
@@ -79,12 +76,12 @@ where
     let delta = delta_initial;
 
     let pu_norm = pu.enorm();
-    let d2 = Float::powi(delta, 2);
+    let _d2 = Float::powi(delta, 2);
 
-    let p_star;
+    let _p_star;
     if pu_norm >= delta {
         let tau = delta / pu_norm;
-        p_star = pu.scale(tau);
+        _p_star = pu.scale(tau);
     } else {
         let j_owned = j.clone();
 
@@ -101,7 +98,7 @@ where
         //     0,
         // )
         // .unwrap();
-        let pb = svd.solve(&r).unwrap();
+        let _pb = svd.solve(&r).unwrap();
     }
     todo!()
 }

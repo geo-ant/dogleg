@@ -1,5 +1,5 @@
 use crate::{utility::enorm, Error};
-use dogleg_matx::{Addx, Colx, Dotx};
+use dogleg_matx::{Addx, Colx, Dotx, Scalex};
 use nalgebra::{
     allocator::Allocator, Const, DefaultAllocator, Dim, IsContiguous, Matrix, OMatrix, OVector,
     RawStorage, RealField, Scalar, Storage, Vector,
@@ -224,10 +224,10 @@ where
 // we have to use into_ownedx() for the return types and Option<PU::Ownedx> and
 // constrain the PU : Colx<T, Ownedx= PB::Ownedx>. But I won't do it unless I
 // have to.
-pub fn dogleg_step<T, P>(p_u: P, p_b: P, delta: T) -> Option<P>
+pub fn dogleg_step<T, P>(p_u: P, p_b: P, delta: T) -> Option<P::Owned>
 where
     T: RealField + Float + ConstOne,
-    P: Colx<T> + Addx<T, P> + Dotx<T, P>,
+    P: Colx<T> + Addx<T, P> + Dotx<T, P> + Scalex<T>,
 {
     let pu_norm = p_u.enorm();
     let pb_norm = p_b.enorm();
@@ -236,12 +236,12 @@ where
     if pb_norm <= delta {
         // 1) in this case the entire dogleg lies inside the trust region radius
         // and we can just return the value for tau = 2, which is p_b
-        Some(p_b)
+        Some(p_b.into_owned())
     } else if pu_norm >= delta {
         // 2) in this case the first part of the dogleg path lies inside
         // the trust region, so we can just find the tau in [0,1] for
         // which ||p|| = delta, which is just tau = delta/pu_norm.
-        Some(p_u.scale(delta / pu_norm))
+        Some(p_u.scale(delta / pu_norm).into_owned())
     } else {
         // 3) in this case the rust region intersects somewhere inside the
         // second part of the dogleg and we have to do some algebra
@@ -268,9 +268,10 @@ where
         // mathematically, but numerically c can be small. The case c-> 0 implies
         // b/c -> inf, such that tau-1 = 0.
         if !b_c.is_finite() || b_c >= Float::sqrt(<T as Float>::max_value()) {
-            return Some(p_u);
+            return Some(p_u.into_owned());
         }
         let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
         p_u.axpy(T::ONE, &pb_pu.scale(tau_minus_one), T::ONE)
+            .map(|p| p.into_owned())
     }
 }

@@ -1,9 +1,11 @@
-use crate::{Addx, Colx, Dotx, Matx, Ownedx, SvdSolverx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
+use crate::{
+    Addx, Colx, Dotx, Matx, Ownedx, Scalex, SvdSolverx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+};
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{AreMultipliable, ShapeConstraint};
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, Const, DefaultAllocator, DimMin, DimSub, Matrix, OMatrix,
-    OVector, RawStorage, Storage, UninitVector, Vector, SVD, U1,
+    OVector, Storage, UninitVector, Vector, SVD, U1,
 };
 use nalgebra::{Dim, Scalar};
 use nalgebra::{RawStorageMut, RealField};
@@ -41,18 +43,13 @@ impl<T, R, S> Colx<T> for Vector<T, R, S>
 where
     T: Scalar + RealField,
     R: Dim,
-    S: Storage<T, R> + RawStorageMut<T, R> + RawStorage<T, R>,
+    S: Storage<T, R>,
     DefaultAllocator: Allocator<R>,
 {
     type Owned = OVector<T, R>;
 
     fn enorm(&self) -> T {
         todo!()
-    }
-
-    fn scale(mut self, factor: T) -> Self {
-        self.scale_mut(factor);
-        self
     }
 
     fn clone_owned(&self) -> Self::Owned {
@@ -64,6 +61,19 @@ where
     }
 }
 
+impl<T, R, S> Scalex<T> for Vector<T, R, S>
+where
+    T: Scalar + RealField,
+    R: Dim,
+    S: RawStorageMut<T, R>,
+    DefaultAllocator: Allocator<R>,
+{
+    fn scale(mut self, factor: T) -> Self {
+        self.scale_mut(factor);
+        self
+    }
+}
+
 impl<T, R, C, S, SV> TrMatVecMulx<T, Vector<T, R, SV>> for Matrix<T, R, C, S>
 where
     T: Scalar + RealField + ClosedAddAssign + ClosedMulAssign + Zero + One,
@@ -71,10 +81,9 @@ where
     C: Dim,
     DefaultAllocator: Allocator<R, C>,
     DefaultAllocator: Allocator<R>,
-    S: RawStorage<T, R, C>,
     DefaultAllocator: Allocator<C>,
     S: Storage<T, R, C>,
-    SV: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
+    SV: Storage<T, R>,
     ShapeConstraint: AreMultipliable<C, R, R, U1>,
 {
     type Output = OVector<T, C>;
@@ -101,8 +110,8 @@ where
     T: Scalar + RealField + Zero + ClosedAddAssign + ClosedMulAssign,
     R: nalgebra::Dim,
     DefaultAllocator: Allocator<R>,
-    S1: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
-    S2: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
+    S1: Storage<T, R>,
+    S2: Storage<T, R>,
 {
     fn dot(&self, v: &Vector<T, R, S1>) -> Option<T> {
         let (r1, _) = self.shape_generic();
@@ -120,8 +129,9 @@ where
     T: Scalar + RealField + ClosedAddAssign + Copy,
     R: nalgebra::Dim,
     DefaultAllocator: Allocator<R>,
-    S1: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
-    S2: Storage<T, R> + RawStorage<T, R> + RawStorageMut<T, R>,
+    S1: Storage<T, R>,
+    S1: RawStorageMut<T, R>,
+    S2: Storage<T, R>,
 {
     fn axpy(mut self, a: T, y: &Vector<T, R, S2>, b: T) -> Option<Self> {
         let (r1, _) = self.shape_generic();
@@ -143,7 +153,7 @@ where
     DefaultAllocator: Allocator<R, C>,
     DefaultAllocator: Allocator<C>,
     S: Storage<T, R, C>,
-    SV: Storage<T, C> + RawStorage<T, C> + RawStorageMut<T, C>,
+    SV: Storage<T, C>,
     ShapeConstraint: AreMultipliable<R, C, C, U1>,
     DefaultAllocator: nalgebra::allocator::Allocator<R>,
 {

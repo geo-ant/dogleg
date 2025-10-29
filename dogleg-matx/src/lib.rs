@@ -32,8 +32,8 @@ pub trait Addx<T, V>: Sized
 where
     V: Colx<T>,
 {
-    /// calculate self = a*self + b*y
-    fn axpy(self, a: T, y: &V, b: T) -> Option<Self>;
+    /// calculate self + factor*y
+    fn scaled_add(self, factor: T, y: &V) -> Option<Self>;
 }
 
 /// scalar (dot) product of two column vectors

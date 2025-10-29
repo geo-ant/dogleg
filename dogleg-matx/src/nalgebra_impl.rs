@@ -9,7 +9,7 @@ use nalgebra::{
 };
 use nalgebra::{Dim, Scalar};
 use nalgebra::{RawStorageMut, RealField};
-use num_traits::{Float, One, Zero};
+use num_traits::{ConstOne, Float, One, Zero};
 
 impl<T, C, R, S> Matx<T> for Matrix<T, R, C, S>
 where
@@ -126,21 +126,21 @@ where
 
 impl<T, R, S1, S2> Addx<T, Vector<T, R, S2>> for Vector<T, R, S1>
 where
-    T: Scalar + RealField + ClosedAddAssign + Copy,
+    T: Scalar + RealField + ClosedAddAssign + Copy + ConstOne,
     R: nalgebra::Dim,
     DefaultAllocator: Allocator<R>,
     S1: Storage<T, R>,
     S1: RawStorageMut<T, R>,
     S2: Storage<T, R>,
 {
-    fn axpy(mut self, a: T, y: &Vector<T, R, S2>, b: T) -> Option<Self> {
+    fn scaled_add(mut self, factor: T, y: &Vector<T, R, S2>) -> Option<Self> {
         let (r1, _) = self.shape_generic();
         let (r2, _) = y.shape_generic();
         if r1 != r2 {
             return None;
         }
 
-        Vector::<_, _, _>::axpy(&mut self, a, y, b);
+        Vector::<_, _, _>::axpy(&mut self, T::ONE, y, factor);
         Some(self)
     }
 }

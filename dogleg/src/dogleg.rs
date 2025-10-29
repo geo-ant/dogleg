@@ -36,6 +36,8 @@ where
         <M as DimMin<N>>::Output: DimSub<Const<1>>,
         DefaultAllocator: Allocator<<<M as DimMin<N>>::Output as DimSub<Const<1>>>::Output>,
     {
+        // nonsense code, just to see if my abstractions work with the levmar
+        // stuff.
         minimize_impl(
             problem.jacobian().unwrap(),
             problem.residuals().unwrap(),

@@ -22,6 +22,10 @@ where
     fn into_owned(self) -> Self::Owned {
         Matrix::<_, _, _, _>::into_owned(self)
     }
+
+    fn clone_owned(&self) -> Self::Owned {
+        Matrix::<_, _, _, _>::clone_owned(self)
+    }
 }
 
 impl<T, R, C> Ownedx for OMatrix<T, R, C>
@@ -140,7 +144,7 @@ where
     DefaultAllocator: Allocator<C>,
     S: Storage<T, R, C>,
     SV: Storage<T, C> + RawStorage<T, C> + RawStorageMut<T, C>,
-    ShapeConstraint: AreMultipliable<R, C, R, U1>,
+    ShapeConstraint: AreMultipliable<R, C, C, U1>,
     DefaultAllocator: nalgebra::allocator::Allocator<R>,
 {
     fn mulv_enorm(&self, v: &Vector<T, C, SV>) -> Option<T> {
@@ -154,7 +158,7 @@ where
     }
 }
 
-impl<T, R, C, SV> ToSvdx<T, Vector<T, R, SV>> for OMatrix<T, R, C>
+impl<T, R, C> ToSvdx<T> for OMatrix<T, R, C>
 where
     R: Dim + DimMin<C>,
     T: RealField + Scalar + Float,
@@ -167,11 +171,10 @@ where
     DefaultAllocator: Allocator<<R as DimMin<C>>::Output, C>,
     <R as DimMin<C>>::Output: DimSub<Const<1>>,
     DefaultAllocator: Allocator<<<R as DimMin<C>>::Output as DimSub<Const<1>>>::Output>,
-    SV: nalgebra::Storage<T, R>,
 {
-    type Output = SVD<T, R, C>;
+    type Svd = SVD<T, R, C>;
 
-    fn svd(self) -> Option<Self::Output> {
+    fn calc_svd(self) -> Option<Self::Svd> {
         SVD::try_new_unordered(
             self,
             true,

@@ -8,6 +8,7 @@ pub trait Matx<T> {
     type Owned: Ownedx;
 
     fn into_owned(self) -> Self::Owned;
+    fn clone_owned(&self) -> Self::Owned;
 }
 
 /// column vector abstraction
@@ -62,10 +63,11 @@ where
     fn mulv_enorm(&self, v: &V) -> Option<T>;
 }
 
-pub trait ToSvdx<T, V> {
-    type Output: SvdSolverx<T, V>;
+/// The singular value decomposition of this matrix can be calculated
+pub trait ToSvdx<T>: Matx<T> {
+    type Svd;
 
-    fn svd(self) -> Option<Self::Output>;
+    fn calc_svd(self) -> Option<Self::Svd>;
 }
 
 pub trait SvdSolverx<T, V> {

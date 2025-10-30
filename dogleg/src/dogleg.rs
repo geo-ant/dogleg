@@ -1,5 +1,5 @@
 use crate::dogleg::common::DoglegStepSolver;
-use crate::dogleg::svd_impl::{SvdDoglegSolver, SvdDoglegSolverOld};
+use crate::dogleg::svd_impl::SvdDoglegSolver;
 use crate::problem::LeastSquaresProblem;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use nalgebra::allocator::Allocator;
@@ -43,7 +43,8 @@ where
         let grad = jac.clone_owned().transpose() * &res;
 
         let mut solver = SvdDoglegSolver::init(jac, res, grad).unwrap();
-        let (step, solver) = solver.calc_step(F::one()).unwrap();
+        let (_step, solver_new) = solver.calc_step(F::one()).unwrap();
+        solver = solver_new;
 
         // nonsense code, just to see if my abstractions work with the levmar
         // stuff.

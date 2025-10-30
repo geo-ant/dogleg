@@ -1,8 +1,8 @@
 use crate::{utility::enorm, Error};
 use dogleg_matx::{Addx, Colx, Dotx, Scalex};
 use nalgebra::{
-    allocator::Allocator, Const, DefaultAllocator, Dim, IsContiguous, Matrix, OMatrix, OVector,
-    RawStorage, RealField, Scalar, Storage, Vector,
+    allocator::Allocator, Const, DefaultAllocator, Dim, IsContiguous, Matrix, OVector, RawStorage,
+    RealField, Scalar, Storage, Vector,
 };
 use num_traits::{float::TotalOrder, ConstOne, Float};
 
@@ -170,56 +170,6 @@ pub trait DoglegStepSolver<T, MMN, VM, VN>: Sized {
     /// on success. An error otherwise. Takes self by values and returns self
     /// rather than &mut self because I like the by-value state pattern more.
     fn calc_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), Error>;
-}
-
-#[deprecated]
-/// abstracts part of the algorithm whose responsibility it is to calculate
-/// the dogleg components.
-pub trait DoglegStepSolverOLD<T, R, C>
-where
-    C: Dim,
-    T: Scalar,
-    R: Dim,
-    DefaultAllocator: nalgebra::allocator::Allocator<R>,
-    DefaultAllocator: nalgebra::allocator::Allocator<R, C>,
-    DefaultAllocator: nalgebra::allocator::Allocator<C>,
-{
-    /// type of the instance that allows us to calculate
-    /// ||J*v|| for suitably sized vectors v, where J is the
-    /// Jacobian of the residuals. Depending on the implementation, this
-    /// thing could be the Jacobian itself or a matrix decomposition, which
-    /// allows us to calculate the norm more efficiently.
-    type Cache: JacMatMulVecNorm<T, C>;
-
-    /// the responsibility of this method is to calculate the dogleg components
-    /// from the given inputs.
-    /// See Nocedal and Wright, pp. 73 - 74 (for the dogleg part) and
-    /// p. 246 for important notes that are particular for least squares, namely
-    /// g = J^T r and B = J^T J (approx.), which togehter with the formulas
-    /// on pp. 73 give the following:
-    ///
-    /// p_u is calculated as
-    ///
-    ///              ||g||^2
-    /// p_u = -1 * -----------    g = u * g, where u: scalar, g: vector
-    ///             ||J g||^2
-    ///
-    /// where g is the gradient of f : g = J^T r
-    ///
-    /// and p_b is the solution of min ||J p_b - (-r)||^2, where it
-    /// makes sense to use some matrix decomposition rather than using the
-    /// normal equations p_b = (J^T J)^-1 J^T r.
-    ///
-    /// We also return the matrix J or (if it makes sense) its decomposition
-    /// so that we can use it to calculate ||J v||^2 for suitably sized vectors
-    /// v in the downstream code.
-    fn dogleg_components<S1>(
-        jacobian: OMatrix<T, R, C>,
-        residuals: &Vector<T, R, S1>,
-        delta: T,
-    ) -> Result<DoglegComponents<T, C, Self::Cache>, Error>
-    where
-        S1: Storage<T, R>;
 }
 
 /// this performs the calculation which gives us the value to compare against

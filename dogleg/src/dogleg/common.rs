@@ -175,7 +175,7 @@ pub trait DoglegStepSolver<T, MMN, VM, VN> {
     /// so that we can use it to calculate ||J v||^2 for suitably sized vectors
     /// v in the downstream code. These things can be stored in the cache
     /// associated with this instance.
-    fn dogleg_components<S1>(
+    fn calculate_step(
         state: DoglegSolverInput<MMN, VM, VN, Self::Cache>,
         delta: T,
     ) -> Result<(DoglegStep<T, VN>, Self::Cache), Error>;

@@ -1,3 +1,4 @@
+use crate::dogleg::common::DoglegStepSolver;
 use crate::problem::LeastSquaresProblem;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use nalgebra::allocator::Allocator;
@@ -7,6 +8,8 @@ use num_traits::{ConstOne, Float};
 mod common;
 mod qr_impl;
 mod svd_impl;
+
+pub use svd_impl::SvdDogledSolver;
 
 pub struct Dogleg<F> {
     /// initial radius of the trust region boundary

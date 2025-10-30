@@ -1,6 +1,5 @@
 use crate::dogleg::common::DoglegStepSolver;
 use crate::dogleg::svd_impl::SvdDoglegSolver;
-use crate::problem::LevMarLeastSquaresProblem;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use nalgebra::allocator::Allocator;
 use nalgebra::{Const, DefaultAllocator, Dim, DimMin, DimSub, RealField, Scalar};
@@ -17,44 +16,44 @@ pub struct Dogleg<F> {
 
 pub struct MinimizationReport;
 
-impl<T> Dogleg<T>
-where
-    T: RealField + Scalar + Copy + Float + ConstOne,
-{
-    pub fn minimize<M, N, P>(&self, problem: P) -> (P, MinimizationReport)
-    where
-        P: LevMarLeastSquaresProblem<T, M, N>,
-        <M as DimMin<N>>::Output: DimSub<Const<1>>,
-        M: Dim + DimMin<N>,
-        N: Dim,
-        DefaultAllocator: Allocator<M, N>,
-        DefaultAllocator: Allocator<N, M>,
-        DefaultAllocator: Allocator<M>,
-        DefaultAllocator: Allocator<N>,
-        DefaultAllocator: Allocator<M, <M as DimMin<N>>::Output>,
-        DefaultAllocator: Allocator<<M as DimMin<N>>::Output>,
-        DefaultAllocator: Allocator<<M as DimMin<N>>::Output, N>,
-        DefaultAllocator: Allocator<<<M as DimMin<N>>::Output as DimSub<Const<1>>>::Output>,
-    {
-        let jac = problem.jacobian().unwrap();
-        let res = problem.residuals().unwrap();
-        // @todo(geo) super stupid, but just so I can use it
-        // @todo(geo) REMOVE HACK FIX
-        let grad = jac.clone_owned().transpose() * &res;
+// impl<T> Dogleg<T>
+// where
+//     T: RealField + Scalar + Copy + Float + ConstOne,
+// {
+//     pub fn minimize<M, N, P>(&self, problem: P) -> (P, MinimizationReport)
+//     where
+//         P: LevMarLeastSquaresProblem<T, M, N>,
+//         <M as DimMin<N>>::Output: DimSub<Const<1>>,
+//         M: Dim + DimMin<N>,
+//         N: Dim,
+//         DefaultAllocator: Allocator<M, N>,
+//         DefaultAllocator: Allocator<N, M>,
+//         DefaultAllocator: Allocator<M>,
+//         DefaultAllocator: Allocator<N>,
+//         DefaultAllocator: Allocator<M, <M as DimMin<N>>::Output>,
+//         DefaultAllocator: Allocator<<M as DimMin<N>>::Output>,
+//         DefaultAllocator: Allocator<<M as DimMin<N>>::Output, N>,
+//         DefaultAllocator: Allocator<<<M as DimMin<N>>::Output as DimSub<Const<1>>>::Output>,
+//     {
+//         let jac = problem.jacobian().unwrap();
+//         let res = problem.residuals().unwrap();
+//         // @todo(geo) super stupid, but just so I can use it
+//         // @todo(geo) REMOVE HACK FIX
+//         let grad = jac.clone_owned().transpose() * &res;
 
-        let solver = SvdDoglegSolver::init(jac, res, grad).unwrap();
-        let (_step, _solver_new) = solver.calc_step(T::one()).unwrap();
+//         let solver = SvdDoglegSolver::init(jac, res, grad).unwrap();
+//         let (_step, _solver_new) = solver.calc_step(T::one()).unwrap();
 
-        // nonsense code, just to see if my abstractions work with the levmar
-        // stuff.
-        minimize_impl(
-            problem.jacobian().unwrap(),
-            problem.residuals().unwrap(),
-            self.delta_initial,
-        );
-        todo!()
-    }
-}
+//         // nonsense code, just to see if my abstractions work with the levmar
+//         // stuff.
+//         minimize_impl(
+//             problem.jacobian().unwrap(),
+//             problem.residuals().unwrap(),
+//             self.delta_initial,
+//         );
+//         todo!()
+//     }
+// }
 
 // fn minimize_with_solver<T,MMN,VM,VN,DS>(
 

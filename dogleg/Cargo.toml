@@ -7,3 +7,5 @@ edition = "2021"
 nalgebra = "0.34"
 num-traits = "0.2"
 dogleg-matx = {version = "0.1", path = "../dogleg-matx"}
+# enable this to expose adapter types with the levenberg-marquardt crate
+levenberg-marquardt = {version = "0.15", optional = true}

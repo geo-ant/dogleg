@@ -1,4 +1,4 @@
-use dogleg_matx::{Addx, Colx, Dotx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
+use dogleg_matx::{Addx, Colx, Dotx, Matx, Scalex, Svdx, ToSvdx, TransformedVecNorm};
 use nalgebra::{
     allocator::Allocator, Const, DefaultAllocator, Dim, DimMin, DimSub, OMatrix, RealField, Scalar,
     Storage, SVD,
@@ -7,17 +7,26 @@ use num_traits::{float::TotalOrder, ConstOne, Float};
 
 use crate::{
     dogleg::common::{
-        dogleg_step, gtol_calc, DoglegComponents, DoglegSolverInput, DoglegStepSolver,
-        DoglegStepSolverOLD,
+        dogleg_step, gtol_calc, DoglegComponents, DoglegStepSolver, DoglegStepSolverOLD,
     },
     utility::{enorm, enorm_squared},
 };
 
 use super::common::DoglegStep;
 
-pub struct SvdDogledSolver;
+pub enum SvdDoglegSolver<T, MMN, VM, VN> {
+    Init {
+        // (scaled) Jacobian (matrix of size MxN)
+        jacobian: MMN,
+        // (not scaled) residuals (column vector with M elements)
+        residuals: VM,
+        // (scaled) gradient (column vector with N elements)
+        gradient: VN,
+    },
+    Cached(SvdSolverCache<T, MMN, VN>),
+}
 
-pub struct SvdSolverCache<MMN, T, VN> {
+pub struct SvdSolverCache<T, MMN, VN> {
     /// Jacobian of the problem, an MxN matrix
     jacobian: MMN,
     /// we don't save pu explicitly, but `u` such that `u*g = pu`
@@ -32,29 +41,31 @@ pub struct SvdSolverCache<MMN, T, VN> {
     pb_norm: T,
 }
 
-impl<T, MMN, VN, VM> DoglegStepSolver<T, MMN, VM, VN> for SvdDogledSolver
+impl<T, MMN, VN, VM> DoglegStepSolver<T, MMN, VM, VN> for SvdDoglegSolver<T, MMN, VM, VN>
 where
     T: ConstOne + Float,
-    MMN: Clone,
-    MMN: ToSvdx<T> + TransformedVecNorm<T, VN>,
+    MMN: Matx<T> + TransformedVecNorm<T, VN>,
+    MMN::Owned: ToSvdx<T>,
     // the output of the least squares solution of `j pb = -r` is a vector of dim N
     // just like the gradient
-    <MMN as ToSvdx<T>>::Svd: Svdx<T, VM, Output = VN>,
+    <MMN::Owned as ToSvdx<T>>::Svd: Svdx<T, VM, Output = VN>,
     VN: Colx<T> + Scalex<T>,
     VM: Colx<T> + Scalex<T>,
     VN: Colx<T, Owned = VN> + Addx<T, VN> + Dotx<T, VN> + Scalex<T>,
     VN::Owned: Scalex<T> + Addx<T, VN> + Colx<T>,
 {
-    // @todo(geo-ant): The Res, Res at the end needs to be changed to the correct output types
-    type Cache = SvdSolverCache<MMN, T, VN>;
+    fn init(jacobian: MMN, residuals: VM, gradient: VN) -> Result<Self, crate::Error> {
+        Ok(Self::Init {
+            jacobian,
+            residuals,
+            gradient,
+        })
+    }
 
-    fn calc_step(
-        state: DoglegSolverInput<MMN, VM, VN, Self::Cache>,
-        delta: T,
-    ) -> Result<(DoglegStep<T, VN>, Self::Cache), crate::Error> {
+    fn calc_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), crate::Error> {
         // if we haven't already cached the calculations, do them now
-        let cached = match state {
-            DoglegSolverInput::Init {
+        let cached = match self {
+            Self::Init {
                 jacobian,
                 gradient,
                 residuals,
@@ -64,13 +75,13 @@ where
                 // ||g||
                 let g_norm = gradient.enorm();
 
-                let jacobian_clone = jacobian.clone();
+                let jacobian_clone = jacobian.clone_owned();
                 let svd = jacobian_clone.calc_svd().unwrap();
                 let minus_r = residuals.scale(-T::ONE);
                 let pb = svd.solve_lsqr(&minus_r).unwrap();
                 let pb_norm = pb.enorm();
                 let u = Float::powi(g_norm, 2) / Float::powi(jg_norm, 2);
-                Self::Cache {
+                SvdSolverCache {
                     u,
                     g: gradient,
                     g_norm,
@@ -79,7 +90,7 @@ where
                     pb_norm,
                 }
             }
-            DoglegSolverInput::Cached(cached) => cached,
+            Self::Cached(cached) => cached,
         };
 
         // at this point we have to pick the correct combination of steps,
@@ -107,7 +118,7 @@ where
             predicted_reduction,
         };
 
-        Ok((step, cached))
+        Ok((step, Self::Cached(cached)))
     }
 }
 
@@ -135,7 +146,7 @@ where
     {
         let g = jacobian.tr_mul(residuals);
 
-        let gtol_check_value = gtol_calc(&jacobian, &residuals);
+        let _gtol_check_value = gtol_calc(&jacobian, &residuals);
 
         // if gtol_check_value <= gtol {
         //     return Ok(DoglegComponents::GtolSatisfied(gtol_check_value));

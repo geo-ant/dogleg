@@ -1,5 +1,5 @@
 use crate::{utility::enorm, Error};
-use dogleg_matx::{Addx, Colx, Dotx, OwnedColx, Scalex};
+use dogleg_matx::{Addx, Colx, Dotx, Scalex};
 use nalgebra::{
     allocator::Allocator, Const, DefaultAllocator, Dim, IsContiguous, Matrix, OMatrix, OVector,
     RawStorage, RealField, Scalar, Storage, Vector,
@@ -118,18 +118,6 @@ where
     p_norm: T,
 }
 
-pub enum DoglegSolverInput<MMN, VM, VN, Cache> {
-    Init {
-        // (scaled) Jacobian (matrix of size MxN)
-        jacobian: MMN,
-        // (not scaled) residuals (column vector with M elements)
-        residuals: VM,
-        // (scaled) gradient (column vector with N elements)
-        gradient: VN,
-    },
-    Cached(Cache),
-}
-
 pub struct DoglegStep<T, VN> {
     /// optimal next step `p` to take in this iteration
     pub p: VN,
@@ -146,14 +134,16 @@ pub struct DoglegStep<T, VN> {
 // MMN: means Matrix of Size MxN
 // VM: column vector with M elements
 // VN: column vector with N elemens
-pub trait DoglegStepSolver<T, MMN, VM, VN> {
-    /// this cache allows the dogleg solver to cache some calculations to be
-    /// passed in at the next iteration which belongs to the same Jacobian
-    /// and residual as has already been calculated.
-    type Cache;
+pub trait DoglegStepSolver<T, MMN, VM, VN>: Sized {
+    /// Construct a dogleg solver to initialize an internal state using the
+    /// Jacobian, residuals, and the gradient at the current parameters.
+    fn init(jacobian: MMN, residuals: VM, gradient: VN) -> Result<Self, crate::Error>;
 
     /// the responsibility of this method is to calculate the dogleg components
-    /// from the given inputs.
+    /// from the given inputs at the current parameters. The Jacobian,
+    /// residuals, and gradient that were last set using `init`
+    /// will be used for this evaluation.
+    ///
     /// See Nocedal and Wright, pp. 73 - 74 (for the dogleg part) and
     /// p. 246 for important notes that are particular for least squares, namely
     /// g = J^T r and B = J^T J (approx.), which togehter with the formulas
@@ -175,10 +165,11 @@ pub trait DoglegStepSolver<T, MMN, VM, VN> {
     /// so that we can use it to calculate ||J v||^2 for suitably sized vectors
     /// v in the downstream code. These things can be stored in the cache
     /// associated with this instance.
-    fn calc_step(
-        state: DoglegSolverInput<MMN, VM, VN, Self::Cache>,
-        delta: T,
-    ) -> Result<(DoglegStep<T, VN>, Self::Cache), Error>;
+    ///
+    /// Returns the step and the next iteration of the internal solver state
+    /// on success. An error otherwise. Takes self by values and returns self
+    /// rather than &mut self because I like the by-value state pattern more.
+    fn calc_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), Error>;
 }
 
 #[deprecated]

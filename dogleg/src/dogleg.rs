@@ -1,4 +1,5 @@
 use crate::dogleg::common::DoglegStepSolver;
+use crate::dogleg::svd_impl::{SvdDoglegSolver, SvdDoglegSolverOld};
 use crate::problem::LeastSquaresProblem;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use nalgebra::allocator::Allocator;
@@ -8,8 +9,6 @@ use num_traits::{ConstOne, Float};
 mod common;
 mod qr_impl;
 mod svd_impl;
-
-pub use svd_impl::SvdDogledSolver;
 
 pub struct Dogleg<F> {
     /// initial radius of the trust region boundary
@@ -28,6 +27,7 @@ where
         M: Dim + DimMin<N>,
         N: Dim,
         DefaultAllocator: Allocator<M, N>,
+        DefaultAllocator: Allocator<N, M>,
         DefaultAllocator: Allocator<M>,
         DefaultAllocator: Allocator<N>,
         DefaultAllocator: Allocator<M, <M as DimMin<N>>::Output>,
@@ -36,6 +36,14 @@ where
         <M as DimMin<N>>::Output: DimSub<Const<1>>,
         DefaultAllocator: Allocator<<<M as DimMin<N>>::Output as DimSub<Const<1>>>::Output>,
     {
+        let jac = problem.jacobian().unwrap();
+        let res = problem.residuals().unwrap();
+        // @todo(geo) super stupid, but just so I can use it
+        // @todo(geo) REMOVE HACK FIX
+        let grad = jac.clone_owned().transpose() * res;
+
+        // SvdDoglegSolver::init(jac, res, grad);
+
         // nonsense code, just to see if my abstractions work with the levmar
         // stuff.
         minimize_impl(

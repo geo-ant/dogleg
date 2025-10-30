@@ -48,7 +48,7 @@ where
     // @todo(geo-ant): The Res, Res at the end needs to be changed to the correct output types
     type Cache = SvdSolverCache<MMN, T, VN>;
 
-    fn calculate_step(
+    fn calc_step(
         state: DoglegSolverInput<MMN, VM, VN, Self::Cache>,
         delta: T,
     ) -> Result<(DoglegStep<T, VN>, Self::Cache), crate::Error> {

@@ -1,6 +1,6 @@
 use crate::dogleg::common::DoglegStepSolver;
 use crate::dogleg::svd_impl::SvdDoglegSolver;
-use crate::problem::LeastSquaresProblem;
+use crate::problem::LevMarLeastSquaresProblem;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use nalgebra::allocator::Allocator;
 use nalgebra::{Const, DefaultAllocator, Dim, DimMin, DimSub, RealField, Scalar};
@@ -17,13 +17,13 @@ pub struct Dogleg<F> {
 
 pub struct MinimizationReport;
 
-impl<F> Dogleg<F>
+impl<T> Dogleg<T>
 where
-    F: RealField + Scalar + Copy + Float + ConstOne,
+    T: RealField + Scalar + Copy + Float + ConstOne,
 {
     pub fn minimize<M, N, P>(&self, problem: P) -> (P, MinimizationReport)
     where
-        P: LeastSquaresProblem<F, M, N>,
+        P: LevMarLeastSquaresProblem<T, M, N>,
         <M as DimMin<N>>::Output: DimSub<Const<1>>,
         M: Dim + DimMin<N>,
         N: Dim,
@@ -43,7 +43,7 @@ where
         let grad = jac.clone_owned().transpose() * &res;
 
         let solver = SvdDoglegSolver::init(jac, res, grad).unwrap();
-        let (_step, _solver_new) = solver.calc_step(F::one()).unwrap();
+        let (_step, _solver_new) = solver.calc_step(T::one()).unwrap();
 
         // nonsense code, just to see if my abstractions work with the levmar
         // stuff.
@@ -56,27 +56,29 @@ where
     }
 }
 
+// fn minimize_with_solver<T,MMN,VM,VN,DS>(
+
 //@todo(geo) change, this is just to see if my abstractions work
-pub fn minimize_impl<F, Jac, Res>(
+fn minimize_impl<T, Jac, Res>(
     jacobian: Jac,
     residuals: Res,
-    delta_initial: F,
+    delta_initial: T,
 ) -> Option<MinimizationReport>
 where
-    F: Scalar + RealField + Float + ConstOne,
-    Jac: Matx<F>,
-    Jac::Owned: TrMatVecMulx<F, Res, Output: Scalex<F>>,
-    Jac::Owned: TransformedVecNorm<F, <Jac::Owned as TrMatVecMulx<F, Res>>::Output>,
-    Jac::Owned: Clone + ToSvdx<F>,
-    <Jac::Owned as ToSvdx<F>>::Svd: Svdx<F, Res>,
-    Res: Colx<F> + Scalex<F>,
+    T: Scalar + RealField + Float + ConstOne,
+    Jac: Matx<T>,
+    Jac::Owned: TrMatVecMulx<T, Res, Output: Scalex<T>>,
+    Jac::Owned: TransformedVecNorm<T, <Jac::Owned as TrMatVecMulx<T, Res>>::Output>,
+    Jac::Owned: Clone + ToSvdx<T>,
+    <Jac::Owned as ToSvdx<T>>::Svd: Svdx<T, Res>,
+    Res: Colx<T> + Scalex<T>,
 {
     // J: Jacobian matrix
     // we have to call into_owned here unfortunately, because all the solvers that we use
     // will actually need the matrix to be Owned.
     let j = jacobian.into_owned();
     // r: residual vector. Actually, this contains -r
-    let r = residuals.scale(-F::ONE);
+    let r = residuals.scale(-T::ONE);
 
     // this is the gradient g = J^T r.
     let g = j.tr_mulv(&r)?;

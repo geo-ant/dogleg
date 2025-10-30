@@ -9,3 +9,7 @@ mod problem;
 mod utility;
 
 pub use error::Error;
+
+mod sealed {
+    pub trait Sealed {}
+}

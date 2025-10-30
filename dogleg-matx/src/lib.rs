@@ -37,7 +37,7 @@ pub trait Scalex<T> {
 }
 
 /// add / subtract from this vector
-pub trait Addx<T, V>: Sized
+pub trait Addx<T, V = Self>: Sized
 where
     V: Colx<T>,
 {
@@ -46,7 +46,7 @@ where
 }
 
 /// scalar (dot) product of two column vectors
-pub trait Dotx<T, V>: Colx<T>
+pub trait Dotx<T, V = Self>: Colx<T>
 where
     V: Colx<T>,
 {

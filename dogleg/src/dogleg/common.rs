@@ -1,5 +1,5 @@
 use crate::{utility::enorm, Error};
-use dogleg_matx::{Addx, Colx, Dotx, Scalex};
+use dogleg_matx::{Addx, Colx, Dotx, OwnedColx, Scalex};
 use nalgebra::{
     allocator::Allocator, Const, DefaultAllocator, Dim, IsContiguous, Matrix, OMatrix, OVector,
     RawStorage, RealField, Scalar, Storage, Vector,
@@ -100,12 +100,12 @@ where
     /// where J is the (scaled) Jacobian used to calculate the dogleg step
     /// and v is a suitably sized vector.
     type Cache: JacMatMulVecNorm<T, C>;
-    fn unpack(self) -> (DoglegStep<T, C>, Self::Cache);
+    fn unpack(self) -> (DoglegStepOLD<T, C>, Self::Cache);
 }
 
 /// this is the solution to the dogleg steps as determined by the dogleg step
 /// solver, where p is the optimal next dogleg
-pub struct DoglegStep<T, C>
+pub struct DoglegStepOLD<T, C>
 where
     T: Scalar,
     C: Dim,
@@ -118,24 +118,73 @@ where
     p_norm: T,
 }
 
-pub enum DoglegSolverInput<Jac, Res, Cache> {
-    Init(Jac, Res),
+pub enum DoglegSolverInput<MMN, VM, VN, Cache> {
+    Init {
+        // (scaled) Jacobian (matrix of size MxN)
+        jacobian: MMN,
+        // (not scaled) residuals (column vector with M elements)
+        residuals: VM,
+        // (scaled) gradient (column vector with N elements)
+        gradient: VN,
+    },
     Cached(Cache),
 }
 
-pub struct DoglegSolverOutput<T, V> {
+pub struct DoglegStep<T, VN> {
     /// optimal next step `p` to take in this iteration
-    p: V,
+    pub p: VN,
     /// euclidean norm of this step
-    p_norm: T,
+    pub p_norm: T,
     /// predicted reduction `m(0) - m(p)` of the model function
     /// if the step `p` was to be taken.
-    predicted_reduction: T,
+    pub predicted_reduction: T,
 }
 
 /// abstracts part of the algorithm whose responsibility it is to calculate
 /// the dogleg components.
-pub trait DoglegStepSolver<T, R, C>
+//@note(geo-ant) why do these generic have those weird names?
+// MMN: means Matrix of Size MxN
+// VM: column vector with M elements
+// VN: column vector with N elemens
+pub trait DoglegStepSolver<T, MMN, VM, VN> {
+    /// this cache allows the dogleg solver to cache some calculations to be
+    /// passed in at the next iteration which belongs to the same Jacobian
+    /// and residual as has already been calculated.
+    type Cache;
+
+    /// the responsibility of this method is to calculate the dogleg components
+    /// from the given inputs.
+    /// See Nocedal and Wright, pp. 73 - 74 (for the dogleg part) and
+    /// p. 246 for important notes that are particular for least squares, namely
+    /// g = J^T r and B = J^T J (approx.), which togehter with the formulas
+    /// on pp. 73 give the following:
+    ///
+    /// p_u is calculated as
+    ///
+    ///              ||g||^2
+    /// p_u = -1 * -----------    g = u * g, where u: scalar, g: vector
+    ///             ||J g||^2
+    ///
+    /// where g is the gradient of f : g = J^T r
+    ///
+    /// and p_b is the solution of min ||J p_b - (-r)||^2, where it
+    /// makes sense to use some matrix decomposition rather than using the
+    /// normal equations p_b = (J^T J)^-1 J^T r.
+    ///
+    /// We also return the matrix J or (if it makes sense) its decomposition
+    /// so that we can use it to calculate ||J v||^2 for suitably sized vectors
+    /// v in the downstream code. These things can be stored in the cache
+    /// associated with this instance.
+    fn dogleg_components<S1>(
+        state: DoglegSolverInput<MMN, VM, VN, Self::Cache>,
+        delta: T,
+    ) -> Result<(DoglegStep<T, VN>, Self::Cache), Error>;
+}
+
+#[deprecated]
+/// abstracts part of the algorithm whose responsibility it is to calculate
+/// the dogleg components.
+pub trait DoglegStepSolverOLD<T, R, C>
 where
     C: Dim,
     T: Scalar,
@@ -238,24 +287,25 @@ where
 // we have to use into_ownedx() for the return types and Option<PU::Ownedx> and
 // constrain the PU : Colx<T, Ownedx= PB::Ownedx>. But I won't do it unless I
 // have to.
-pub fn dogleg_step<T, P>(p_u: P, p_b: P, delta: T) -> Option<P::Owned>
+pub fn dogleg_step<T, P>(pu: &P, pb: &P, delta: T) -> Option<P::Owned>
 where
-    T: RealField + Float + ConstOne,
-    P: Colx<T> + Addx<T, P> + Dotx<T, P> + Scalex<T>,
+    T: Float + ConstOne,
+    P: Colx<T, Owned = P> + Addx<T, P> + Dotx<T, P> + Scalex<T>,
+    P::Owned: Scalex<T> + Addx<T, P> + Colx<T>,
 {
-    let pu_norm = p_u.enorm();
-    let pb_norm = p_b.enorm();
+    let pu_norm = pu.enorm();
+    let pb_norm = pb.enorm();
 
     // we have to treat 3 cases differently:
     if pb_norm <= delta {
         // 1) in this case the entire dogleg lies inside the trust region radius
         // and we can just return the value for tau = 2, which is p_b
-        Some(p_b.into_owned())
+        Some(pb.clone_owned())
     } else if pu_norm >= delta {
         // 2) in this case the first part of the dogleg path lies inside
         // the trust region, so we can just find the tau in [0,1] for
         // which ||p|| = delta, which is just tau = delta/pu_norm.
-        Some(p_u.scale(delta / pu_norm).into_owned())
+        Some(pu.clone_owned().scale(delta / pu_norm))
     } else {
         // 3) in this case the rust region intersects somewhere inside the
         // second part of the dogleg and we have to do some algebra
@@ -271,8 +321,8 @@ where
         // in x and then with a little bit of rearranging, we can find a solution
         let a = Float::powi(pu_norm, 2);
         // pb - pu
-        let pb_pu = p_b.scaled_add(-T::ONE, &p_u)?;
-        let b = p_u.dot(&pb_pu)?;
+        let pb_pu = pb.clone_owned().scaled_add(-T::ONE, &pu)?;
+        let b = pu.dot(&pb_pu)?;
 
         let c = Float::powi(pb_pu.enorm(), 2);
         let d = Float::powi(delta, 2);
@@ -282,10 +332,10 @@ where
         // mathematically, but numerically c can be small. The case c-> 0 implies
         // b/c -> inf, such that tau-1 = 0.
         if !b_c.is_finite() || b_c >= Float::sqrt(<T as Float>::max_value()) {
-            return Some(p_u.into_owned());
+            return Some(pu.clone_owned());
         }
         let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
-        p_u.scaled_add(T::ONE, &pb_pu.scale(tau_minus_one))
-            .map(|p| p.into_owned())
+        pu.clone_owned()
+            .scaled_add(T::ONE, &pb_pu.scale(tau_minus_one))
     }
 }

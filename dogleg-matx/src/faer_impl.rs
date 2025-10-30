@@ -328,7 +328,6 @@ impl<T, V> Svdx<T, V> for Svd<T>
 where
     T: RealField,
     V: Colx<T> + AsColRef<T = T, Rows = usize>,
-    // V::Owned: AsColMut<T = T, Rows = usize>,
 {
     type Output = Col<T>;
 

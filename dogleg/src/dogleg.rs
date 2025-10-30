@@ -40,9 +40,9 @@ where
         let res = problem.residuals().unwrap();
         // @todo(geo) super stupid, but just so I can use it
         // @todo(geo) REMOVE HACK FIX
-        let grad = jac.clone_owned().transpose() * res;
+        let grad = jac.clone_owned().transpose() * &res;
 
-        // SvdDoglegSolver::init(jac, res, grad);
+        SvdDoglegSolver::init(jac, res, grad);
 
         // nonsense code, just to see if my abstractions work with the levmar
         // stuff.

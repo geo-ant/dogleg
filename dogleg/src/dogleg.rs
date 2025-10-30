@@ -42,9 +42,8 @@ where
         // @todo(geo) REMOVE HACK FIX
         let grad = jac.clone_owned().transpose() * &res;
 
-        let mut solver = SvdDoglegSolver::init(jac, res, grad).unwrap();
-        let (_step, solver_new) = solver.calc_step(F::one()).unwrap();
-        solver = solver_new;
+        let solver = SvdDoglegSolver::init(jac, res, grad).unwrap();
+        let (_step, _solver_new) = solver.calc_step(F::one()).unwrap();
 
         // nonsense code, just to see if my abstractions work with the levmar
         // stuff.

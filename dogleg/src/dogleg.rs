@@ -24,6 +24,7 @@ where
     pub fn minimize<M, N, P>(&self, problem: P) -> (P, MinimizationReport)
     where
         P: LeastSquaresProblem<F, M, N>,
+        <M as DimMin<N>>::Output: DimSub<Const<1>>,
         M: Dim + DimMin<N>,
         N: Dim,
         DefaultAllocator: Allocator<M, N>,
@@ -33,7 +34,6 @@ where
         DefaultAllocator: Allocator<M, <M as DimMin<N>>::Output>,
         DefaultAllocator: Allocator<<M as DimMin<N>>::Output>,
         DefaultAllocator: Allocator<<M as DimMin<N>>::Output, N>,
-        <M as DimMin<N>>::Output: DimSub<Const<1>>,
         DefaultAllocator: Allocator<<<M as DimMin<N>>::Output as DimSub<Const<1>>>::Output>,
     {
         let jac = problem.jacobian().unwrap();
@@ -42,7 +42,8 @@ where
         // @todo(geo) REMOVE HACK FIX
         let grad = jac.clone_owned().transpose() * &res;
 
-        SvdDoglegSolver::init(jac, res, grad);
+        let mut solver = SvdDoglegSolver::init(jac, res, grad).unwrap();
+        let (step, solver) = solver.calc_step(F::one()).unwrap();
 
         // nonsense code, just to see if my abstractions work with the levmar
         // stuff.

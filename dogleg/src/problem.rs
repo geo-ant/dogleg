@@ -2,11 +2,7 @@ use dogleg_matx::{Colx, Matx};
 
 /// compatibility type for the levenberg-marquardt crate
 #[cfg(feature = "levenberg-marquardt")]
-mod levmar_adapter;
-#[cfg(feature = "levenberg-marquardt")]
-pub use levenberg_marquardt;
-#[cfg(feature = "levenberg-marquardt")]
-pub use levmar_adapter::LevMarAdapter;
+pub mod levmar_adapter;
 
 //TODO document
 pub trait LeastSquaresProblem<T> {

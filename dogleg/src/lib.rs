@@ -3,12 +3,25 @@
 //@todo(geo) remove this
 #![allow(dead_code)]
 
+/// solver implementations
 mod dogleg;
+/// error types
 mod error;
+/// utility
+mod magic_const;
+/// least squares problem abstractions and levmar compatibility
 mod problem;
 mod utility;
 
-mod magic_const;
+pub use dogleg::Dogleg;
+pub use problem::LeastSquaresProblem;
+
+pub use dogleg_matx as matx;
+pub use error::Error;
 pub use magic_const::MagicConst;
 
-pub use error::Error;
+/// re-export the levenberg-marquardt crate
+#[cfg(feature = "levenberg-marquardt")]
+pub use levenberg_marquardt;
+#[cfg(feature = "levenberg-marquardt")]
+pub use problem::levmar_adapter::LevMarAdapter;

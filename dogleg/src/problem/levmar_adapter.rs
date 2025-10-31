@@ -1,4 +1,4 @@
-use super::levenberg_marquardt::LeastSquaresProblem as LevMarLeastSquaresProblem;
+use crate::levenberg_marquardt::LeastSquaresProblem as LevMarLeastSquaresProblem;
 use crate::problem::LeastSquaresProblem;
 use nalgebra::{
     allocator::Allocator, ComplexField, DefaultAllocator, Dim, IsContiguous, Matrix, RawStorageMut,

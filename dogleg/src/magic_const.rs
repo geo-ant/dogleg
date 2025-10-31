@@ -1,5 +1,5 @@
-/// A couple of constants that the algorithm needs internally. Already
-/// implemented for f64 and f32
+/// Utility trait, defining a couple of constants that the algorithm needs
+/// internally. Already implemented for f64 and f32
 pub trait MagicConst: num_traits::ConstOne + num_traits::ConstZero {
     /// the value 30
     const THIRTY: Self;

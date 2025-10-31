@@ -8,8 +8,7 @@ mod error;
 mod problem;
 mod utility;
 
-pub use error::Error;
+mod magic_const;
+pub use magic_const::MagicConst;
 
-mod sealed {
-    pub trait Sealed {}
-}
+pub use error::Error;

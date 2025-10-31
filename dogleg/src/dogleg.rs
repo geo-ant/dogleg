@@ -1,20 +1,188 @@
-use crate::dogleg::common::DoglegStepSolver;
-use crate::dogleg::svd_impl::SvdDoglegSolver;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
-use nalgebra::allocator::Allocator;
-use nalgebra::{Const, DefaultAllocator, Dim, DimMin, DimSub, RealField, Scalar};
-use num_traits::{ConstOne, Float};
+use num_traits::Float;
+use std::num::NonZero;
+
+use crate::MagicConst;
 
 mod common;
 mod qr_impl;
 mod svd_impl;
 
-pub struct Dogleg<F> {
-    /// initial radius of the trust region boundary
-    delta_initial: F,
+/// Powell's Dogleg minimization algorithm. The behaviour of the algorithm
+/// can be controlled by setting various parameters.
+///
+/// Note, that the Dogleg algorithm requires the Jacobian of the problem
+/// to be a full-rank matrix at for every position that is possibly evaluated.
+/// This is not a limitation of the implementation, but a fundamental assumption
+/// in the algorithm.
+///
+/// # References
+///
+/// Nocedal & Wright: Numerical Optimization, 2nd ed, p 73-76, 95-97, 245-247
+pub struct Dogleg<T> {
+    /// Relative error criterion on the residual values.
+    /// See section 2.3 in the MINPACK user guide: https://cds.cern.ch/record/126569/files/CM-P00068642.pdf
+    ftol: T,
+    /// Attempt to guarantee that x is in the vicinity of a true solution, by
+    /// estimating the distance of the true and current x by
+    /// See section 2.3 in the MINPACK user guide: https://cds.cern.ch/record/126569/files/CM-P00068642.pdf
+    xtol: T,
+    /// Value for checking the orthogonality between residuals and Jacobian.
+    /// It's a more clever (scale-invariant) way of checking whether the gradient
+    /// of the problem is zero.
+    /// See section 2.3 in the MINPACK user guide: https://cds.cern.ch/record/126569/files/CM-P00068642.pdf
+    gtol: T,
+    /// see `lmder` function in the minpack code (https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90)
+    /// >> a positive input variable used in determining the
+    /// >> initial step bound. this bound is set to the product of
+    /// >> factor and the euclidean norm of diag*x if nonzero, or else
+    /// >> to factor itself. in most cases factor should lie in the
+    /// >> interval (.1,100.).100. is a generally recommended value
+    factor: T,
+    /// Whether to apply diagonal scaling internally. For this, see
+    /// Nocedal & Wright, p 95-97
+    scale_diag: bool,
+    /// Used to calculate the maximum number of function evals (a stopping
+    /// criterion) based on the problem
+    patience: usize,
 }
 
 pub struct MinimizationReport;
+
+impl<T> Dogleg<T>
+where
+    T: Float + MagicConst,
+{
+    /// Create a solver with reasonable default parameters. Consider changing
+    /// the parameters if optimization results are unsatisfying.
+    pub fn new() -> Self {
+        // this logic is taken from the brilliant `levenberg-marquardt` crate
+        let user_tol = T::epsilon() * T::THIRTY;
+        Self {
+            ftol: user_tol,
+            xtol: user_tol,
+            gtol: user_tol,
+            factor: T::ONE_E2,
+            scale_diag: true,
+            patience: 100,
+        }
+    }
+
+    /// Set `ftol` for the termination criterion for function reduction
+    /// according to the same logic as MINPACK:
+    ///
+    /// > termination occurs when both the actual and predicted relative
+    /// > reductions in the sum of squares are at most `ftol`.
+    /// > therefore, `ftol` measures the relative error desired
+    /// > in the sum of squares.
+    ///
+    /// Cf. function `lmder` in the [MINPACK implementation](https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `ftol < 0`.
+    #[must_use]
+    pub fn with_ftol(self, ftol: T) -> Self {
+        assert!(ftol.is_finite() && ftol >= T::ZERO, "ftol < 0 not allowed");
+        Self { ftol, ..self }
+    }
+
+    /// Set `xtol` for the termination criterion for consecutive iterates,
+    /// according to this logic from the MINPACK implementation:
+    ///
+    /// > termination occurs when the relative error between two consecutive
+    /// > iterates is at most xtol. therefore, xtol measures the
+    /// > relative error desired in the approximate solution.
+    ///
+    /// Cf. function `lmder` in the [MINPACK implementation](https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90).
+    /// # Panics
+    ///
+    /// If `xtol` is negative.
+    #[must_use]
+    pub fn with_xtol(self, xtol: T) -> Self {
+        assert!(xtol.is_finite() && xtol >= T::ZERO, "xtol < 0 not allowed");
+        Self { xtol, ..self }
+    }
+
+    #[must_use]
+    /// Set `gtol` for the termination criterion the gradient
+    /// according to this logic from the MINPACK implementation:
+    ///
+    /// > termination occurs when the cosine of the angle between
+    /// > \[the residuals\] and any column of the jacobian is at most `gtol` in absolute
+    /// > value. therefore, gtol measures the orthogonality
+    /// > desired between the \[residual\] vector and the columns
+    /// > of the jacobian.
+    ///
+    /// Cf. function `lmder` in the [MINPACK implementation](https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90).
+    /// # Panics
+    ///
+    /// If `gtol` is negative.
+    pub fn with_gtol(self, gtol: T) -> Self {
+        assert!(gtol.is_finite() && gtol >= T::ZERO, "gtol < 0 not allowed");
+        Self { gtol, ..self }
+    }
+
+    #[must_use]
+    /// Shortcut to set `ftol = xtol = tol` and `gtol = 0`, which is what the
+    /// high level driver function `lmder1` in MINPACK does.
+    ///
+    /// Cf. function `lmder` in the [MINPACK implementation](https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90).
+    ///
+    ///
+    pub fn with_tol(self, tol: T) -> Self {
+        assert!(tol.is_finite() && tol > T::ZERO, "tol < 0 not allowed");
+        Self {
+            ftol: tol,
+            xtol: tol,
+            gtol: T::ZERO,
+            ..self
+        }
+    }
+
+    #[must_use]
+    /// Used to set the initial radius of the trust region, according to this
+    /// logic from the MINPACK implementation:
+    ///
+    /// > a positive input variable used in determining the
+    /// > initial step bound. this bound is set to the product of
+    /// > factor and the euclidean norm of diag*x if nonzero, or else
+    /// > to factor itself. in most cases factor should lie in the
+    /// > interval (.1, 100). 100 is a generally recommended value.
+    ///
+    /// Cf. function `lmder` in the [MINPACK implementation](https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90).
+    ///
+    /// # Panics
+    ///
+    /// If stepbound is negative
+    pub fn with_stepbound(self, stepbound: T) -> Self {
+        assert!(
+            stepbound.is_finite() && stepbound > T::ZERO,
+            "step bound < 0 not allowed"
+        );
+        Self {
+            factor: stepbound,
+            ..self
+        }
+    }
+
+    #[must_use]
+    /// This sets the maximum number of function evaluations to
+    /// `patience * (n+1)`, where n is the number of parameters.
+    pub fn with_patience(self, patience: NonZero<usize>) -> Self {
+        Self {
+            patience: patience.get(),
+            ..self
+        }
+    }
+
+    #[must_use]
+    /// Whether to apply diagonal rescaling of variables, see e.g.
+    /// Nocedal & Wright p 95-97
+    pub fn with_scale_diag(self, scale_diag: bool) -> Self {
+        Self { scale_diag, ..self }
+    }
+}
 
 // impl<T> Dogleg<T>
 // where
@@ -58,19 +226,19 @@ pub struct MinimizationReport;
 // fn minimize_with_solver<T,MMN,VM,VN,DS>(
 
 //@todo(geo) change, this is just to see if my abstractions work
-fn minimize_impl<T, Jac, Res>(
-    jacobian: Jac,
-    residuals: Res,
+fn minimize_impl<T, MMN, VM>(
+    jacobian: MMN,
+    residuals: VM,
     delta_initial: T,
 ) -> Option<MinimizationReport>
 where
-    T: Scalar + RealField + Float + ConstOne,
-    Jac: Matx<T>,
-    Jac::Owned: TrMatVecMulx<T, Res, Output: Scalex<T>>,
-    Jac::Owned: TransformedVecNorm<T, <Jac::Owned as TrMatVecMulx<T, Res>>::Output>,
-    Jac::Owned: Clone + ToSvdx<T>,
-    <Jac::Owned as ToSvdx<T>>::Svd: Svdx<T, Res>,
-    Res: Colx<T> + Scalex<T>,
+    T: Float + MagicConst,
+    MMN: Matx<T>,
+    MMN::Owned: TrMatVecMulx<T, VM, Output: Scalex<T>>,
+    MMN::Owned: TransformedVecNorm<T, <MMN::Owned as TrMatVecMulx<T, VM>>::Output>,
+    MMN::Owned: Clone + ToSvdx<T>,
+    <MMN::Owned as ToSvdx<T>>::Svd: Svdx<T, VM>,
+    VM: Colx<T> + Scalex<T>,
 {
     // J: Jacobian matrix
     // we have to call into_owned here unfortunately, because all the solvers that we use

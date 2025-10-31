@@ -53,7 +53,7 @@ fn unlikely(b: bool) -> bool {
 /// A very large number
 /// Directly taken from the `levenberg_marquardt` crate, which in turn translated it
 /// from the FORTRAN implementation in MINPACK.
-pub(crate) fn giant<T: Float>() -> T {
+pub fn giant<T: Float>() -> T {
     T::max_value()
 }
 
@@ -62,7 +62,7 @@ pub(crate) fn giant<T: Float>() -> T {
 /// A very small number
 /// Directly taken from the `levenberg_marquardt` crate, which in turn translated it
 /// from the FORTRAN implementation in MINPACK.
-pub(crate) fn dwarf<T: Float>() -> T {
+pub fn dwarf<T: Float>() -> T {
     T::min_positive_value()
 }
 

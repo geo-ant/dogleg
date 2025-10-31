@@ -7,7 +7,7 @@ use faer::mat::AsMatRef;
 use faer::prelude::SolveLstsq;
 use faer::{col::AsColRef, traits::RealField, Col, ColMut, ColRef, Mat, Scale};
 use faer::{Accum, MatMut, MatRef, Shape};
-use num_traits::ConstOne;
+use num_traits::{ConstOne, Float};
 use std::ops::AddAssign;
 
 /// marker trait to get around some conflicting impl trouble with nalgebra
@@ -120,13 +120,13 @@ impl<T, R> Ownedx for Col<T, R> where R: Shape {}
 
 impl<T, R> Colx<T> for Col<T, R>
 where
-    T: faer::traits::RealField,
+    T: RealField + Copy + Float + AddAssign,
     R: Shape,
 {
     type Owned = Self;
 
     fn enorm(&self) -> T {
-        todo!()
+        crate::utility::enorm(self.as_col_ref().iter().cloned())
     }
 
     fn clone_owned(&self) -> Self::Owned {
@@ -140,13 +140,13 @@ where
 
 impl<'a, T, R> Colx<T> for ColMut<'a, T, R>
 where
-    T: RealField,
+    T: RealField + Float + AddAssign + Copy,
     R: Shape,
 {
     type Owned = Col<T, R>;
 
     fn enorm(&self) -> T {
-        todo!()
+        crate::utility::enorm(self.as_col_ref().iter().copied())
     }
 
     fn clone_owned(&self) -> Self::Owned {
@@ -160,13 +160,13 @@ where
 
 impl<'a, T, R> Colx<T> for ColRef<'a, T, R>
 where
-    T: faer::traits::RealField,
+    T: RealField + Float + AddAssign + Copy,
     R: Shape,
 {
     type Owned = Col<T, R>;
 
     fn enorm(&self) -> T {
-        todo!()
+        crate::utility::enorm(self.clone().iter().copied())
     }
 
     fn clone_owned(&self) -> Self::Owned {
@@ -255,7 +255,7 @@ where
 impl<T, R, C, V, M> TrMatVecMulx<T, V> for M
 where
     M: AsMatRef<T = T, Rows = R, Cols = C> + FaerType,
-    T: RealField + ConstOne,
+    T: RealField + ConstOne + Float + Copy + AddAssign,
     R: Shape,
     C: Shape,
     V: Colx<T> + AsColRef<T = T, Rows = R>,
@@ -289,7 +289,7 @@ where
 
 impl<T, R, C, M, V> TransformedVecNorm<T, V> for M
 where
-    T: RealField + ConstOne,
+    T: RealField + ConstOne + Float + AddAssign + Copy,
     R: Shape,
     C: Shape,
     M: FaerType + AsMatRef<T = T, Rows = R, Cols = C>,
@@ -334,7 +334,7 @@ where
 
 impl<T, V> Svdx<T, V> for Svd<T>
 where
-    T: RealField,
+    T: RealField + Float + AddAssign + Copy,
     V: Colx<T> + AsColRef<T = T, Rows = usize>,
 {
     type Output = Col<T>;

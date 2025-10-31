@@ -100,13 +100,15 @@ pub trait DoglegStepSolver<T, MMN, VM, VN>: Sized {
 
 pub fn gtol_calc<T, VN1, VN2>(jacobian_norms: VN1, gradient: VN2, residual_norm: T) -> T
 where
-    VN1: Scalex<T>,
-    VN2: ComponentMulx<T, VN1>,
+    VN1: Scalex<T> + Colx<T>,
+    VN2: ComponentMulx<T, VN1> + Colx<T>,
+    T: Float,
 {
     let normj_normr = jacobian_norms.scale(residual_norm);
-    gradient.component_div(&normj_normr);
-
-    todo!()
+    gradient
+        .component_div(&normj_normr)
+        .and_then(|v| v.max())
+        .unwrap_or(T::max_value())
 }
 
 /// this calculates the dogleg step from the component vectors p_b, p_u,

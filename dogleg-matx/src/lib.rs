@@ -1,9 +1,9 @@
 //! Linear algebra abstraction that are specific to the `dogleg` crate.
-//! This crate has no affiliation with the `matx` crate or other famous products,
-//! companies, or people with the letter `x`.
+//!
+//! This crate has no affiliation with the `matx` crate. Also no affiliation
+//! to famous products, companies, or people containing the letter `X`.
 mod faer_impl;
 mod nalgebra_impl;
-
 mod utility;
 
 /// indicates that a matrix or vector type owns its storage
@@ -51,7 +51,7 @@ pub trait Addx<T, V = Self>: Sized
 where
     V: Colx<T>,
 {
-    /// calculate self + factor*y
+    /// calculate self + factor*y. Return `None` on dimension mismatch.
     fn scaled_add(self, factor: T, y: &V) -> Option<Self>;
 }
 
@@ -60,7 +60,8 @@ pub trait Dotx<T, V = Self>: Colx<T>
 where
     V: Colx<T>,
 {
-    /// calculate the scalar (dot) product <self,v>
+    /// calculate the scalar (dot) product <self,v>. Returns `None` if there's
+    /// a dimension mismatch
     fn dot(&self, v: &V) -> Option<T>;
 }
 
@@ -86,6 +87,7 @@ pub trait TransformedVecNorm<T, V>
 where
     V: Colx<T>,
 {
+    /// calculate the norm ||A v|| for a suitably sized vector v
     fn mulv_enorm(&self, v: &V) -> Option<T>;
 }
 
@@ -93,6 +95,7 @@ where
 pub trait ToSvdx<T> {
     type Svd;
 
+    /// calculate the SVD (singular value decomposition). Return `None` on error.
     fn calc_svd(self) -> Option<Self::Svd>;
 }
 
@@ -100,6 +103,6 @@ pub trait ToSvdx<T> {
 pub trait Svdx<T, V> {
     type Output: Colx<T>;
     /// Solve ||A x - v||^2 -> min for x. This solves the system
-    /// A x = v in a least squares sense.
+    /// A x = v in a least squares sense. Return `None` on error.
     fn solve_lsqr(&self, v: &V) -> Option<Self::Output>;
 }

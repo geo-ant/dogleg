@@ -4,6 +4,7 @@ use nalgebra::{
     allocator::Allocator, ComplexField, DefaultAllocator, Dim, IsContiguous, Matrix, RawStorageMut,
     RealField, Storage, Vector,
 };
+use num_traits::Float;
 use std::marker::PhantomData;
 
 /// An adapter type so that any type that implements the
@@ -56,7 +57,7 @@ where
 
 impl<T, P, M, N> LeastSquaresProblem<T> for LevMarAdapter<P, T, M, N>
 where
-    T: ComplexField + Copy + RealField,
+    T: ComplexField + Copy + RealField + Float,
     N: Dim,
     M: Dim,
     P: LevMarLeastSquaresProblem<T, M, N>,

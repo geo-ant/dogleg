@@ -41,7 +41,7 @@ where
 
 impl<T, R, S> Colx<T> for Vector<T, R, S>
 where
-    T: Scalar + RealField,
+    T: Scalar + RealField + Float,
     R: Dim,
     S: Storage<T, R>,
     DefaultAllocator: Allocator<R>,
@@ -49,7 +49,7 @@ where
     type Owned = OVector<T, R>;
 
     fn enorm(&self) -> T {
-        todo!()
+        crate::utility::enorm(self.iter().copied())
     }
 
     fn clone_owned(&self) -> Self::Owned {
@@ -80,7 +80,7 @@ where
 
 impl<T, R, C, S, SV> TrMatVecMulx<T, Vector<T, R, SV>> for Matrix<T, R, C, S>
 where
-    T: Scalar + RealField + ClosedAddAssign + ClosedMulAssign + Zero + One,
+    T: Scalar + RealField + Float + ClosedAddAssign + ClosedMulAssign + Zero + One,
     R: Dim,
     C: Dim,
     DefaultAllocator: Allocator<R, C>,
@@ -111,7 +111,7 @@ where
 
 impl<T, R, S1, S2> Dotx<T, Vector<T, R, S1>> for Vector<T, R, S2>
 where
-    T: Scalar + RealField + Zero + ClosedAddAssign + ClosedMulAssign,
+    T: Scalar + RealField + Float + Zero + ClosedAddAssign + ClosedMulAssign,
     R: nalgebra::Dim,
     DefaultAllocator: Allocator<R>,
     S1: Storage<T, R>,
@@ -130,7 +130,7 @@ where
 
 impl<T, R, S1, S2> Addx<T, Vector<T, R, S2>> for Vector<T, R, S1>
 where
-    T: Scalar + RealField + ClosedAddAssign + Copy + ConstOne,
+    T: Scalar + RealField + Float + ClosedAddAssign + Copy + ConstOne,
     R: nalgebra::Dim,
     DefaultAllocator: Allocator<R>,
     S1: Storage<T, R>,
@@ -151,7 +151,7 @@ where
 
 impl<T, R, C, S, SV> TransformedVecNorm<T, Vector<T, C, SV>> for Matrix<T, R, C, S>
 where
-    T: Scalar + RealField + ClosedAddAssign + ClosedMulAssign + Zero + One,
+    T: Scalar + RealField + Float + ClosedAddAssign + ClosedMulAssign + Zero + One,
     R: Dim,
     C: Dim,
     DefaultAllocator: Allocator<R, C>,

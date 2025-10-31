@@ -11,7 +11,6 @@ mod error;
 mod magic_const;
 /// least squares problem abstractions and levmar compatibility
 mod problem;
-mod utility;
 
 pub use dogleg::Dogleg;
 pub use problem::LeastSquaresProblem;

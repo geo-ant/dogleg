@@ -1,3 +1,6 @@
+//! Linear algebra abstraction that are specific to the `dogleg` crate.
+//! This crate has no affiliation with the `matx` crate or other famous products,
+//! companies, or people with the letter `x`.
 mod faer_impl;
 mod nalgebra_impl;
 

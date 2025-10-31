@@ -1,3 +1,30 @@
+//! utility code that is mostly directly cribbed from the `levenberg-marquardt`
+//! crate, who ported it from MINPACK.
+//!
+//! Original license of the `levenberg-marquardt` crate is:
+//!
+//! MIT License
+//!
+//! Copyright (c) 2020 rust-cv
+//!
+//! Permission is hereby granted, free of charge, to any person obtaining a copy
+//! of this software and associated documentation files (the "Software"), to deal
+//! in the Software without restriction, including without limitation the rights
+//! to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//! copies of the Software, and to permit persons to whom the Software is
+//! furnished to do so, subject to the following conditions:
+//!
+//! The above copyright notice and this permission notice shall be included in all
+//! copies or substantial portions of the Software.
+//!
+//! THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//! IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//! FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//! AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//! LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//! OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//! SOFTWARE.
+
 use nalgebra::{Dim, RealField, Storage, Vector, U1};
 use num_traits::Float;
 
@@ -105,16 +132,4 @@ where
     } else {
         x3max * Float::sqrt(s3)
     }
-}
-
-/// squared euclidean norm of a vector. This is actually not more
-/// efficient than calculating `enorm(v).powi(2)`, but it's provided
-/// for convenience.
-pub(crate) fn enorm_squared<F, N, VS>(v: &Vector<F, N, VS>) -> F
-where
-    F: nalgebra::RealField + Float + Copy,
-    N: Dim,
-    VS: Storage<F, N, U1>,
-{
-    Float::powi(enorm(v), 2)
 }

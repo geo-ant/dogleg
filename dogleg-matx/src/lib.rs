@@ -8,7 +8,6 @@ pub trait Ownedx {}
 pub trait Matx<T> {
     /// the equivalent type that owns its own storage
     type Owned: Ownedx;
-
     /// consume `self` and give a copy in an owned type
     fn into_owned(self) -> Self::Owned;
     /// clone into an owned type
@@ -26,14 +25,19 @@ impl<T, V> OwnedColx<T> for V where V: Colx<T, Owned = Self> {}
 /// column vector abstraction
 pub trait Colx<T> {
     type Owned: Ownedx;
+    /// calculate the euclidean norm of the vector
     fn enorm(&self) -> T;
+    /// clone the values of `self` and return an owned instance.
     fn clone_owned(&self) -> Self::Owned;
+    /// consume `self` and return an `Owned` instance with the same values
     fn into_owned(self) -> Self::Owned;
 }
 
 /// multiply a matrix or vector type by a constant factor
 pub trait Scalex<T> {
+    /// scale `self` by `factor`
     fn scale_mut(&mut self, factor: T);
+    /// scale `self` by `factor` and return `self`
     fn scale(self, factor: T) -> Self;
 }
 

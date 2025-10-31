@@ -72,6 +72,10 @@ where
         self.scale_mut(factor);
         self
     }
+
+    fn scale_mut(&mut self, factor: T) {
+        self.scale_mut(factor);
+    }
 }
 
 impl<T, R, C, S, SV> TrMatVecMulx<T, Vector<T, R, SV>> for Matrix<T, R, C, S>

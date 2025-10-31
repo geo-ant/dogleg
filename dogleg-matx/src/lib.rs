@@ -33,6 +33,7 @@ pub trait Colx<T> {
 
 /// multiply a matrix or vector type by a constant factor
 pub trait Scalex<T> {
+    fn scale_mut(&mut self, factor: T);
     fn scale(self, factor: T) -> Self;
 }
 

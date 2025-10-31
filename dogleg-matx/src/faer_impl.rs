@@ -186,6 +186,10 @@ where
     fn scale(self, factor: T) -> Self {
         self * Scale(factor)
     }
+
+    fn scale_mut(&mut self, factor: T) {
+        *self *= Scale(factor);
+    }
 }
 
 impl<'a, T, R> Scalex<T> for ColMut<'a, T, R>
@@ -196,6 +200,10 @@ where
     fn scale(mut self, factor: T) -> Self {
         self *= Scale(factor);
         self
+    }
+
+    fn scale_mut(&mut self, factor: T) {
+        *self *= Scale(factor);
     }
 }
 

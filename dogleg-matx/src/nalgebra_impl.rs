@@ -59,6 +59,13 @@ where
     fn into_owned(self) -> OVector<T, R> {
         Vector::<_, _, _>::into_owned(self)
     }
+
+    fn max(&self) -> Option<T> {
+        if self.is_empty() {
+            return None;
+        }
+        Some(self.max())
+    }
 }
 
 impl<T, R, S> Scalex<T> for Vector<T, R, S>

@@ -136,6 +136,10 @@ where
     fn into_owned(self) -> Self::Owned {
         self
     }
+
+    fn max(&self) -> Option<T> {
+        self.max()
+    }
 }
 
 impl<'a, T, R> Colx<T> for ColMut<'a, T, R>
@@ -156,6 +160,10 @@ where
     fn into_owned(self) -> Self::Owned {
         self.to_owned()
     }
+
+    fn max(&self) -> Option<T> {
+        self.max()
+    }
 }
 
 impl<'a, T, R> Colx<T> for ColRef<'a, T, R>
@@ -175,6 +183,10 @@ where
 
     fn into_owned(self) -> Self::Owned {
         self.to_owned()
+    }
+
+    fn max(&self) -> Option<T> {
+        self.max()
     }
 }
 

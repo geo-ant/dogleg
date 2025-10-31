@@ -1,5 +1,5 @@
 use crate::Error;
-use dogleg_matx::{Addx, Colx, Dotx, Scalex};
+use dogleg_matx::{Addx, Colx, ComponentMulx, Dotx, Scalex};
 use num_traits::{ConstOne, Float};
 
 pub struct DoglegStep<T, VN> {
@@ -97,6 +97,17 @@ pub trait DoglegStepSolver<T, MMN, VM, VN>: Sized {
 //         .max_by(TotalOrder::total_cmp)
 //         .unwrap_or(Float::infinity())
 // }
+
+pub fn gtol_calc<T, VN1, VN2>(jacobian_norms: VN1, gradient: VN2, residual_norm: T) -> T
+where
+    VN1: Scalex<T>,
+    VN2: ComponentMulx<T, VN1>,
+{
+    let normj_normr = jacobian_norms.scale(residual_norm);
+    gradient.component_div(&normj_normr);
+
+    todo!()
+}
 
 /// this calculates the dogleg step from the component vectors p_b, p_u,
 /// and the current trust region radius delta.

@@ -3,12 +3,15 @@ use crate::Error;
 use crate::LeastSquaresProblem;
 use crate::MagicConst;
 use crate::TerminationFailure;
+use dogleg_matx::OwnedColx;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
+use nalgebra::iter;
 use num_traits::ops::overflowing::OverflowingAdd;
 use num_traits::Float;
 use std::num::NonZero;
 
 mod common;
+mod hack;
 mod qr_impl;
 mod svd_impl;
 
@@ -18,13 +21,38 @@ pub use common::DoglegStepSolver;
 pub use report::MinimizationReport;
 pub use report::TerminationReason;
 
-macro_rules! tryx {
-    ($ident:ident . $function:ident ($($tokens:tt)*), on_fail = $failure:path) => {
-        match $ident . $function ($($tokens)*) {
+/// utility macro that helps us return our error inline when the
+/// returned type of an expression is an optional. The challenge is
+/// that we need to bundle our problem and return it together with
+/// the error and if we use the monadic interfaces of Option<T>
+/// we'll get into trouble with the borrow checker.
+///
+/// On none, returns the error with the given termination criterion
+/// and bundled with the problem.
+macro_rules! try_opt {
+    // assumes the $problem is the actual problem. Use the
+    // second syntax below to specify the problem
+    ($problem:ident . $function:ident ($($tokens:tt)*), on_none
+         = $failure:expr) => {
+        match $problem. $function ($($tokens)*) {
             Some(val) => val,
             None => {
                 return Err($crate::Error {
-                    problem: $ident,
+                    problem: $problem,
+                    termination : $failure
+                });
+            }
+        }
+    };
+
+    // for calls like jacobian.mul_tr(&residuals)
+    ($ident:ident . $function:ident ($($tokens:tt)*), on_none
+         = $failure:expr, problem = $problem:ident) => {
+        match $ident. $function ($($tokens)*) {
+            Some(val) => val,
+            None => {
+                return Err($crate::Error {
+                    problem: $problem,
                     termination : $failure
                 });
             }
@@ -214,15 +242,26 @@ impl<T> Dogleg<T> {
         problem: P,
     ) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
-        S: DoglegStepSolver<T, P::Jacobian, P::Residuals, P::Parameters>,
+        T: Float + MagicConst,
         P: LeastSquaresProblem<T>,
+        // see below, we require the gradient, i.e. the of J^T r to be the owned type of P.
+        // This should barely be a restriction...
+        S: DoglegStepSolver<T, P::Jacobian, P::Residuals, <P::Parameters as Colx<T>>::Owned>,
+        // for max func eval calculation
         u64: TryFrom<<P::Parameters as Colx<T>>::Dim, Error: std::fmt::Debug>,
+        // for calculating gradient
+        // @note(geo-ant) for now, we require the output of J^T r h
+        P::Jacobian: TrMatVecMulx<T, P::Residuals>,
+        <P::Jacobian as TrMatVecMulx<T, P::Residuals>>::Output:
+            Colx<T, Owned = <P::Parameters as Colx<T>>::Owned>,
     {
         // @todo(geo-ant) maybe refactor this at a later date, but for the
         // intended use of this library, the number of parameters being near
         // the u64 limit is completely unreasonable, hence panicking here is
         // completely fine. If you have that many parameters, you probably
         // shouldn't be using this algorithm anyway...
+        // @note(geo-ant) this whole overflow checking is very pedantic,
+        // but what the heck...
         let (n_plus_one, overflow) = u64::try_from(problem.params().dim())
             .expect("too many parameters for dogleg solver")
             .overflowing_add(1);
@@ -242,18 +281,47 @@ impl<T> Dogleg<T> {
                 });
             }
 
-            let residuals = tryx!(
+            let residuals = try_opt!(
                 problem.residuals(),
-                on_fail = TerminationFailure::ResidualEval
+                on_none = TerminationFailure::ResidualEval
             );
+
+            let rnorm = residuals.enorm();
+
+            if rnorm.is_zero() {
+                return Ok((
+                    problem,
+                    MinimizationReport {
+                        termination: TerminationReason::ResidualsZero,
+                        number_of_evaluations: nfunc_evals,
+                        objective_function: T::P5 * rnorm,
+                    },
+                ));
+            }
 
             nfunc_evals += 1;
-            let jacobian = tryx!(
+            let jacobian = try_opt!(
                 problem.jacobian(),
-                on_fail = TerminationFailure::ResidualEval
+                on_none = TerminationFailure::JacobianEval
             );
 
-            todo!()
+            let gradient = try_opt!(
+                jacobian.tr_mulv(&residuals),
+                on_none = TerminationFailure::WrongDimensions("J^T r"),
+                problem = problem
+            )
+            .into_owned();
+
+            let step_solver = S::init(jacobian, residuals, gradient);
+
+            if iter > 10 {
+                break;
+            }
+
+            //@note(geo-ant)
+            // this check is also completely overblown, but can possibly help me spot bugs
+            assert!(iter < u64::MAX - 1, "iteration limit reached");
+            iter += 1;
         }
 
         todo!()

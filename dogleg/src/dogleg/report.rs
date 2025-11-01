@@ -40,7 +40,7 @@ pub enum StoppingCriterion {
 pub struct MinimizationReport<T> {
     pub termination: TerminationReason,
     /// Number of residuals which were computed.
-    pub number_of_evaluations: usize,
+    pub number_of_evaluations: u64,
     /// Contains the value of `f(x)=1/2 ||r(x)||^2`.
     pub objective_function: T,
 }

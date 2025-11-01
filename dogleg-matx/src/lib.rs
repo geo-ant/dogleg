@@ -9,7 +9,6 @@
 
 mod faer_impl;
 mod nalgebra_impl;
-
 mod utility;
 
 /// indicates that a matrix or vector type owns its storage

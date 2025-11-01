@@ -90,11 +90,11 @@ where
 }
 
 /// A matrix that owns its own storage
-pub trait OwnedMatx<T> {}
+pub trait OwnedMatx<T>: Matx<T> {}
 impl<T, M> OwnedMatx<T> for M where M: Matx<T, Owned = Self> {}
 
 /// A column vector that owns its own storage
-pub trait OwnedColx<T> {}
+pub trait OwnedColx<T>: Colx<T> {}
 impl<T, V> OwnedColx<T> for V where V: Colx<T, Owned = Self> {}
 
 /// column vector abstraction

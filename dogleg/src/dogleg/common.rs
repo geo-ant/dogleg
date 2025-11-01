@@ -1,5 +1,5 @@
 use crate::dogleg::report::TerminationFailure;
-use dogleg_matx::{Addx, Colx, ComponentMulx, Dotx, Scalex};
+use dogleg_matx::{Addx, Colx, ComponentMulx, Dotx, Matx, OwnedColx, Scalex};
 use num_traits::{ConstOne, Float};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -19,10 +19,17 @@ pub struct DoglegStep<T, VN> {
 // MMN: means Matrix of Size MxN
 // VM: column vector with M elements
 // VN: column vector with N elemens
-pub trait DoglegStepSolver<T, MMN, VM, VN>: Sized {
+pub trait DoglegStepSolver<T>: Sized {
+    type Jacobian: Matx<T>;
+    type Gradient: OwnedColx<T>;
+    type Residuals: Colx<T>;
     /// Construct a dogleg solver to initialize an internal state using the
     /// Jacobian, residuals, and the gradient at the current parameters.
-    fn init(jacobian: MMN, residuals: VM, gradient: VN) -> Result<Self, TerminationFailure>;
+    fn init(
+        jacobian: Self::Jacobian,
+        residuals: Self::Residuals,
+        gradient: Self::Gradient,
+    ) -> Result<Self, TerminationFailure>;
 
     /// the responsibility of this method is to calculate the dogleg components
     /// from the given inputs at the current parameters. The Jacobian,
@@ -54,7 +61,10 @@ pub trait DoglegStepSolver<T, MMN, VM, VN>: Sized {
     /// Returns the step and the next iteration of the internal solver state
     /// on success. An error otherwise. Takes self by values and returns self
     /// rather than &mut self because I like the by-value state pattern more.
-    fn calc_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), TerminationFailure>;
+    fn calc_step(
+        self,
+        delta: T,
+    ) -> Result<(DoglegStep<T, Self::Gradient>, Self), TerminationFailure>;
 }
 
 /// this performs the calculation which gives us the value to compare against

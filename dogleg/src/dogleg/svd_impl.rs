@@ -38,7 +38,7 @@ pub struct SvdSolverCache<T, MMN, VN> {
     pb_norm: T,
 }
 
-impl<T, MMN, VN, VM> DoglegStepSolver<T, MMN, VM, VN> for SvdStepSolver<T, MMN, VM, VN>
+impl<T, MMN, VN, VM> DoglegStepSolver<T> for SvdStepSolver<T, MMN, VM, VN>
 where
     T: ConstOne + Float,
     MMN: Matx<T> + TransformedVecNorm<T, VN>,
@@ -51,6 +51,10 @@ where
     VN: Colx<T, Owned = VN> + Addx<T, VN> + Dotx<T, VN> + Scalex<T>,
     VN::Owned: Scalex<T> + Addx<T, VN> + Colx<T>,
 {
+    type Jacobian = MMN;
+    type Gradient = VN;
+    type Residuals = VM;
+
     fn init(jacobian: MMN, residuals: VM, gradient: VN) -> Result<Self, TerminationFailure> {
         Ok(Self::Init {
             jacobian,

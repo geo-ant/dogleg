@@ -246,14 +246,18 @@ impl<T> Dogleg<T> {
         P: LeastSquaresProblem<T>,
         // see below, we require the gradient, i.e. the of J^T r to be the owned type of P.
         // This should barely be a restriction...
-        S: DoglegStepSolver<T, P::Jacobian, P::Residuals, <P::Parameters as Colx<T>>::Owned>,
+        S: DoglegStepSolver<
+            T,
+            Jacobian = P::Jacobian,
+            Gradient = <P::Jacobian as TrMatVecMulx<T, P::Residuals>>::Output,
+            Residuals = P::Residuals,
+        >,
         // for max func eval calculation
         u64: TryFrom<<P::Parameters as Colx<T>>::Dim, Error: std::fmt::Debug>,
         // for calculating gradient
-        // @note(geo-ant) for now, we require the output of J^T r h
-        P::Jacobian: TrMatVecMulx<T, P::Residuals>,
-        <P::Jacobian as TrMatVecMulx<T, P::Residuals>>::Output:
-            Colx<T, Owned = <P::Parameters as Colx<T>>::Owned>,
+        // @note(geo-ant) for now, we require the output of `J^T r` to be an
+        // owned vector with the same type as P::Owned.
+        P::Jacobian: TrMatVecMulx<T, P::Residuals, Output = P::Parameters>,
     {
         // @todo(geo-ant) maybe refactor this at a later date, but for the
         // intended use of this library, the number of parameters being near
@@ -309,8 +313,7 @@ impl<T> Dogleg<T> {
                 jacobian.tr_mulv(&residuals),
                 on_none = TerminationFailure::WrongDimensions("J^T r"),
                 problem = problem
-            )
-            .into_owned();
+            );
 
             let step_solver = S::init(jacobian, residuals, gradient);
 

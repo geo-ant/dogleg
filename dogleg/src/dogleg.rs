@@ -1,15 +1,10 @@
-use crate::problem;
 use crate::Error;
 use crate::LeastSquaresProblem;
 use crate::MagicConst;
 use crate::TerminationFailure;
-use dogleg_matx::OwnedColx;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
-use nalgebra::iter;
-use num_traits::ops::overflowing::OverflowingAdd;
 use num_traits::Float;
 use std::num::NonZero;
-use std::process::Output;
 
 mod common;
 mod hack;
@@ -239,12 +234,46 @@ where
 /// type of J^T r
 type GradType<T, J, R> = <J as TrMatVecMulx<T, R>>::Output;
 
+// use nalgebra::constraint::AreMultipliable;
+// use nalgebra::constraint::ShapeConstraint;
+// use nalgebra::iter;
+// use nalgebra::ClosedAddAssign;
+// use nalgebra::Const;
+// use nalgebra::Dim;
+// use nalgebra::DimMin;
+// use nalgebra::DimSub;
+// use nalgebra::RealField;
+// use nalgebra::Scalar;
+// use nalgebra::U1;
 impl<T> Dogleg<T> {
-    pub fn minimize_generic<S, P>(
-        &self,
-        solver: S,
-        problem: P,
-    ) -> Result<(P, MinimizationReport<T>), Error<P>>
+    //@todo(geo) this works with only nalgebra trait bounds
+    // pub fn min_levmar<P, M, N>(self, p: P)
+    // where
+    //     P: levenberg_marquardt::LeastSquaresProblem<T, M, N>,
+    //     T: nalgebra::Scalar + Copy + RealField + Float + MagicConst,
+    //     T: Scalar + RealField + Float + ClosedAddAssign + Copy + ConstOne,
+    //     M: Dim,
+    //     N: Dim,
+    //     M: DimMin<N, Output = N>,
+    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<M>,
+    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<M, N>,
+    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<M>,
+    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<N>,
+    //     ShapeConstraint: AreMultipliable<N, M, M, U1>,
+    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<M, <M as DimMin<N>>::Output>,
+    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<<M as DimMin<N>>::Output>,
+    //     nalgebra::DefaultAllocator:
+    //         nalgebra::allocator::Allocator<<M as nalgebra::DimMin<N>>::Output, N>,
+    //     <M as DimMin<N>>::Output: DimSub<U1>,
+    //     nalgebra::DefaultAllocator:
+    //         nalgebra::allocator::Allocator<<<M as DimMin<N>>::Output as DimSub<U1>>::Output>,
+    //     N: DimSub<Const<1>>,
+    // {
+    //     let adapter = LevMarAdapter::new(p);
+    //     self.minimize_generic::<SvdStepSolver<_, _, _, _>, _>(adapter);
+    // }
+
+    pub fn minimize_generic<S, P>(&self, problem: P) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
         T: Float + MagicConst,
         P: LeastSquaresProblem<T>,
@@ -282,6 +311,16 @@ impl<T> Dogleg<T> {
 
         let mut nfunc_evals: u64 = 0;
         let mut iter = 0;
+
+        // @todo(geo-ant)
+        // the trust region radius. In the first iteration of the algorithm,
+        // this will be set to something useful, so initializing with factor
+        // zero here is fine. But we can only calculate this after having
+        // calculated the jacobian (and thus the scaling matrix) and pulling
+        // this outside makes the loop diverge from the MINPACK implementation,
+        // which I'm sticking to for now.
+        let mut delta = T::zero();
+
         // outer loop
         loop {
             if nfunc_evals >= max_func_evals {
@@ -315,13 +354,25 @@ impl<T> Dogleg<T> {
                 on_none = TerminationFailure::JacobianEval
             );
 
+            if iter == 0 {
+                //@todo(geo) add scaling for parameters
+                let scaled_params = problem.params();
+                delta = scaled_params.enorm() * self.factor;
+                if delta.is_zero() {
+                    delta = self.factor;
+                }
+            }
+
             let gradient = try_opt!(
                 jacobian.tr_mulv(&residuals),
                 on_none = TerminationFailure::WrongDimensions("J^T r"),
                 problem = problem
             );
 
-            let step_solver = S::init(jacobian, residuals, gradient);
+            let mut step_solver = S::init(jacobian, residuals, gradient).unwrap();
+
+            let (step, solver) = step_solver.calc_step(delta).unwrap();
+            step_solver = solver;
 
             if iter > 10 {
                 break;

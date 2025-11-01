@@ -2,7 +2,7 @@ use crate::levenberg_marquardt::LeastSquaresProblem as LevMarLeastSquaresProblem
 use crate::problem::LeastSquaresProblem;
 use nalgebra::{
     allocator::Allocator, ComplexField, DefaultAllocator, Dim, IsContiguous, Matrix, OVector,
-    RawStorageMut, RealField, Storage, Vector,
+    Owned, RawStorageMut, RealField, Storage, Vector,
 };
 use num_traits::Float;
 use std::marker::PhantomData;
@@ -57,7 +57,7 @@ where
 
 impl<T, P, M, N> LeastSquaresProblem<T> for LevMarAdapter<P, T, M, N>
 where
-    T: ComplexField + Copy + RealField + Float,
+    T: Copy + RealField + Float,
     N: Dim,
     M: Dim,
     P: LevMarLeastSquaresProblem<T, M, N>,
@@ -70,7 +70,9 @@ where
 {
     type Residuals = Vector<T, M, P::ResidualStorage>;
     type Parameters = Vector<T, N, P::ParameterStorage>;
-    type Jacobian = Matrix<T, M, N, P::JacobianStorage>;
+    // we always return the owned type here due to implementation details in the
+    // dogleg crate.
+    type Jacobian = Matrix<T, M, N, Owned<T, M, N>>;
 
     fn set_params(&mut self, x: Self::Parameters) {
         self.problem.set_params(&x)
@@ -85,6 +87,6 @@ where
     }
 
     fn jacobian(&self) -> Option<Self::Jacobian> {
-        self.problem.jacobian()
+        self.problem.jacobian().map(|m| m.into_owned())
     }
 }

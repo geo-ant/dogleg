@@ -124,6 +124,7 @@ where
     R: Shape,
 {
     type Owned = Self;
+    type Dim = R;
 
     fn enorm(&self) -> T {
         crate::utility::enorm(self.as_col_ref().iter().cloned())
@@ -140,6 +141,10 @@ where
     fn max(&self) -> Option<T> {
         self.max()
     }
+
+    fn dim(&self) -> Self::Dim {
+        self.nrows()
+    }
 }
 
 impl<'a, T, R> Colx<T> for ColMut<'a, T, R>
@@ -148,6 +153,7 @@ where
     R: Shape,
 {
     type Owned = Col<T, R>;
+    type Dim = R;
 
     fn enorm(&self) -> T {
         crate::utility::enorm(self.as_col_ref().iter().copied())
@@ -164,6 +170,10 @@ where
     fn max(&self) -> Option<T> {
         self.max()
     }
+
+    fn dim(&self) -> Self::Dim {
+        self.nrows()
+    }
 }
 
 impl<'a, T, R> Colx<T> for ColRef<'a, T, R>
@@ -172,6 +182,7 @@ where
     R: Shape,
 {
     type Owned = Col<T, R>;
+    type Dim = R;
 
     fn enorm(&self) -> T {
         crate::utility::enorm(self.clone().iter().copied())
@@ -187,6 +198,10 @@ where
 
     fn max(&self) -> Option<T> {
         self.max()
+    }
+
+    fn dim(&self) -> Self::Dim {
+        self.nrows()
     }
 }
 

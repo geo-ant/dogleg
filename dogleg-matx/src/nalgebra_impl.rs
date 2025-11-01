@@ -47,6 +47,7 @@ where
     DefaultAllocator: Allocator<R>,
 {
     type Owned = OVector<T, R>;
+    type Dim = usize;
 
     fn enorm(&self) -> T {
         crate::utility::enorm(self.iter().copied())
@@ -65,6 +66,10 @@ where
             return None;
         }
         Some(self.max())
+    }
+
+    fn dim(&self) -> Self::Dim {
+        self.nrows()
     }
 }
 

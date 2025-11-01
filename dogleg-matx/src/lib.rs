@@ -100,7 +100,11 @@ impl<T, V> OwnedColx<T> for V where V: Colx<T, Owned = Self> {}
 
 /// column vector abstraction
 pub trait Colx<T> {
+    /// the corresponding owned column vector type of same dimensions and type
     type Owned: Ownedx;
+    /// an unsigned integer type for the number of elements in the vector.
+    /// Often e.g. usize.
+    type Dim;
     /// calculate the euclidean norm of the vector
     fn enorm(&self) -> T;
     /// clone the values of `self` and return an owned instance.
@@ -109,6 +113,8 @@ pub trait Colx<T> {
     fn into_owned(self) -> Self::Owned;
     /// the maximum element or `None` if the vector is empty
     fn max(&self) -> Option<T>;
+    /// the number of elements in this vector
+    fn dim(&self) -> Self::Dim;
 }
 
 /// multiply a matrix or vector type by a constant factor

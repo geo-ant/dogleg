@@ -56,48 +56,35 @@ pub trait DoglegStepSolver<T, MMN, VM, VN>: Sized {
     fn calc_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), Error>;
 }
 
-// /// this performs the calculation which gives us the value to compare against
-// /// gtol. The name is a bit stupid, because this doesn't calculate gtol, but
-// /// I don't know how to name it better. This function takes the jacobian (J)
-// /// and the residuals (r) and outputs a single value. I'll explain what it calculates
-// /// below. If that value is <= gtol, then the gtol check passes and iteration
-// /// is finished successfully.
-// ///
-// /// # What does the gtol check actually calculate?
-// ///
-// /// The [minpack user guide](https://cds.cern.ch/record/126569/files/CM-P00068642.pdf)
-// /// does a great job of explaining the criterion on page 21,22. The idea is
-// /// that at the minimum the gradient J^T r should be the zero vector. This criterion
-// /// tests for this a little smarter than just comparing each element to zero.
-// /// What we do is realize that each component of (J^T r)_i is the multiplication
-// /// of the vectors (j_i^T r), where j_i is the i-th COLUMN of the jacobian.
-// /// That means at the minimum, the columns of the Jacobian j_i are orthogonal
-// /// to the residuals. That means cos(theta_i) = 0, where theta is the angle
-// /// between the vectors, so gval_i = cos(theta_i) = (j_i^T r)/(||j_i||*||r||).
-// /// What we return is gval_i which is a better criterion for checking against
-// /// the gradient being zero due to the normalization
-// pub fn gtol_calc<T, R, C, S, S2>(jacobian: &Matrix<T, R, C, S>, residuals: &Vector<T, R, S2>) -> T
-// where
-//     T: RealField + Float + TotalOrder,
-//     R: Dim,
-//     C: Dim,
-//     S: RawStorage<T, R, C> + Storage<T, R, C>,
-//     S2: RawStorage<T, R> + Storage<T, R>,
-// {
-//     let rnorm = enorm(&residuals);
-
-//     jacobian
-//         .column_iter()
-//         .map(|j| {
-//             let jnorm = enorm(&j);
-//             let jtr = j.dot(residuals);
-
-//             jtr / (jnorm * rnorm)
-//         })
-//         .max_by(TotalOrder::total_cmp)
-//         .unwrap_or(Float::infinity())
-// }
-
+/// this performs the calculation which gives us the value to compare against
+/// gtol. The name is a bit stupid, because this doesn't calculate gtol, but
+/// I don't know how to name it better. This function takes the jacobian (J)
+/// and the residuals (r) and outputs a single value. I'll explain what it calculates
+/// below. If that value is <= gtol, then the gtol check passes and iteration
+/// is finished successfully.
+///
+/// # What does the gtol check actually calculate?
+///
+/// The [minpack user guide](https://cds.cern.ch/record/126569/files/CM-P00068642.pdf)
+/// does a great job of explaining the criterion on page 21,22. The idea is
+/// that at the minimum the gradient J^T r should be the zero vector. This criterion
+/// tests for this a little smarter than just comparing each element to zero.
+/// What we do is realize that each component of (J^T r)_i is the multiplication
+/// of the vectors (j_i^T r), where j_i is the i-th COLUMN of the jacobian.
+/// That means at the minimum, the columns of the Jacobian j_i are orthogonal
+/// to the residuals. That means cos(theta_i) = 0, where theta is the angle
+/// between the vectors, so gval_i = cos(theta_i) = (j_i^T r)/(||j_i||*||r||).
+/// What we return is gval_i which is a better criterion for checking against
+/// the gradient being zero due to the normalization
+///
+/// So this calculates
+///          j_i^T r                 g_i
+/// max_i  ----------------  = ---------------
+///          ||j_i|| ||r||      ||j_i|| ||r||
+///
+/// where j_i (vec) is the i-th column of the jacobian and r (vec) is the
+/// residual vector. g_i (scalar) is the i-th element of the gradient,
+/// since g = J^T r.
 pub fn gtol_calc<T, VN1, VN2>(jacobian_norms: VN1, gradient: VN2, residual_norm: T) -> T
 where
     VN1: Scalex<T> + Colx<T>,

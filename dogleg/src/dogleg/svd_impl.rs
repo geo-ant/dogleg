@@ -1,5 +1,8 @@
 use super::common::DoglegStep;
-use crate::dogleg::common::{dogleg_step, DoglegStepSolver};
+use crate::dogleg::{
+    common::{dogleg_step, DoglegStepSolver},
+    report::TerminationFailure,
+};
 use dogleg_matx::{Addx, Colx, Dotx, Matx, Scalex, Svdx, ToSvdx, TransformedVecNorm};
 use num_traits::{ConstOne, Float};
 
@@ -48,7 +51,7 @@ where
     VN: Colx<T, Owned = VN> + Addx<T, VN> + Dotx<T, VN> + Scalex<T>,
     VN::Owned: Scalex<T> + Addx<T, VN> + Colx<T>,
 {
-    fn init(jacobian: MMN, residuals: VM, gradient: VN) -> Result<Self, crate::Error> {
+    fn init(jacobian: MMN, residuals: VM, gradient: VN) -> Result<Self, TerminationFailure> {
         Ok(Self::Init {
             jacobian,
             residuals,
@@ -56,7 +59,7 @@ where
         })
     }
 
-    fn calc_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), crate::Error> {
+    fn calc_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), TerminationFailure> {
         // if we haven't already cached the calculations, do them now
         let cached = match self {
             Self::Init {

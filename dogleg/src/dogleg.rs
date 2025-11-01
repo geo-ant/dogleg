@@ -6,9 +6,9 @@ use std::num::NonZero;
 
 mod common;
 mod qr_impl;
-mod report;
 mod svd_impl;
 
+pub mod report;
 pub use common::DoglegStep;
 pub use common::DoglegStepSolver;
 pub use report::MinimizationReport;
@@ -51,7 +51,7 @@ pub struct Dogleg<T> {
     scale_diag: bool,
     /// Used to calculate the maximum number of function evals (a stopping
     /// criterion) based on the problem
-    patience: usize,
+    patience: u64,
 }
 
 impl<T> Dogleg<T>
@@ -174,7 +174,7 @@ where
     #[must_use]
     /// This sets the maximum number of function evaluations to
     /// `patience * (n+1)`, where n is the number of parameters.
-    pub fn with_patience(self, patience: NonZero<usize>) -> Self {
+    pub fn with_patience(self, patience: NonZero<u64>) -> Self {
         Self {
             patience: patience.get(),
             ..self

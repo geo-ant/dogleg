@@ -46,14 +46,8 @@ pub struct MinimizationReport<T> {
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
-/// Reasons for terminating the minimization.
+/// Reason for a successful termination of the minimization.
 pub enum TerminationReason {
-    /// Jacobian evaluation failed
-    JacobianEval,
-    /// residual evaluation failed
-    ResidualEval,
-    /// Encountered `NaN` or `$\pm\infty$`.
-    Numerical(&'static str),
     /// The residuals are literally zero.
     ResidualsZero,
     /// Convergence achieved. Also tells us which stopping criterion
@@ -62,12 +56,23 @@ pub enum TerminationReason {
     /// the last iteration, it just means the others weren't evaluated
     /// anymore.
     Converged { criterion: StoppingCriterion },
+}
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+/// Reason for failure of the minimization.
+pub enum TerminationFailure {
+    /// Encountered `NaN` or `+/- inf`.
+    Numerical(&'static str),
+    /// Jacobian evaluation failed
+    JacobianEval,
+    /// residual evaluation failed
+    ResidualEval,
     /// The bound for `ftol`, `xtol` or `gtol` was set so low that the
     /// test passed with the machine epsilon but not with the actual
     /// bound. This means you must increase the bound.
     NoImprovementPossible(StoppingCriterion),
     /// Maximum number of function evaluations was hit.
     LostPatience,
-    /// The shape of the computed residuals or Jacobian is not correct.
-    WrongDimensions,
+    /// Wrong dimensions for a matrix or vector
+    WrongDimensions(&'static str),
 }

@@ -12,6 +12,8 @@ mod magic_const;
 /// least squares problem abstractions and levmar compatibility
 mod problem;
 
+pub use dogleg::report::TerminationFailure;
+pub use dogleg::report::TerminationReason;
 pub use dogleg::Dogleg;
 pub use problem::LeastSquaresProblem;
 

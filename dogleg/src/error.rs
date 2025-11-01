@@ -4,7 +4,7 @@ use crate::dogleg::report::TerminationFailure;
 #[derive(thiserror::Error)]
 #[error("foo")]
 pub struct Error<P> {
-    pub objective_function: P, // pub termination_error:
+    pub problem: P, // pub termination_error:
     pub termination: TerminationFailure,
 }
 

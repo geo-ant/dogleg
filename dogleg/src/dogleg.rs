@@ -1,6 +1,10 @@
+use crate::problem;
+use crate::Error;
 use crate::LeastSquaresProblem;
 use crate::MagicConst;
+use crate::TerminationFailure;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
+use num_traits::ops::overflowing::OverflowingAdd;
 use num_traits::Float;
 use std::num::NonZero;
 
@@ -13,6 +17,20 @@ pub use common::DoglegStep;
 pub use common::DoglegStepSolver;
 pub use report::MinimizationReport;
 pub use report::TerminationReason;
+
+macro_rules! tryx {
+    ($ident:ident . $function:ident ($($tokens:tt)*), on_fail = $failure:path) => {
+        match $ident . $function ($($tokens)*) {
+            Some(val) => val,
+            None => {
+                return Err($crate::Error {
+                    problem: $ident,
+                    termination : $failure
+                });
+            }
+        }
+    };
+}
 
 /// Powell's Dogleg minimization algorithm. The behaviour of the algorithm
 /// can be controlled by setting various parameters.
@@ -190,11 +208,54 @@ where
 }
 
 impl<T> Dogleg<T> {
-    pub fn minimize_generic<S, P>(solver: S, problem: P) -> (P, MinimizationReport<T>)
+    pub fn minimize_generic<S, P>(
+        &self,
+        solver: S,
+        problem: P,
+    ) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
         S: DoglegStepSolver<T, P::Jacobian, P::Residuals, P::Parameters>,
         P: LeastSquaresProblem<T>,
+        u64: TryFrom<<P::Parameters as Colx<T>>::Dim, Error: std::fmt::Debug>,
     {
+        // @todo(geo-ant) maybe refactor this at a later date, but for the
+        // intended use of this library, the number of parameters being near
+        // the u64 limit is completely unreasonable, hence panicking here is
+        // completely fine. If you have that many parameters, you probably
+        // shouldn't be using this algorithm anyway...
+        let (n_plus_one, overflow) = u64::try_from(problem.params().dim())
+            .expect("too many parameters for dogleg solver")
+            .overflowing_add(1);
+        let (max_func_evals, overflow2) = self.patience.overflowing_mul(n_plus_one);
+        if overflow || overflow2 {
+            panic!("too many parameters for dogleg solver");
+        }
+
+        let mut nfunc_evals: u64 = 0;
+        let mut iter = 0;
+        // outer loop
+        loop {
+            if nfunc_evals >= max_func_evals {
+                return Err(Error {
+                    problem,
+                    termination: TerminationFailure::LostPatience,
+                });
+            }
+
+            let residuals = tryx!(
+                problem.residuals(),
+                on_fail = TerminationFailure::ResidualEval
+            );
+
+            nfunc_evals += 1;
+            let jacobian = tryx!(
+                problem.jacobian(),
+                on_fail = TerminationFailure::ResidualEval
+            );
+
+            todo!()
+        }
+
         todo!()
     }
 }

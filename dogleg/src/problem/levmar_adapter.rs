@@ -1,8 +1,8 @@
 use crate::levenberg_marquardt::LeastSquaresProblem as LevMarLeastSquaresProblem;
 use crate::problem::LeastSquaresProblem;
 use nalgebra::{
-    allocator::Allocator, ComplexField, DefaultAllocator, Dim, IsContiguous, Matrix, RawStorageMut,
-    RealField, Storage, Vector,
+    allocator::Allocator, ComplexField, DefaultAllocator, Dim, IsContiguous, Matrix, OVector,
+    RawStorageMut, RealField, Storage, Vector,
 };
 use num_traits::Float;
 use std::marker::PhantomData;

@@ -12,4 +12,9 @@ thiserror = "2.0"
 # TODO consider if different version of this crate should be supported
 # via feature flags. However, this complicates nalgebra (and nalgebra-lapack)
 # dependencies.
-levenberg-marquardt = {version = "0.15", optional = false}
+levenberg-marquardt = {version = "0.15", optional = true}
+
+
+[features]
+# TODO remove this
+default = ["levenberg-marquardt"]

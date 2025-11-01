@@ -11,7 +11,7 @@ pub trait LeastSquaresProblem<T> {
     /// column vector of size N for the parameters.
     /// We require the parameter vector to be an owned vector which is slightly
     /// more restrictive than the `levenberg-marquardt` crate
-    type Parameters: OwnedColx<T>;
+    type Parameters: Colx<T>;
     /// matrix of size M x N for the Jacobian of the residuals
     type Jacobian: Matx<T>;
 

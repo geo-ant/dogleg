@@ -9,6 +9,7 @@ use nalgebra::iter;
 use num_traits::ops::overflowing::OverflowingAdd;
 use num_traits::Float;
 use std::num::NonZero;
+use std::process::Output;
 
 mod common;
 mod hack;
@@ -235,6 +236,9 @@ where
     }
 }
 
+/// type of J^T r
+type GradType<T, J, R> = <J as TrMatVecMulx<T, R>>::Output;
+
 impl<T> Dogleg<T> {
     pub fn minimize_generic<S, P>(
         &self,
@@ -249,15 +253,17 @@ impl<T> Dogleg<T> {
         S: DoglegStepSolver<
             T,
             Jacobian = P::Jacobian,
-            Gradient = <P::Jacobian as TrMatVecMulx<T, P::Residuals>>::Output,
+            Gradient = GradType<T, P::Jacobian, P::Residuals>,
             Residuals = P::Residuals,
         >,
         // for max func eval calculation
         u64: TryFrom<<P::Parameters as Colx<T>>::Dim, Error: std::fmt::Debug>,
-        // for calculating gradient
-        // @note(geo-ant) for now, we require the output of `J^T r` to be an
-        // owned vector with the same type as P::Owned.
-        P::Jacobian: TrMatVecMulx<T, P::Residuals, Output = P::Parameters>,
+        // for calculating the gradient g = J^T r
+        // @note(geo-ant) what this means is: (J^T * r).to_owned() has the
+        // same type as P::Parameters::Owned, which should not be a restriction in practice
+        // because the dimensions of J^T r and the parameters must be identical
+        P::Jacobian: TrMatVecMulx<T, P::Residuals>,
+        GradType<T, P::Jacobian, P::Residuals>: Colx<T, Owned = <P::Parameters as Colx<T>>::Owned>,
     {
         // @todo(geo-ant) maybe refactor this at a later date, but for the
         // intended use of this library, the number of parameters being near
@@ -320,6 +326,8 @@ impl<T> Dogleg<T> {
             if iter > 10 {
                 break;
             }
+
+            let params = problem.params().into_owned();
 
             //@note(geo-ant)
             // this check is also completely overblown, but can possibly help me spot bugs

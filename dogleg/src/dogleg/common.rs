@@ -2,6 +2,7 @@ use crate::Error;
 use dogleg_matx::{Addx, Colx, ComponentMulx, Dotx, Scalex};
 use num_traits::{ConstOne, Float};
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct DoglegStep<T, VN> {
     /// optimal next step `p` to take in this iteration
     pub p: VN,

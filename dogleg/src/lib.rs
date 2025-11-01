@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 
 /// solver implementations
-mod dogleg;
+pub mod dogleg;
 /// error types
 mod error;
 /// utility

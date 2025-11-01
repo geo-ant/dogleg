@@ -6,7 +6,8 @@ use num_traits::{ConstOne, Float};
 /// Dogleg solver using singular value decomposition internally, which is not
 /// the cheapest way to calculate the step, but it's available on both `faer`
 /// and lapack-free `nalgebra`.
-pub enum SvdDoglegSolver<T, MMN, VM, VN> {
+#[derive(Debug, Clone, PartialEq)]
+pub enum SvdStepSolver<T, MMN, VM, VN> {
     Init {
         // (scaled) Jacobian (matrix of size MxN)
         jacobian: MMN,
@@ -18,6 +19,7 @@ pub enum SvdDoglegSolver<T, MMN, VM, VN> {
     Cached(SvdSolverCache<T, MMN, VN>),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct SvdSolverCache<T, MMN, VN> {
     /// Jacobian of the problem, an MxN matrix
     jacobian: MMN,
@@ -33,7 +35,7 @@ pub struct SvdSolverCache<T, MMN, VN> {
     pb_norm: T,
 }
 
-impl<T, MMN, VN, VM> DoglegStepSolver<T, MMN, VM, VN> for SvdDoglegSolver<T, MMN, VM, VN>
+impl<T, MMN, VN, VM> DoglegStepSolver<T, MMN, VM, VN> for SvdStepSolver<T, MMN, VM, VN>
 where
     T: ConstOne + Float,
     MMN: Matx<T> + TransformedVecNorm<T, VN>,

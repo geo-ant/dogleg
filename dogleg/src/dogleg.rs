@@ -1,12 +1,18 @@
+use crate::LeastSquaresProblem;
+use crate::MagicConst;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use num_traits::Float;
 use std::num::NonZero;
 
-use crate::MagicConst;
-
 mod common;
 mod qr_impl;
+mod report;
 mod svd_impl;
+
+pub use common::DoglegStep;
+pub use common::DoglegStepSolver;
+pub use report::MinimizationReport;
+pub use report::TerminationReason;
 
 /// Powell's Dogleg minimization algorithm. The behaviour of the algorithm
 /// can be controlled by setting various parameters.
@@ -19,6 +25,7 @@ mod svd_impl;
 /// # References
 ///
 /// Nocedal & Wright: Numerical Optimization, 2nd ed, p 73-76, 95-97, 245-247
+#[derive(Debug, PartialEq, Clone)]
 pub struct Dogleg<T> {
     /// Relative error criterion on the residual values.
     /// See section 2.3 in the MINPACK user guide: https://cds.cern.ch/record/126569/files/CM-P00068642.pdf
@@ -46,8 +53,6 @@ pub struct Dogleg<T> {
     /// criterion) based on the problem
     patience: usize,
 }
-
-pub struct MinimizationReport;
 
 impl<T> Dogleg<T>
 where
@@ -184,53 +189,22 @@ where
     }
 }
 
-// impl<T> Dogleg<T>
-// where
-//     T: RealField + Scalar + Copy + Float + ConstOne,
-// {
-//     pub fn minimize<M, N, P>(&self, problem: P) -> (P, MinimizationReport)
-//     where
-//         P: LevMarLeastSquaresProblem<T, M, N>,
-//         <M as DimMin<N>>::Output: DimSub<Const<1>>,
-//         M: Dim + DimMin<N>,
-//         N: Dim,
-//         DefaultAllocator: Allocator<M, N>,
-//         DefaultAllocator: Allocator<N, M>,
-//         DefaultAllocator: Allocator<M>,
-//         DefaultAllocator: Allocator<N>,
-//         DefaultAllocator: Allocator<M, <M as DimMin<N>>::Output>,
-//         DefaultAllocator: Allocator<<M as DimMin<N>>::Output>,
-//         DefaultAllocator: Allocator<<M as DimMin<N>>::Output, N>,
-//         DefaultAllocator: Allocator<<<M as DimMin<N>>::Output as DimSub<Const<1>>>::Output>,
-//     {
-//         let jac = problem.jacobian().unwrap();
-//         let res = problem.residuals().unwrap();
-//         // @todo(geo) super stupid, but just so I can use it
-//         // @todo(geo) REMOVE HACK FIX
-//         let grad = jac.clone_owned().transpose() * &res;
-
-//         let solver = SvdDoglegSolver::init(jac, res, grad).unwrap();
-//         let (_step, _solver_new) = solver.calc_step(T::one()).unwrap();
-
-//         // nonsense code, just to see if my abstractions work with the levmar
-//         // stuff.
-//         minimize_impl(
-//             problem.jacobian().unwrap(),
-//             problem.residuals().unwrap(),
-//             self.delta_initial,
-//         );
-//         todo!()
-//     }
-// }
-
-// fn minimize_with_solver<T,MMN,VM,VN,DS>(
+impl<T> Dogleg<T> {
+    pub fn minimize_generic<S, P>(solver: S, problem: P) -> (P, MinimizationReport<T>)
+    where
+        S: DoglegStepSolver<T, P::Jacobian, P::Residuals, P::Parameters>,
+        P: LeastSquaresProblem<T>,
+    {
+        todo!()
+    }
+}
 
 //@todo(geo) change, this is just to see if my abstractions work
 fn minimize_impl<T, MMN, VM>(
     jacobian: MMN,
     residuals: VM,
     delta_initial: T,
-) -> Option<MinimizationReport>
+) -> Option<MinimizationReport<T>>
 where
     T: Float + MagicConst,
     MMN: Matx<T>,

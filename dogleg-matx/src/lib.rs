@@ -1,10 +1,15 @@
 //! Linear algebra abstraction that are specific to the `dogleg` crate.
+//! This crate has no affiliation with another crate named `matx` crate
+//! on crates.io.
 //!
-//! This crate has no affiliation with the `matx` crate. Also no affiliation
-//! to famous products, companies, or people containing the letter `X`.
+//! You are free to implement the abstractions for a different matrix backend.
+//! If you do, consider submitting a PR to this repository, so that
+//! everyone can profit from this and use this crate with your
+//! favorite matrix backend.
 
 mod faer_impl;
 mod nalgebra_impl;
+
 mod utility;
 
 /// indicates that a matrix or vector type owns its storage

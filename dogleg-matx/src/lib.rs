@@ -24,71 +24,6 @@ pub trait Matx<T> {
     fn clone_owned(&self) -> Self::Owned;
 }
 
-/// calculate the column norms of a matrix and put them into a vector
-/// (indexed the same as the column, so element i of the vector will have
-/// norm of column i).
-pub trait ColEnormsx<T>: Matx<T> {
-    type Norms: OwnedColx<T>;
-    /// the calculated column norms placed into avector
-    fn column_enorms(&self) -> Option<Self::Norms>;
-}
-
-/// used to indicate whether to invert the diagonal matrix for
-/// multiplication.
-pub enum Invert {
-    Yes,
-    No,
-}
-
-/// trait for right-multiplying a diagonal matrix `D` to a matrix
-/// `A` to calculate `A D` or `A D^-1`.
-pub trait DiagRightMulx<T, V>: Sized
-where
-    V: Colx<T>,
-{
-    /// returns the result `A D` or `A D^-1`, depending on the value
-    /// of `invert`. `D` is given by the vector
-    /// of its diagonal elements or `None`, if the dimensions are wrong
-    fn diag_right_mul(self, diagonal: &V, invert: Invert) -> Option<Self>;
-}
-
-/// trait for left-multiplying a diagonal matrix `D` to a vector
-/// `v` to calculate `D v` or `(D^-1) v`.
-pub trait DiagLeftMulx<T, V>: Sized {
-    /// returns the result `D v` or `(D^-1) v`, depending on the value
-    /// of `invert`. `D` is given by the vector
-    /// of its diagonal elements or `None`, if the dimensions are wrong
-    /// or if the inversion could not be carried out.
-    fn diag_left_mul(self, diagonal: &V, invert: Invert) -> Option<Self>;
-}
-
-/// component wise multiplication. Doesn't need to be implemented
-/// manually since it is blanket implemented through the DiagLeftMultiply
-/// trait, which will be implemented for vectors anyways. So this is
-/// just an alias to make the code more readable.
-pub trait ComponentMulx<T, V>: Sized {
-    /// multiply `self` and V component wise. Return `None` on dimension
-    /// mismatch.
-    fn component_mul(self, v: &V) -> Option<Self>;
-    /// divide self and V component wise
-    fn component_div(self, v: &V) -> Option<Self>;
-}
-
-/// Blanket impl
-impl<T, V1, V2> ComponentMulx<T, V2> for V1
-where
-    V1: Sized + DiagLeftMulx<T, V2>,
-{
-    #[inline]
-    fn component_mul(self, v: &V2) -> Option<Self> {
-        self.diag_left_mul(v, Invert::No)
-    }
-    #[inline]
-    fn component_div(self, v: &V2) -> Option<Self> {
-        self.diag_left_mul(v, Invert::Yes)
-    }
-}
-
 /// A matrix that owns its own storage
 pub trait OwnedMatx<T>: Matx<T> {}
 impl<T, M> OwnedMatx<T> for M where M: Matx<T, Owned = Self> {}
@@ -183,4 +118,69 @@ pub trait Svdx<T, V> {
     /// Solve ||A x - v||^2 -> min for x. This solves the system
     /// A x = v in a least squares sense. Return `None` on error.
     fn solve_lsqr(&self, v: &V) -> Option<Self::Output>;
+}
+
+/// calculate the column norms of a matrix and put them into a vector
+/// (indexed the same as the column, so element i of the vector will have
+/// norm of column i).
+pub trait ColEnormsx<T>: Matx<T> {
+    type Norms: OwnedColx<T>;
+    /// the calculated column norms placed into avector
+    fn column_enorms(&self) -> Option<Self::Norms>;
+}
+
+/// used to indicate whether to invert the diagonal matrix for
+/// multiplication.
+pub enum Invert {
+    Yes,
+    No,
+}
+
+/// trait for right-multiplying a diagonal matrix `D` to a matrix
+/// `A` to calculate `A D` or `A D^-1`.
+pub trait DiagRightMulx<T, V>: Sized
+where
+    V: Colx<T>,
+{
+    /// returns the result `A D` or `A D^-1`, depending on the value
+    /// of `invert`. `D` is given by the vector
+    /// of its diagonal elements or `None`, if the dimensions are wrong
+    fn diag_right_mul(self, diagonal: &V, invert: Invert) -> Option<Self>;
+}
+
+/// trait for left-multiplying a diagonal matrix `D` to a vector
+/// `v` to calculate `D v` or `(D^-1) v`.
+pub trait DiagLeftMulx<T, V>: Sized {
+    /// returns the result `D v` or `(D^-1) v`, depending on the value
+    /// of `invert`. `D` is given by the vector
+    /// of its diagonal elements or `None`, if the dimensions are wrong
+    /// or if the inversion could not be carried out.
+    fn diag_left_mul(self, diagonal: &V, invert: Invert) -> Option<Self>;
+}
+
+/// component wise multiplication. Doesn't need to be implemented
+/// manually since it is blanket implemented through the DiagLeftMultiply
+/// trait, which will be implemented for vectors anyways. So this is
+/// just an alias to make the code more readable.
+pub trait ComponentMulx<T, V>: Sized {
+    /// multiply `self` and V component wise. Return `None` on dimension
+    /// mismatch.
+    fn component_mul(self, v: &V) -> Option<Self>;
+    /// divide self and V component wise
+    fn component_div(self, v: &V) -> Option<Self>;
+}
+
+/// Blanket impl
+impl<T, V1, V2> ComponentMulx<T, V2> for V1
+where
+    V1: Sized + DiagLeftMulx<T, V2>,
+{
+    #[inline]
+    fn component_mul(self, v: &V2) -> Option<Self> {
+        self.diag_left_mul(v, Invert::No)
+    }
+    #[inline]
+    fn component_div(self, v: &V2) -> Option<Self> {
+        self.diag_left_mul(v, Invert::Yes)
+    }
 }

@@ -60,19 +60,13 @@ pub trait Scalex<T> {
 }
 
 /// add / subtract from this vector
-pub trait Addx<T, V = Self>: Sized
-where
-    V: Colx<T>,
-{
+pub trait Addx<T, V = Self>: Sized {
     /// calculate self + factor*y. Return `None` on dimension mismatch.
     fn scaled_add(self, factor: T, y: &V) -> Option<Self>;
 }
 
 /// scalar (dot) product of two column vectors
-pub trait Dotx<T, V = Self>: Colx<T>
-where
-    V: Colx<T>,
-{
+pub trait Dotx<T, V = Self> {
     /// calculate the scalar (dot) product <self,v>. Returns `None` if there's
     /// a dimension mismatch
     fn dot(&self, v: &V) -> Option<T>;
@@ -80,10 +74,7 @@ where
 
 /// For a matrix `A` that implements this, we can calculate the matrix-vector
 /// product `A^T v` with a suitably sized vector.
-pub trait TrMatVecMulx<T, V>
-where
-    V: Colx<T>,
-{
+pub trait TrMatVecMulx<T, V> {
     type Output: Colx<T>;
     /// calculate `A^T v`. Returns `None` if there is a
     /// dimensions mismatch.
@@ -96,10 +87,7 @@ where
 /// it can also be implemented for matrix decompositions. For QR decomposition
 /// of A we have e.g.: ||A v|| = ||Q R v|| = ||R v||, because of Q^T Q = Id.
 /// `R v` is cheaper to compute then `A v` because `R` is upper triangular.
-pub trait TransformedVecNorm<T, V>
-where
-    V: Colx<T>,
-{
+pub trait TransformedVecNorm<T, V> {
     /// calculate the norm ||A v|| for a suitably sized vector v
     fn mulv_enorm(&self, v: &V) -> Option<T>;
 }
@@ -123,7 +111,7 @@ pub trait Svdx<T, V> {
 /// calculate the column norms of a matrix and put them into a vector
 /// (indexed the same as the column, so element i of the vector will have
 /// norm of column i).
-pub trait ColEnormsx<T>: Matx<T> {
+pub trait ColEnormsx<T> {
     type Norms: OwnedColx<T>;
     /// the calculated column norms placed into avector
     fn column_enorms(&self) -> Option<Self::Norms>;
@@ -138,10 +126,7 @@ pub enum Invert {
 
 /// trait for right-multiplying a diagonal matrix `D` to a matrix
 /// `A` to calculate `A D` or `A D^-1`.
-pub trait DiagRightMulx<T, V>: Sized
-where
-    V: Colx<T>,
-{
+pub trait DiagRightMulx<T, V>: Sized {
     /// returns the result `A D` or `A D^-1`, depending on the value
     /// of `invert`. `D` is given by the vector
     /// of its diagonal elements or `None`, if the dimensions are wrong

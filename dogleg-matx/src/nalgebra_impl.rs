@@ -1,6 +1,6 @@
 use crate::{
-    Addx, Colx, DiagRightMulx, Dotx, Invert, Matx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx,
-    TransformedVecNorm,
+    Addx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Invert, Matx, Ownedx, Scalex, Svdx, ToSvdx,
+    TrMatVecMulx, TransformedVecNorm,
 };
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{AreMultipliable, DimEq, ShapeConstraint};
@@ -129,8 +129,6 @@ where
     T: Scalar + RealField + Float + Zero + ClosedAddAssign + ClosedMulAssign,
     R1: Dim,
     R2: Dim,
-    DefaultAllocator: Allocator<R1>,
-    DefaultAllocator: Allocator<R2>,
     S1: Storage<T, R1>,
     S2: Storage<T, R2>,
     ShapeConstraint: DimEq<R1, R2>,
@@ -151,8 +149,6 @@ where
     T: Scalar + RealField + Float + ClosedAddAssign + Copy + ConstOne,
     R1: Dim,
     R2: Dim,
-    DefaultAllocator: Allocator<R1>,
-    DefaultAllocator: Allocator<R2>,
     S1: Storage<T, R1> + RawStorageMut<T, R1>,
     S2: Storage<T, R2>,
     ShapeConstraint: DimEq<R1, R2>,
@@ -175,8 +171,6 @@ where
     R: Dim,
     C: Dim,
     D: Dim,
-    DefaultAllocator: Allocator<R, C>,
-    DefaultAllocator: Allocator<D>,
     S: Storage<T, R, C>,
     SV: Storage<T, D>,
     ShapeConstraint: AreMultipliable<R, C, D, U1>,
@@ -253,7 +247,6 @@ where
     CM: Dim,
     RV: Dim,
     SV: Storage<T, RV>,
-    DefaultAllocator: nalgebra::allocator::Allocator<RV>,
     SM: Storage<T, RM, CM> + RawStorageMut<T, RM, CM>,
     ShapeConstraint: AreMultipliable<RM, CM, RV, U1>,
 {
@@ -274,6 +267,36 @@ where
                     Invert::No => diag,
                 };
                 col *= diag;
+            });
+
+        Some(self)
+    }
+}
+
+impl<T, R2, S2, R1, S1> DiagLeftMulx<T, Vector<T, R1, S1>> for Vector<T, R2, S2>
+where
+    T: RealField + Scalar + Float + Copy,
+    R2: Dim,
+    R1: Dim,
+    S1: Storage<T, R1>,
+    S2: Storage<T, R2> + RawStorageMut<T, R2>,
+    ShapeConstraint: DimEq<R1, R2>,
+{
+    fn diag_left_mul(mut self, diagonal: &Vector<T, R1, S1>, invert: Invert) -> Option<Self> {
+        let (r2, _) = self.shape_generic();
+        let (r1, _) = diagonal.shape_generic();
+        if r1.value() != r2.value() {
+            return None;
+        }
+
+        self.iter_mut()
+            .zip(diagonal.iter().copied())
+            .for_each(|(elem, diag)| {
+                let diag = match invert {
+                    Invert::Yes => Float::powi(diag, -1),
+                    Invert::No => diag,
+                };
+                *elem *= diag;
             });
 
         Some(self)

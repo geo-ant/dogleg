@@ -112,9 +112,9 @@ pub trait Svdx<T, V> {
 /// (indexed the same as the column, so element i of the vector will have
 /// norm of column i).
 pub trait ColEnormsx<T> {
-    type Norms: OwnedColx<T>;
+    type Output: OwnedColx<T>;
     /// the calculated column norms placed into avector
-    fn column_enorms(&self) -> Option<Self::Norms>;
+    fn column_enorms(&self) -> Self::Output;
 }
 
 /// used to indicate whether to invert the diagonal matrix for

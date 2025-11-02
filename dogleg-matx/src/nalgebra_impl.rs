@@ -1,6 +1,6 @@
 use crate::{
-    Addx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Invert, Matx, Ownedx, Scalex, Svdx, ToSvdx,
-    TrMatVecMulx, TransformedVecNorm,
+    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Invert, Matx, Ownedx, Scalex, Svdx,
+    ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{AreMultipliable, DimEq, ShapeConstraint};
@@ -226,8 +226,8 @@ where
     DefaultAllocator: Allocator<R, <R as DimMin<C>>::Output>,
     DefaultAllocator: Allocator<<R as DimMin<C>>::Output>,
     DefaultAllocator: Allocator<<R as DimMin<C>>::Output, C>,
-    <R as DimMin<C>>::Output: DimSub<Const<1>>,
     DefaultAllocator: Allocator<<<R as DimMin<C>>::Output as DimSub<Const<1>>>::Output>,
+    <R as DimMin<C>>::Output: DimSub<Const<1>>,
     SV: Storage<T, R>,
 {
     type Output = OVector<T, C>;
@@ -237,6 +237,27 @@ where
         // we could also be smarter and use a fraction of the largest eigenvalue,
         // like we do in nalgebra-lapack (for the QR decomposition).
         self.solve(v, Float::sqrt(Float::epsilon())).ok()
+    }
+}
+
+impl<T, R, C, S> ColEnormsx<T> for Matrix<T, R, C, S>
+where
+    T: Scalar + RealField + Float + Copy,
+    C: Dim,
+    R: Dim,
+    DefaultAllocator: nalgebra::allocator::Allocator<C>,
+    S: Storage<T, R, C>,
+{
+    type Output = OVector<T, C>;
+
+    fn column_enorms(&self) -> Self::Output {
+        let (_, c) = self.shape_generic();
+        OVector::<T, C>::from_iterator_generic(
+            c,
+            U1,
+            self.column_iter()
+                .map(|col| crate::utility::enorm(col.iter().copied())),
+        )
     }
 }
 

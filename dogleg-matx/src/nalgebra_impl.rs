@@ -1,13 +1,14 @@
 use crate::{
-    Addx, Colx, Dotx, Matx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    Addx, Colx, DiagRightMulx, Dotx, Invert, Matx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx,
+    TransformedVecNorm,
 };
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{AreMultipliable, DimEq, ShapeConstraint};
+use nalgebra::Scalar;
 use nalgebra::{
-    ClosedAddAssign, ClosedMulAssign, Const, DefaultAllocator, DimMin, DimSub, Matrix, OMatrix,
-    OVector, Storage, UninitVector, Vector, SVD, U1,
+    ClosedAddAssign, ClosedMulAssign, Const, DefaultAllocator, Dim, DimMin, DimSub, Matrix,
+    OMatrix, OVector, Storage, UninitVector, Vector, SVD, U1,
 };
-use nalgebra::{Dim, Scalar};
 use nalgebra::{RawStorageMut, RealField};
 use num_traits::{ConstOne, Float, One, Zero};
 
@@ -126,8 +127,8 @@ where
 impl<T, R1, R2, S1, S2> Dotx<T, Vector<T, R1, S1>> for Vector<T, R2, S2>
 where
     T: Scalar + RealField + Float + Zero + ClosedAddAssign + ClosedMulAssign,
-    R1: nalgebra::Dim,
-    R2: nalgebra::Dim,
+    R1: Dim,
+    R2: Dim,
     DefaultAllocator: Allocator<R1>,
     DefaultAllocator: Allocator<R2>,
     S1: Storage<T, R1>,
@@ -148,8 +149,8 @@ where
 impl<T, R1, R2, S1, S2> Addx<T, Vector<T, R2, S2>> for Vector<T, R1, S1>
 where
     T: Scalar + RealField + Float + ClosedAddAssign + Copy + ConstOne,
-    R1: nalgebra::Dim,
-    R2: nalgebra::Dim,
+    R1: Dim,
+    R2: Dim,
     DefaultAllocator: Allocator<R1>,
     DefaultAllocator: Allocator<R2>,
     S1: Storage<T, R1> + RawStorageMut<T, R1>,
@@ -233,7 +234,7 @@ where
     DefaultAllocator: Allocator<<R as DimMin<C>>::Output, C>,
     <R as DimMin<C>>::Output: DimSub<Const<1>>,
     DefaultAllocator: Allocator<<<R as DimMin<C>>::Output as DimSub<Const<1>>>::Output>,
-    SV: nalgebra::Storage<T, R>,
+    SV: Storage<T, R>,
 {
     type Output = OVector<T, C>;
 
@@ -242,5 +243,39 @@ where
         // we could also be smarter and use a fraction of the largest eigenvalue,
         // like we do in nalgebra-lapack (for the QR decomposition).
         self.solve(v, Float::sqrt(Float::epsilon())).ok()
+    }
+}
+
+impl<T, RM, CM, SM, RV, SV> DiagRightMulx<T, Vector<T, RV, SV>> for Matrix<T, RM, CM, SM>
+where
+    T: RealField + Scalar + Float + Copy,
+    RM: Dim,
+    CM: Dim,
+    RV: Dim,
+    SV: Storage<T, RV>,
+    DefaultAllocator: nalgebra::allocator::Allocator<RV>,
+    SM: Storage<T, RM, CM> + RawStorageMut<T, RM, CM>,
+    ShapeConstraint: AreMultipliable<RM, CM, RV, U1>,
+{
+    fn diag_right_mul(mut self, diagonal: &Vector<T, RV, SV>, invert: Invert) -> Option<Self> {
+        let (_, c) = self.shape_generic();
+        let (d, _) = diagonal.shape_generic();
+        if c.value() != d.value() {
+            return None;
+        }
+
+        // right multiplying matrix `self` with a diagonal matrix means scaling
+        // the columns.
+        self.column_iter_mut()
+            .zip(diagonal.iter().copied())
+            .for_each(|(mut col, diag)| {
+                let diag = match invert {
+                    Invert::Yes => Float::powi(diag, -1),
+                    Invert::No => diag,
+                };
+                col *= diag;
+            });
+
+        Some(self)
     }
 }

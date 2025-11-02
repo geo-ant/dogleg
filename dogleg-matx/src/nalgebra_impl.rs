@@ -123,22 +123,25 @@ where
     }
 }
 
-impl<T, R, S1, S2> Dotx<T, Vector<T, R, S1>> for Vector<T, R, S2>
+impl<T, R1, R2, S1, S2> Dotx<T, Vector<T, R1, S1>> for Vector<T, R2, S2>
 where
     T: Scalar + RealField + Float + Zero + ClosedAddAssign + ClosedMulAssign,
-    R: nalgebra::Dim,
-    DefaultAllocator: Allocator<R>,
-    S1: Storage<T, R>,
-    S2: Storage<T, R>,
+    R1: nalgebra::Dim,
+    R2: nalgebra::Dim,
+    DefaultAllocator: Allocator<R1>,
+    DefaultAllocator: Allocator<R2>,
+    S1: Storage<T, R1>,
+    S2: Storage<T, R2>,
+    ShapeConstraint: DimEq<R1, R2>,
 {
-    fn dot(&self, v: &Vector<T, R, S1>) -> Option<T> {
+    fn dot(&self, v: &Vector<T, R1, S1>) -> Option<T> {
         let (r1, _) = self.shape_generic();
         let (r2, _) = v.shape_generic();
-        if r1 != r2 {
+        if r1.value() != r2.value() {
             return None;
         }
 
-        Some(Vector::<_, _, _>::dot(self, v))
+        Some(Vector::<_, _, _>::dot(v, self))
     }
 }
 

@@ -2,7 +2,7 @@ use crate::{
     Addx, Colx, Dotx, Matx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use nalgebra::allocator::Allocator;
-use nalgebra::constraint::{AreMultipliable, ShapeConstraint};
+use nalgebra::constraint::{AreMultipliable, DimEq, ShapeConstraint};
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, Const, DefaultAllocator, DimMin, DimSub, Matrix, OMatrix,
     OVector, Storage, UninitVector, Vector, SVD, U1,
@@ -90,26 +90,28 @@ where
     }
 }
 
-impl<T, R, C, S, SV> TrMatVecMulx<T, Vector<T, R, SV>> for Matrix<T, R, C, S>
+impl<T, R, C, S, D, SV> TrMatVecMulx<T, Vector<T, D, SV>> for Matrix<T, R, C, S>
 where
     T: Scalar + RealField + Float + ClosedAddAssign + ClosedMulAssign + Zero + One,
     R: Dim,
     C: Dim,
+    D: Dim,
     DefaultAllocator: Allocator<R, C>,
     DefaultAllocator: Allocator<R>,
     DefaultAllocator: Allocator<C>,
+    DefaultAllocator: Allocator<D>,
     S: Storage<T, R, C>,
-    SV: Storage<T, R>,
-    ShapeConstraint: AreMultipliable<C, R, R, U1>,
+    SV: Storage<T, D>,
+    ShapeConstraint: AreMultipliable<C, R, D, U1>,
 {
     type Output = OVector<T, C>;
 
-    fn tr_mulv(&self, v: &Vector<T, R, SV>) -> Option<Self::Output> {
+    fn tr_mulv(&self, v: &Vector<T, D, SV>) -> Option<Self::Output> {
         let (r, c) = self.shape_generic();
         let (d, _) = v.shape_generic();
         // we always have to add this check if one of the dimensions is
         // dynamically sized.
-        if r != d {
+        if r.value() != d.value() {
             return None;
         }
 
@@ -140,19 +142,21 @@ where
     }
 }
 
-impl<T, R, S1, S2> Addx<T, Vector<T, R, S2>> for Vector<T, R, S1>
+impl<T, R1, R2, S1, S2> Addx<T, Vector<T, R2, S2>> for Vector<T, R1, S1>
 where
     T: Scalar + RealField + Float + ClosedAddAssign + Copy + ConstOne,
-    R: nalgebra::Dim,
-    DefaultAllocator: Allocator<R>,
-    S1: Storage<T, R>,
-    S1: RawStorageMut<T, R>,
-    S2: Storage<T, R>,
+    R1: nalgebra::Dim,
+    R2: nalgebra::Dim,
+    DefaultAllocator: Allocator<R1>,
+    DefaultAllocator: Allocator<R2>,
+    S1: Storage<T, R1> + RawStorageMut<T, R1>,
+    S2: Storage<T, R2>,
+    ShapeConstraint: DimEq<R1, R2>,
 {
-    fn scaled_add(mut self, factor: T, y: &Vector<T, R, S2>) -> Option<Self> {
+    fn scaled_add(mut self, factor: T, y: &Vector<T, R2, S2>) -> Option<Self> {
         let (r1, _) = self.shape_generic();
         let (r2, _) = y.shape_generic();
-        if r1 != r2 {
+        if r1.value() != r2.value() {
             return None;
         }
 
@@ -161,22 +165,23 @@ where
     }
 }
 
-impl<T, R, C, S, SV> TransformedVecNorm<T, Vector<T, C, SV>> for Matrix<T, R, C, S>
+impl<T, R, C, D, S, SV> TransformedVecNorm<T, Vector<T, D, SV>> for Matrix<T, R, C, S>
 where
     T: Scalar + RealField + Float + ClosedAddAssign + ClosedMulAssign + Zero + One,
     R: Dim,
     C: Dim,
+    D: Dim,
     DefaultAllocator: Allocator<R, C>,
-    DefaultAllocator: Allocator<C>,
+    DefaultAllocator: Allocator<D>,
     S: Storage<T, R, C>,
-    SV: Storage<T, C>,
-    ShapeConstraint: AreMultipliable<R, C, C, U1>,
+    SV: Storage<T, D>,
+    ShapeConstraint: AreMultipliable<R, C, D, U1>,
     DefaultAllocator: nalgebra::allocator::Allocator<R>,
 {
-    fn mulv_enorm(&self, v: &Vector<T, C, SV>) -> Option<T> {
+    fn mulv_enorm(&self, v: &Vector<T, D, SV>) -> Option<T> {
         let (_, c) = self.shape_generic();
         let (d, _) = v.shape_generic();
-        if c != d {
+        if c.value() != d.value() {
             return None;
         }
 

@@ -1,14 +1,21 @@
 use crate::{
-    Addx, Colx, Dotx, Matx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Invert, Matx, Ownedx, Scalex, Svdx,
+    ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use faer::col::AsColMut;
+use faer::diag::DiagRef;
+use faer::dyn_stack::{self, MemStack, StackReq};
 use faer::linalg::solvers::Svd;
-use faer::mat::AsMatRef;
+use faer::mat::{AsMatMut, AsMatRef};
+use faer::matrix_free::Precond;
 use faer::prelude::SolveLstsq;
+use faer::rand::Rng;
 use faer::{col::AsColRef, traits::RealField, Col, ColMut, ColRef, Mat, Scale};
 use faer::{Accum, MatMut, MatRef, Shape};
 use num_traits::{ConstOne, Float};
-use std::ops::AddAssign;
+use rayon::prelude::*;
+use std::mem::MaybeUninit;
+use std::ops::{AddAssign, MulAssign};
 
 /// marker trait to get around some conflicting impl trouble with nalgebra
 /// implementations.
@@ -369,5 +376,93 @@ where
     fn solve_lsqr(&self, v: &V) -> Option<Self::Output> {
         let x = self.solve_lstsq(v.as_col_ref());
         Some(x)
+    }
+}
+
+impl<T, R, C, M> ColEnormsx<T> for M
+where
+    T: RealField + Copy + Float + AddAssign,
+    M: AsMatRef<T = T, Rows = R, Cols = C> + FaerType,
+    C: Shape,
+    R: Shape,
+{
+    type Output = Col<T>;
+
+    fn column_enorms(&self) -> Self::Output {
+        let this = self.as_mat_ref();
+        Col::from_iter(this.col_iter().map(|col| col.enorm()))
+    }
+}
+
+impl<T, V, M, R, C> DiagRightMulx<T, V> for M
+where
+    M: FaerType + AsMatMut<T = T, Rows = R, Cols = C>,
+    R: Shape,
+    C: Shape,
+    V: AsColRef<T = T, Rows = C>,
+    T: RealField + MulAssign + Copy + Float,
+{
+    fn mul_diag_right(mut self, diagonal: &V, invert: Invert) -> Option<Self> {
+        let this = self.as_mat_mut();
+        let diagonal = diagonal.as_col_ref();
+        if this.ncols() != diagonal.nrows() {
+            return None;
+        }
+
+        //@todo(geo-ant) PERF there might be a way to apply a DiagRef to this.transpose()
+        // in place, but that doesn't have to be faster necessarily and I'm somehow
+        // too dumb to get that to compile, so I'm trying to do the next best thing
+        // here.
+        match faer::get_global_parallelism() {
+            faer::Par::Seq => {
+                this.col_iter_mut()
+                    .zip(diagonal.iter().copied())
+                    .for_each(|(mut col, diag)| {
+                        let diag = match invert {
+                            crate::Invert::Yes => diag.powi(-1),
+                            crate::Invert::No => diag,
+                        };
+                        col *= Scale(diag);
+                    });
+            }
+            faer::Par::Rayon(_) => {
+                this.par_col_iter_mut()
+                    .zip(diagonal.par_iter().copied())
+                    .for_each(|(mut col, diag)| {
+                        let diag = match invert {
+                            crate::Invert::Yes => diag.powi(-1),
+                            crate::Invert::No => diag,
+                        };
+                        col *= Scale(diag);
+                    });
+            }
+        }
+        Some(self)
+    }
+}
+
+impl<T, V, M> DiagLeftMulx<T, V> for M
+where
+    M: FaerType + AsMatMut<T = T, Rows = usize, Cols = usize>,
+    V: AsColRef<T = T, Rows = usize>,
+    T: RealField + MulAssign + Copy + Float,
+{
+    fn diag_mul_left(mut self, diagonal: &V, TODO THIS DOESN'T WORK HERE invert: Invert) -> Option<Self> {
+        use faer::matrix_free::Precond;
+        let this = self.as_mat_mut();
+        let diagonal = diagonal.as_col_ref();
+
+        if this.nrows() != diagonal.ncols() {
+            return None;
+        }
+
+        // yo dawg, I heard you like diagonals...
+        let diagonal = diagonal.as_diagonal();
+
+        let req = diagonal.apply_in_place_scratch(this.ncols(), faer::get_global_parallelism());
+        let mut buf = vec![MaybeUninit::uninit(); StackReq::from(req).unaligned_bytes_required()];
+        let mut stack = MemStack::new(&mut buf);
+        diagonal.apply_in_place(this, faer::get_global_parallelism(), &mut stack);
+        Some(self)
     }
 }

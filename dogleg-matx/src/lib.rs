@@ -130,7 +130,7 @@ pub trait DiagRightMulx<T, V>: Sized {
     /// returns the result `A D` or `A D^-1`, depending on the value
     /// of `invert`. `D` is given by the vector
     /// of its diagonal elements or `None`, if the dimensions are wrong
-    fn diag_right_mul(self, diagonal: &V, invert: Invert) -> Option<Self>;
+    fn mul_diag_right(self, diagonal: &V, invert: Invert) -> Option<Self>;
 }
 
 /// trait for left-multiplying a diagonal matrix `D` to a vector
@@ -140,7 +140,7 @@ pub trait DiagLeftMulx<T, V>: Sized {
     /// of `invert`. `D` is given by the vector
     /// of its diagonal elements or `None`, if the dimensions are wrong
     /// or if the inversion could not be carried out.
-    fn diag_left_mul(self, diagonal: &V, invert: Invert) -> Option<Self>;
+    fn diag_mul_left(self, diagonal: &V, invert: Invert) -> Option<Self>;
 }
 
 /// component wise multiplication. Doesn't need to be implemented
@@ -162,10 +162,10 @@ where
 {
     #[inline]
     fn component_mul(self, v: &V2) -> Option<Self> {
-        self.diag_left_mul(v, Invert::No)
+        self.diag_mul_left(v, Invert::No)
     }
     #[inline]
     fn component_div(self, v: &V2) -> Option<Self> {
-        self.diag_left_mul(v, Invert::Yes)
+        self.diag_mul_left(v, Invert::Yes)
     }
 }

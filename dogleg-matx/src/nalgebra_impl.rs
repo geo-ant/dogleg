@@ -271,7 +271,7 @@ where
     SM: Storage<T, RM, CM> + RawStorageMut<T, RM, CM>,
     ShapeConstraint: AreMultipliable<RM, CM, RV, U1>,
 {
-    fn diag_right_mul(mut self, diagonal: &Vector<T, RV, SV>, invert: Invert) -> Option<Self> {
+    fn mul_diag_right(mut self, diagonal: &Vector<T, RV, SV>, invert: Invert) -> Option<Self> {
         let (_, c) = self.shape_generic();
         let (d, _) = diagonal.shape_generic();
         if c.value() != d.value() {
@@ -303,7 +303,7 @@ where
     S2: Storage<T, R2> + RawStorageMut<T, R2>,
     ShapeConstraint: DimEq<R1, R2>,
 {
-    fn diag_left_mul(mut self, diagonal: &Vector<T, R1, S1>, invert: Invert) -> Option<Self> {
+    fn diag_mul_left(mut self, diagonal: &Vector<T, R1, S1>, invert: Invert) -> Option<Self> {
         let (r2, _) = self.shape_generic();
         let (r1, _) = diagonal.shape_generic();
         if r1.value() != r2.value() {

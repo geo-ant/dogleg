@@ -1,7 +1,9 @@
+use crate::dogleg::common::gtol_calc;
 use crate::Error;
 use crate::LeastSquaresProblem;
 use crate::MagicConst;
 use crate::TerminationFailure;
+use dogleg_matx::ColEnormsx;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use num_traits::Float;
 use std::num::NonZero;
@@ -234,9 +236,10 @@ where
 /// type of J^T r
 type GradType<T, J, R> = <J as TrMatVecMulx<T, R>>::Output;
 
+// use crate::dogleg::svd_impl::SvdStepSolver;
+// use crate::LevMarAdapter;
 // use nalgebra::constraint::AreMultipliable;
 // use nalgebra::constraint::ShapeConstraint;
-// use nalgebra::iter;
 // use nalgebra::ClosedAddAssign;
 // use nalgebra::Const;
 // use nalgebra::Dim;
@@ -245,8 +248,9 @@ type GradType<T, J, R> = <J as TrMatVecMulx<T, R>>::Output;
 // use nalgebra::RealField;
 // use nalgebra::Scalar;
 // use nalgebra::U1;
+// use num_traits::ConstOne;
 impl<T> Dogleg<T> {
-    //@todo(geo) this works with only nalgebra trait bounds
+    // // @todo(geo) this works with only nalgebra trait bounds
     // pub fn min_levmar<P, M, N>(self, p: P)
     // where
     //     P: levenberg_marquardt::LeastSquaresProblem<T, M, N>,
@@ -291,7 +295,7 @@ impl<T> Dogleg<T> {
         // @note(geo-ant) what this means is: (J^T * r).to_owned() has the
         // same type as P::Parameters::Owned, which should not be a restriction in practice
         // because the dimensions of J^T r and the parameters must be identical
-        P::Jacobian: TrMatVecMulx<T, P::Residuals>,
+        P::Jacobian: TrMatVecMulx<T, P::Residuals> + ColEnormsx<T>,
         GradType<T, P::Jacobian, P::Residuals>: Colx<T, Owned = <P::Parameters as Colx<T>>::Owned>,
     {
         // @todo(geo-ant) maybe refactor this at a later date, but for the
@@ -309,8 +313,8 @@ impl<T> Dogleg<T> {
             panic!("too many parameters for dogleg solver");
         }
 
+        // actual number of function evaluations
         let mut nfunc_evals: u64 = 0;
-        let mut iter = 0;
 
         // @todo(geo-ant)
         // the trust region radius. In the first iteration of the algorithm,
@@ -320,6 +324,9 @@ impl<T> Dogleg<T> {
         // this outside makes the loop diverge from the MINPACK implementation,
         // which I'm sticking to for now.
         let mut delta = T::zero();
+
+        // some special case handling for the first loop iteration
+        let mut is_first_iteration = true;
 
         // outer loop
         loop {
@@ -354,13 +361,18 @@ impl<T> Dogleg<T> {
                 on_none = TerminationFailure::JacobianEval
             );
 
-            if iter == 0 {
+            let jacobian_col_norms = jacobian.column_enorms();
+
+            // let gmax = gtol_calc(&jacobian_norms, gradient, residual_norm)
+
+            if is_first_iteration {
                 //@todo(geo) add scaling for parameters
                 let scaled_params = problem.params();
                 delta = scaled_params.enorm() * self.factor;
                 if delta.is_zero() {
                     delta = self.factor;
                 }
+                is_first_iteration = false;
             }
 
             let gradient = try_opt!(
@@ -374,16 +386,11 @@ impl<T> Dogleg<T> {
             let (step, solver) = step_solver.calc_step(delta).unwrap();
             step_solver = solver;
 
-            if iter > 10 {
-                break;
-            }
-
             let params = problem.params().into_owned();
 
-            //@note(geo-ant)
-            // this check is also completely overblown, but can possibly help me spot bugs
-            assert!(iter < u64::MAX - 1, "iteration limit reached");
-            iter += 1;
+            if !is_first_iteration {
+                break;
+            }
         }
 
         todo!()

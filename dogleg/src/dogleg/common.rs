@@ -1,5 +1,5 @@
 use crate::dogleg::report::TerminationFailure;
-use dogleg_matx::{Addx, Colx, ComponentMulx, Dotx, Matx, OwnedColx, Scalex};
+use dogleg_matx::{Addx, Colx, Dotx, Matx, MaxScaledDivx, OwnedColx, Scalex};
 use num_traits::{ConstOne, Float};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -96,17 +96,21 @@ pub trait DoglegStepSolver<T>: Sized {
 /// where j_i (vec) is the i-th column of the jacobian and r (vec) is the
 /// residual vector. g_i (scalar) is the i-th element of the gradient,
 /// since g = J^T r.
-pub fn gtol_calc<T, VN1, VN2>(jacobian_norms: VN1, gradient: VN2, residual_norm: T) -> T
+pub fn gtol_calc<T, VN1, VN2, D>(jacobian_norms: &VN1, gradient: &VN2, residual_norm: T) -> T
 where
-    VN1: Scalex<T> + Colx<T>,
-    VN2: ComponentMulx<T, VN1> + Colx<T>,
     T: Float,
+    D: std::fmt::Debug + PartialEq,
+    VN1: Colx<T, Dim = D>,
+    VN2: MaxScaledDivx<T, VN1> + Colx<T, Dim = D>,
 {
-    let normj_normr = jacobian_norms.scale(residual_norm);
+    assert_eq!(
+        jacobian_norms.dim(),
+        gradient.dim(),
+        "jacobian must have same number of columns as gradient"
+    );
     gradient
-        .component_div(&normj_normr)
-        .and_then(|v| v.max())
-        .unwrap_or(T::max_value())
+        .max_scaled_div(residual_norm, jacobian_norms)
+        .unwrap_or(T::infinity())
 }
 
 /// this calculates the dogleg step from the component vectors p_b, p_u,

@@ -1,16 +1,18 @@
 use crate::{
-    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Invert, Matx, Ownedx, Scalex, Svdx,
-    ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Invert, Matx, MaxScaledDivx, Ownedx,
+    Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{AreMultipliable, DimEq, ShapeConstraint};
-use nalgebra::Scalar;
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, Const, DefaultAllocator, Dim, DimMin, DimSub, Matrix,
     OMatrix, OVector, Storage, UninitVector, Vector, SVD, U1,
 };
+use nalgebra::{RawStorage, Scalar};
 use nalgebra::{RawStorageMut, RealField};
+use num_traits::float::TotalOrder;
 use num_traits::{ConstOne, Float, One, Zero};
+use std::ops::{Div, Mul};
 
 impl<T, C, R, S> Matx<T> for Matrix<T, R, C, S>
 where
@@ -97,10 +99,7 @@ where
     R: Dim,
     C: Dim,
     D: Dim,
-    DefaultAllocator: Allocator<R, C>,
-    DefaultAllocator: Allocator<R>,
     DefaultAllocator: Allocator<C>,
-    DefaultAllocator: Allocator<D>,
     S: Storage<T, R, C>,
     SV: Storage<T, D>,
     ShapeConstraint: AreMultipliable<C, R, D, U1>,
@@ -174,7 +173,7 @@ where
     S: Storage<T, R, C>,
     SV: Storage<T, D>,
     ShapeConstraint: AreMultipliable<R, C, D, U1>,
-    DefaultAllocator: nalgebra::allocator::Allocator<R>,
+    DefaultAllocator: Allocator<R>,
 {
     fn mulv_enorm(&self, v: &Vector<T, D, SV>) -> Option<T> {
         let (_, c) = self.shape_generic();
@@ -245,7 +244,7 @@ where
     T: Scalar + RealField + Float + Copy,
     C: Dim,
     R: Dim,
-    DefaultAllocator: nalgebra::allocator::Allocator<C>,
+    DefaultAllocator: Allocator<C>,
     S: Storage<T, R, C>,
 {
     type Output = OVector<T, C>;
@@ -321,5 +320,22 @@ where
             });
 
         Some(self)
+    }
+}
+
+impl<T, R1, R2, S1, S2> MaxScaledDivx<T, Vector<T, R2, S2>> for Vector<T, R1, S1>
+where
+    T: Scalar + Copy + Mul<Output = T> + Div<Output = T> + TotalOrder,
+    R1: Dim,
+    R2: Dim,
+    S1: Storage<T, R1> + RawStorage<T, R1>,
+    S2: Storage<T, R2>,
+{
+    fn max_scaled_div(&self, s: T, v: &Vector<T, R2, S2>) -> Option<T> {
+        self.iter()
+            .copied()
+            .zip(v.iter().copied())
+            .map(|(this_i, vi)| this_i / (s * vi))
+            .max_by(TotalOrder::total_cmp)
     }
 }

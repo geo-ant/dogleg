@@ -1,20 +1,15 @@
 use crate::{
-    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Invert, Matx, Ownedx, Scalex, Svdx,
-    ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Invert, Matx, MaxScaledDivx, Ownedx,
+    Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use faer::col::AsColMut;
-use faer::diag::DiagRef;
-use faer::dyn_stack::{self, MemStack, StackReq};
 use faer::linalg::solvers::Svd;
 use faer::mat::{AsMatMut, AsMatRef};
-use faer::matrix_free::Precond;
 use faer::prelude::SolveLstsq;
-use faer::rand::Rng;
 use faer::{col::AsColRef, traits::RealField, Col, ColMut, ColRef, Mat, Scale};
 use faer::{Accum, MatMut, MatRef, Shape};
 use num_traits::{ConstOne, Float};
 use rayon::prelude::*;
-use std::mem::MaybeUninit;
 use std::ops::{AddAssign, MulAssign};
 
 /// marker trait to get around some conflicting impl trouble with nalgebra
@@ -481,5 +476,21 @@ where
             }
         };
         Some(self)
+    }
+}
+
+impl<T, R, V1, V2> MaxScaledDivx<T, V2> for V1
+where
+    T: RealField + Copy,
+    R: Shape,
+    V1: FaerType + AsColRef<T = T, Rows = R>,
+    V2: FaerType + AsColRef<T = T, Rows = R>,
+{
+    fn max_scaled_div(&self, s: T, v: &V2) -> Option<T> {
+        let this = self.as_col_ref();
+        let v = v.as_col_ref();
+        faer::zip!(this, v)
+            .map(|faer::unzip!(this, rhs)| *this / (s * *rhs))
+            .max()
     }
 }

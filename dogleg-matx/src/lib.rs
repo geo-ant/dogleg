@@ -38,7 +38,7 @@ pub trait Colx<T> {
     type Owned: Ownedx;
     /// an unsigned integer type for the number of elements in the vector.
     /// Often e.g. usize.
-    type Dim;
+    type Dim: std::fmt::Debug + PartialEq;
     /// calculate the euclidean norm of the vector
     fn enorm(&self) -> T;
     /// clone the values of `self` and return an owned instance.
@@ -143,29 +143,27 @@ pub trait DiagLeftMulx<T, V>: Sized {
     fn diag_mul_left(self, diagonal: &V, invert: Invert) -> Option<Self>;
 }
 
-/// component wise multiplication. Doesn't need to be implemented
-/// manually since it is blanket implemented through the DiagLeftMultiply
-/// trait, which will be implemented for vectors anyways. So this is
-/// just an alias to make the code more readable.
-pub trait ComponentMulx<T, V>: Sized {
-    /// multiply `self` and V component wise. Return `None` on dimension
-    /// mismatch.
-    fn component_mul(self, v: &V) -> Option<Self>;
-    /// divide self and V component wise
-    fn component_div(self, v: &V) -> Option<Self>;
-}
-
-/// Blanket impl
-impl<T, V1, V2> ComponentMulx<T, V2> for V1
-where
-    V1: Sized + DiagLeftMulx<T, V2>,
-{
-    #[inline]
-    fn component_mul(self, v: &V2) -> Option<Self> {
-        self.diag_mul_left(v, Invert::No)
-    }
-    #[inline]
-    fn component_div(self, v: &V2) -> Option<Self> {
-        self.diag_mul_left(v, Invert::Yes)
-    }
+/// a calculation that is pretty specific to the trust region problem.
+/// This is used in the gtol-criterion, which is described elsewhere in
+/// this codebase.
+///
+/// What this calculation does is this:
+/// We have two VECTORS (of same lenth) `self` and `v`, and a scalar `s`.
+/// What we now calculate is:
+///
+///            self_i
+/// max_i  ------------
+///          s*||v_i||
+///
+/// This seems a bit weird, but it's only used when `self` is the gradient
+/// of the problem self = J^T r (such that self_i = g_i = j_i^T r),
+/// and v = the column norms of J, and s = ||r|| (the residual norm).
+/// This is how this gets used for the gtol criterion, see also
+/// MINPACK user guide p22.
+///
+pub trait MaxScaledDivx<T, V> {
+    /// calculation as described above where None means the vectors
+    /// had no elements. The implementation is free to assume that the
+    /// vectors have same length.
+    fn max_scaled_div(&self, s: T, v: &V) -> Option<T>;
 }

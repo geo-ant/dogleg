@@ -124,9 +124,9 @@ impl<T, R> Colx<T> for Col<T, R>
 where
     T: RealField + Copy + Float + AddAssign,
     R: Shape,
+    u64: TryFrom<R, Error: std::fmt::Debug>,
 {
     type Owned = Self;
-    type Dim = R;
 
     fn enorm(&self) -> T {
         crate::utility::enorm(self.as_col_ref().iter().cloned())
@@ -144,8 +144,8 @@ where
         self.max()
     }
 
-    fn dim(&self) -> Self::Dim {
-        self.nrows()
+    fn dim(&self) -> u64 {
+        self.nrows().try_into().expect("dimension out of bounds")
     }
 }
 
@@ -153,9 +153,9 @@ impl<'a, T, R> Colx<T> for ColMut<'a, T, R>
 where
     T: RealField + Float + AddAssign + Copy,
     R: Shape,
+    u64: TryFrom<R, Error: std::fmt::Debug>,
 {
     type Owned = Col<T, R>;
-    type Dim = R;
 
     fn enorm(&self) -> T {
         crate::utility::enorm(self.as_col_ref().iter().copied())
@@ -173,8 +173,8 @@ where
         self.max()
     }
 
-    fn dim(&self) -> Self::Dim {
-        self.nrows()
+    fn dim(&self) -> u64 {
+        self.nrows().try_into().expect("dimension out of range")
     }
 }
 
@@ -182,9 +182,9 @@ impl<'a, T, R> Colx<T> for ColRef<'a, T, R>
 where
     T: RealField + Float + AddAssign + Copy,
     R: Shape,
+    u64: TryFrom<R, Error: std::fmt::Debug>,
 {
     type Owned = Col<T, R>;
-    type Dim = R;
 
     fn enorm(&self) -> T {
         crate::utility::enorm(self.clone().iter().copied())
@@ -202,8 +202,8 @@ where
         self.max()
     }
 
-    fn dim(&self) -> Self::Dim {
-        self.nrows()
+    fn dim(&self) -> u64 {
+        self.nrows().try_into().expect("dimension out of range")
     }
 }
 
@@ -288,6 +288,7 @@ where
     R: Shape,
     C: Shape,
     V: Colx<T> + AsColRef<T = T, Rows = R>,
+    u64: TryFrom<C, Error: std::fmt::Debug>,
 {
     type Output = Col<T, C>;
 
@@ -323,6 +324,7 @@ where
     C: Shape,
     M: FaerType + AsMatRef<T = T, Rows = R, Cols = C>,
     V: AsColRef<T = T, Rows = C> + Colx<T>,
+    u64: TryFrom<R, Error: std::fmt::Debug>,
 {
     fn mulv_enorm(&self, v: &V) -> Option<T> {
         let v = v.as_col_ref();
@@ -380,6 +382,7 @@ where
     M: AsMatRef<T = T, Rows = R, Cols = C> + FaerType,
     C: Shape,
     R: Shape,
+    u64: TryFrom<R, Error: std::fmt::Debug>,
 {
     type Output = Col<T>;
 

@@ -4,6 +4,7 @@ use crate::LeastSquaresProblem;
 use crate::MagicConst;
 use crate::TerminationFailure;
 use dogleg_matx::ColEnormsx;
+use dogleg_matx::MaxScaledDivx;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use num_traits::Float;
 use std::num::NonZero;
@@ -236,6 +237,9 @@ where
 /// type of J^T r
 type GradType<T, J, R> = <J as TrMatVecMulx<T, R>>::Output;
 
+/// column norms type of matrix J
+type ColNormsType<T, J> = <J as ColEnormsx<T>>::Output;
+
 // use crate::dogleg::svd_impl::SvdStepSolver;
 // use crate::LevMarAdapter;
 // use nalgebra::constraint::AreMultipliable;
@@ -290,13 +294,14 @@ impl<T> Dogleg<T> {
             Residuals = P::Residuals,
         >,
         // for max func eval calculation
-        u64: TryFrom<<P::Parameters as Colx<T>>::Dim, Error: std::fmt::Debug>,
         // for calculating the gradient g = J^T r
         // @note(geo-ant) what this means is: (J^T * r).to_owned() has the
         // same type as P::Parameters::Owned, which should not be a restriction in practice
         // because the dimensions of J^T r and the parameters must be identical
         P::Jacobian: TrMatVecMulx<T, P::Residuals> + ColEnormsx<T>,
         GradType<T, P::Jacobian, P::Residuals>: Colx<T, Owned = <P::Parameters as Colx<T>>::Owned>,
+        // for the calculation of the gtol criterion
+        GradType<T, P::Jacobian, P::Residuals>: MaxScaledDivx<T, ColNormsType<T, P::Jacobian>>,
     {
         // @todo(geo-ant) maybe refactor this at a later date, but for the
         // intended use of this library, the number of parameters being near
@@ -363,8 +368,6 @@ impl<T> Dogleg<T> {
 
             let jacobian_col_norms = jacobian.column_enorms();
 
-            // let gmax = gtol_calc(&jacobian_norms, gradient, residual_norm)
-
             if is_first_iteration {
                 //@todo(geo) add scaling for parameters
                 let scaled_params = problem.params();
@@ -380,6 +383,8 @@ impl<T> Dogleg<T> {
                 on_none = TerminationFailure::WrongDimensions("J^T r"),
                 problem = problem
             );
+
+            let gmax = gtol_calc(&jacobian_col_norms, &gradient, rnorm);
 
             let mut step_solver = S::init(jacobian, residuals, gradient).unwrap();
 

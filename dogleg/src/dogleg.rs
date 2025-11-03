@@ -45,9 +45,8 @@ macro_rules! try_opt {
     };
 
     // for calls like jacobian.mul_tr(&residuals)
-    ($ident:ident . $function:ident ($($tokens:tt)*), on_none
-         = $failure:expr, problem = $problem:ident) => {
-        match $ident. $function ($($tokens)*) {
+    ($expr:expr, on_none = $failure:expr, problem = $problem:ident) => {
+        match $expr {
             Some(val) => val,
             None => {
                 return Err($crate::Error {
@@ -384,7 +383,26 @@ impl<T> Dogleg<T> {
                 problem = problem
             );
 
-            let gmax = gtol_calc(&jacobian_col_norms, &gradient, rnorm);
+            // gtol check
+            let gmax = try_opt!(
+                gtol_calc(&jacobian_col_norms, &gradient, rnorm),
+                on_none =
+                    TerminationFailure::WrongDimensions("zero dimension for residuals or jacobian"),
+                problem = problem
+            );
+
+            if gmax <= self.gtol {
+                return Ok((
+                    problem,
+                    MinimizationReport {
+                        termination: TerminationReason::Converged {
+                            criterion: report::StoppingCriterion::Gtol,
+                        },
+                        number_of_evaluations: nfunc_evals,
+                        objective_function: T::P5 * rnorm,
+                    },
+                ));
+            }
 
             let mut step_solver = S::init(jacobian, residuals, gradient).unwrap();
 

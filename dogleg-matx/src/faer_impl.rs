@@ -441,28 +441,45 @@ where
     }
 }
 
-impl<T, V, M> DiagLeftMulx<T, V> for M
+impl<T, V, R, M> DiagLeftMulx<T, V> for M
 where
-    M: FaerType + AsMatMut<T = T, Rows = usize, Cols = usize>,
-    V: AsColRef<T = T, Rows = usize>,
+    M: FaerType + AsColMut<T = T, Rows = R>,
+    R: Shape,
+    V: AsColRef<T = T, Rows = R>,
     T: RealField + MulAssign + Copy + Float,
 {
-    fn diag_mul_left(mut self, diagonal: &V, TODO THIS DOESN'T WORK HERE invert: Invert) -> Option<Self> {
-        use faer::matrix_free::Precond;
-        let this = self.as_mat_mut();
+    fn diag_mul_left(mut self, diagonal: &V, invert: Invert) -> Option<Self> {
+        let this = self.as_col_mut();
         let diagonal = diagonal.as_col_ref();
 
-        if this.nrows() != diagonal.ncols() {
+        if this.nrows() != diagonal.nrows() {
             return None;
         }
 
-        // yo dawg, I heard you like diagonals...
-        let diagonal = diagonal.as_diagonal();
-
-        let req = diagonal.apply_in_place_scratch(this.ncols(), faer::get_global_parallelism());
-        let mut buf = vec![MaybeUninit::uninit(); StackReq::from(req).unaligned_bytes_required()];
-        let mut stack = MemStack::new(&mut buf);
-        diagonal.apply_in_place(this, faer::get_global_parallelism(), &mut stack);
+        match faer::get_global_parallelism() {
+            faer::Par::Seq => {
+                this.iter_mut()
+                    .zip(diagonal.iter().copied())
+                    .for_each(|(elem, diag)| {
+                        let diag = match invert {
+                            crate::Invert::Yes => diag.powi(-1),
+                            crate::Invert::No => diag,
+                        };
+                        *elem *= diag;
+                    });
+            }
+            faer::Par::Rayon(_) => {
+                this.par_iter_mut()
+                    .zip(diagonal.par_iter().copied())
+                    .for_each(|(elem, diag)| {
+                        let diag = match invert {
+                            crate::Invert::Yes => diag.powi(-1),
+                            crate::Invert::No => diag,
+                        };
+                        *elem *= diag;
+                    });
+            }
+        };
         Some(self)
     }
 }

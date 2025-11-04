@@ -14,6 +14,9 @@ use num_traits::float::TotalOrder;
 use num_traits::{ConstOne, Float, One, Zero};
 use std::ops::{Div, Mul};
 
+#[cfg(test)]
+mod test;
+
 impl<T, C, R, S> Matx<T> for Matrix<T, R, C, S>
 where
     T: Scalar,

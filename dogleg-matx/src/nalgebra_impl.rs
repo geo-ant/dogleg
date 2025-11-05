@@ -1,6 +1,6 @@
 use crate::{
-    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Invert, Matx, MaxScaledDivx, Ownedx,
-    Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx, Invert, Matx,
+    MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{AreMultipliable, DimEq, ShapeConstraint};
@@ -262,7 +262,7 @@ where
     }
 }
 
-impl<T, RM, CM, SM, RV, SV> DiagRightMulx<T, Vector<T, RV, SV>> for Matrix<T, RM, CM, SM>
+impl<T, RM, CM, SM, RV, SV> DiagRightMulx<Vector<T, RV, SV>> for Matrix<T, RM, CM, SM>
 where
     T: RealField + Scalar + Float + Copy,
     RM: Dim,
@@ -295,7 +295,7 @@ where
     }
 }
 
-impl<T, R2, S2, R1, S1> DiagLeftMulx<T, Vector<T, R1, S1>> for Vector<T, R2, S2>
+impl<T, R2, S2, R1, S1> DiagLeftMulx<Vector<T, R1, S1>> for Vector<T, R2, S2>
 where
     T: RealField + Scalar + Float + Copy,
     R2: Dim,
@@ -339,5 +339,33 @@ where
             .zip(v.iter().copied())
             .map(|(this_i, vi)| this_i / (s * vi))
             .max_by(TotalOrder::total_cmp)
+    }
+}
+
+impl<T, R1, R2, S1, S2> ElementwiseMaxx<Vector<T, R2, S2>> for Vector<T, R1, S1>
+where
+    T: Scalar + Copy + TotalOrder,
+    R1: Dim,
+    R2: Dim,
+    ShapeConstraint: DimEq<R1, R2>,
+    S1: Storage<T, R1> + RawStorageMut<T, R1>,
+    S2: Storage<T, R2>,
+{
+    fn elementwise_max(mut self, other: Vector<T, R2, S2>) -> Option<Self> {
+        let (r1, _) = self.shape_generic();
+        let (r2, _) = other.shape_generic();
+        if r1.value() != r2.value() {
+            return None;
+        }
+
+        self.iter_mut().zip(other.iter()).for_each(|(this, elem)| {
+            let max = match TotalOrder::total_cmp(this, elem) {
+                std::cmp::Ordering::Less => *elem,
+                _ => *this,
+            };
+            *this = max;
+        });
+
+        Some(self)
     }
 }

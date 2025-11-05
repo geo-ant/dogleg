@@ -1,6 +1,6 @@
 use crate::{
-    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Invert, Matx, MaxScaledDivx, Ownedx,
-    Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx, Invert, Matx,
+    MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use faer::col::AsColMut;
 use faer::linalg::solvers::Svd;
@@ -8,6 +8,7 @@ use faer::mat::{AsMatMut, AsMatRef};
 use faer::prelude::SolveLstsq;
 use faer::{col::AsColRef, traits::RealField, Col, ColMut, ColRef, Mat, Scale};
 use faer::{Accum, MatMut, MatRef, Shape};
+use num_traits::float::TotalOrder;
 use num_traits::{ConstOne, Float};
 use rayon::prelude::*;
 use std::ops::{AddAssign, MulAssign};
@@ -392,7 +393,7 @@ where
     }
 }
 
-impl<T, V, M, R, C> DiagRightMulx<T, V> for M
+impl<T, V, M, R, C> DiagRightMulx<V> for M
 where
     M: FaerType + AsMatMut<T = T, Rows = R, Cols = C>,
     R: Shape,
@@ -439,7 +440,7 @@ where
     }
 }
 
-impl<T, V, R, M> DiagLeftMulx<T, V> for M
+impl<T, V, R, M> DiagLeftMulx<V> for M
 where
     M: FaerType + AsColMut<T = T, Rows = R>,
     R: Shape,
@@ -495,5 +496,31 @@ where
         faer::zip!(this, v)
             .map(|faer::unzip!(this, rhs)| *this / (s * *rhs))
             .max()
+    }
+}
+
+impl<T, R, V1, V2> ElementwiseMaxx<V2> for V1
+where
+    T: RealField + Copy + TotalOrder,
+    R: Shape,
+    V1: FaerType + AsColMut<T = T, Rows = R>,
+    V2: FaerType + AsColRef<T = T, Rows = R>,
+{
+    fn elementwise_max(mut self, other: V2) -> Option<Self> {
+        let this = self.as_col_mut();
+        let other = other.as_col_ref();
+
+        if this.nrows() != other.nrows() {
+            return None;
+        }
+
+        faer::zip!(this, other).for_each(|faer::unzip!(this, rhs)| {
+            let max = match TotalOrder::total_cmp(this, rhs) {
+                std::cmp::Ordering::Less => *rhs,
+                _ => *this,
+            };
+            *this = max;
+        });
+        Some(self)
     }
 }

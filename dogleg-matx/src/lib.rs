@@ -124,7 +124,7 @@ pub enum Invert {
 
 /// trait for right-multiplying a diagonal matrix `D` to a matrix
 /// `A` to calculate `A D` or `A D^-1`.
-pub trait DiagRightMulx<T, V>: Sized {
+pub trait DiagRightMulx<V>: Sized {
     /// returns the result `A D` or `A D^-1`, depending on the value
     /// of `invert`. `D` is given by the vector
     /// of its diagonal elements or `None`, if the dimensions are wrong
@@ -133,7 +133,7 @@ pub trait DiagRightMulx<T, V>: Sized {
 
 /// trait for left-multiplying a diagonal matrix `D` to a vector
 /// `v` to calculate `D v` or `(D^-1) v`.
-pub trait DiagLeftMulx<T, V>: Sized {
+pub trait DiagLeftMulx<V>: Sized {
     /// returns the result `D v` or `(D^-1) v`, depending on the value
     /// of `invert`. `D` is given by the vector
     /// of its diagonal elements or `None`, if the dimensions are wrong
@@ -164,4 +164,16 @@ pub trait MaxScaledDivx<T, V> {
     /// had no elements. The implementation is free to assume that the
     /// vectors have same length.
     fn max_scaled_div(&self, s: T, v: &V) -> Option<T>;
+}
+
+/// a very dogleg specific trait that is used when assigning the diagonal
+/// scaling during iterations. So this needs to be only implemented for
+/// vectors, which is what we use to store the diagonal scaling matrix
+/// anyways.
+///
+/// What this does is assign every element self_i = max(self_i, other_i).
+/// Then returns that modified self or None if an error occurred (dimensions
+/// mismatch).
+pub trait ElementwiseMaxx<V>: Sized {
+    fn elementwise_max(self, other: V) -> Option<Self>;
 }

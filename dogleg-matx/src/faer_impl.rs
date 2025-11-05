@@ -1,6 +1,7 @@
 use crate::{
-    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx, Invert, Matx,
-    MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
+    ElementwiseReplaceLeqx, Invert, Matx, MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx,
+    TrMatVecMulx, TransformedVecNorm,
 };
 use faer::col::AsColMut;
 use faer::linalg::solvers::Svd;
@@ -11,6 +12,7 @@ use faer::{Accum, MatMut, MatRef, Shape};
 use num_traits::float::TotalOrder;
 use num_traits::{ConstOne, Float};
 use rayon::prelude::*;
+use std::cmp::Ordering;
 use std::ops::{AddAssign, MulAssign};
 
 /// marker trait to get around some conflicting impl trouble with nalgebra
@@ -522,5 +524,21 @@ where
             *this = max;
         });
         Some(self)
+    }
+}
+
+impl<T, R, V> ElementwiseReplaceLeqx<T> for V
+where
+    T: RealField + Copy + TotalOrder,
+    R: Shape,
+    V: FaerType + AsColMut<T = T, Rows = R>,
+{
+    fn replace_if_less_eq(mut self, threshold: T, replacement: T) -> Self {
+        self.as_col_mut().iter_mut().for_each(|elem| {
+            if !matches!(elem.total_cmp(&threshold), Ordering::Greater) {
+                *elem = replacement;
+            }
+        });
+        self
     }
 }

@@ -177,3 +177,12 @@ pub trait MaxScaledDivx<T, V> {
 pub trait ElementwiseMaxx<V>: Sized {
     fn elementwise_max(self, other: V) -> Option<Self>;
 }
+
+/// another very dogleg specific trait that replaces values smaller or equal
+/// to eps with a replacement value.
+/// This is used on initial assignment for the diagonal scaling matrix.
+pub trait ElementwiseReplaceLeqx<T> {
+    /// replace all elements smaller or equal to `threshold` with `replacement`
+    /// and return self again.
+    fn replace_if_less_eq(self, threshold: T, replacement: T) -> Self;
+}

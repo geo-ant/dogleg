@@ -1,6 +1,7 @@
 use crate::{
-    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx, Invert, Matx,
-    MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
+    ElementwiseReplaceLeqx, Invert, Matx, MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx,
+    TrMatVecMulx, TransformedVecNorm,
 };
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{AreMultipliable, DimEq, ShapeConstraint};
@@ -12,6 +13,7 @@ use nalgebra::{RawStorage, Scalar};
 use nalgebra::{RawStorageMut, RealField};
 use num_traits::float::TotalOrder;
 use num_traits::{ConstOne, Float, One, Zero};
+use std::cmp::Ordering;
 use std::ops::{Div, Mul};
 
 #[cfg(test)]
@@ -365,7 +367,22 @@ where
             };
             *this = max;
         });
-
         Some(self)
+    }
+}
+
+impl<T, R, S> ElementwiseReplaceLeqx<T> for Vector<T, R, S>
+where
+    T: Scalar + Copy + TotalOrder,
+    R: Dim,
+    S: Storage<T, R> + RawStorageMut<T, R>,
+{
+    fn replace_if_less_eq(mut self, threshold: T, replacement: T) -> Self {
+        self.iter_mut().for_each(|elem| {
+            if !matches!(elem.total_cmp(&threshold), Ordering::Greater) {
+                *elem = replacement;
+            }
+        });
+        self
     }
 }

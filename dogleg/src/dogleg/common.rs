@@ -3,6 +3,10 @@ use dogleg_matx::{Addx, Colx, Dotx, Matx, MaxScaledDivx, OwnedColx, Scalex};
 use num_traits::{ConstOne, Float};
 
 #[derive(Debug, Clone, PartialEq)]
+//@note(geo-ant) why do these generic have those weird names?
+// MMN: means Matrix of Size MxN
+// VM: column vector with M elements
+// VN: column vector with N elemens
 pub struct DoglegStep<T, VN> {
     /// optimal next step `p` to take in this iteration
     pub p: VN,
@@ -15,10 +19,6 @@ pub struct DoglegStep<T, VN> {
 
 /// abstracts part of the algorithm whose responsibility it is to calculate
 /// the dogleg components.
-//@note(geo-ant) why do these generic have those weird names?
-// MMN: means Matrix of Size MxN
-// VM: column vector with M elements
-// VN: column vector with N elemens
 pub trait DoglegStepSolver<T>: Sized {
     type Jacobian: Matx<T>;
     type Gradient: OwnedColx<T>;

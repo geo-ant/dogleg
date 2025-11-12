@@ -183,7 +183,7 @@ pub trait MaxScaledDivx<T, V> {
 /// Then returns that modified self or None if an error occurred (dimensions
 /// mismatch).
 pub trait ElementwiseMaxx<V>: Sized {
-    fn elementwise_max(self, other: V) -> Option<Self>;
+    fn elementwise_max(self, other: &V) -> Option<Self>;
 }
 
 /// another very dogleg specific trait that replaces values smaller or equal
@@ -192,5 +192,5 @@ pub trait ElementwiseMaxx<V>: Sized {
 pub trait ElementwiseReplaceLeqx<T> {
     /// replace all elements less or equal to `threshold` with `replacement`
     /// and return self again.
-    fn replace_if_less_eq(self, threshold: T, replacement: T) -> Self;
+    fn replace_if_leq(self, threshold: T, replacement: T) -> Self;
 }

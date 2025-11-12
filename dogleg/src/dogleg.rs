@@ -241,6 +241,9 @@ type GradType<T, J, R> = <J as TrMatVecMulx<T, R>>::Output;
 /// column norms type of matrix J
 type ColNormsType<T, J> = <J as ColEnormsx<T>>::Output;
 
+/// Type of the diagonal weights (owned type of the column norms type)
+type DiagonalWeightsType<T, J> = <ColNormsType<T, J> as Colx<T>>::Owned;
+
 // use crate::dogleg::svd_impl::SvdStepSolver;
 // use crate::LevMarAdapter;
 // use nalgebra::constraint::AreMultipliable;
@@ -304,7 +307,8 @@ impl<T> Dogleg<T> {
         // for the calculation of the gtol criterion
         GradType<T, P::Jacobian, P::Residuals>: MaxScaledDivx<T, ColNormsType<T, P::Jacobian>>,
         // for calculating the diagonal weights
-        <ColNormsType<T, P::Jacobian> as Colx<T>>::Owned: ElementwiseReplaceLeqx<T>,
+        DiagonalWeightsType<T, P::Jacobian>:
+            ElementwiseReplaceLeqx<T> + ElementwiseMaxx<ColNormsType<T, P::Jacobian>>,
     {
         // @todo(geo-ant) maybe refactor this at a later date, but for the
         // intended use of this library, the number of parameters being near
@@ -390,7 +394,7 @@ impl<T> Dogleg<T> {
                     diagonal_weights = Some(
                         jacobian_col_norms
                             .clone_owned()
-                            .replace_if_less_eq(T::ZERO, T::ONE),
+                            .replace_if_leq(T::ZERO, T::ONE),
                     );
                 }
             }
@@ -420,6 +424,19 @@ impl<T> Dogleg<T> {
                         objective_function: T::P5 * rnorm,
                     },
                 ));
+            }
+
+            // compute new scaling matrix (if scaling is requested)
+            // note: if scaling is requested, the diagonal weights will be Some(...)
+            if let Some(diag) = diagonal_weights.take() {
+                let diag = try_opt!(
+                    diag.elementwise_max(&jacobian_col_norms),
+                    on_none = TerminationFailure::WrongDimensions(
+                        "jacobian changed shape between iterations"
+                    ),
+                    problem = problem
+                );
+                diagonal_weights = Some(diag);
             }
 
             let mut step_solver = S::init(jacobian, residuals, gradient).unwrap();

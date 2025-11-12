@@ -545,7 +545,7 @@ where
     V1: FaerType + AsColMut<T = T, Rows = R>,
     V2: FaerType + AsColRef<T = T, Rows = R>,
 {
-    fn elementwise_max(mut self, other: V2) -> Option<Self> {
+    fn elementwise_max(mut self, other: &V2) -> Option<Self> {
         let this = self.as_col_mut();
         let other = other.as_col_ref();
 
@@ -570,7 +570,7 @@ where
     R: Shape,
     V: FaerType + AsColMut<T = T, Rows = R>,
 {
-    fn replace_if_less_eq(mut self, threshold: T, replacement: T) -> Self {
+    fn replace_if_leq(mut self, threshold: T, replacement: T) -> Self {
         self.as_col_mut().iter_mut().for_each(|elem| {
             if !matches!(elem.total_cmp(&threshold), Ordering::Greater) {
                 *elem = replacement;

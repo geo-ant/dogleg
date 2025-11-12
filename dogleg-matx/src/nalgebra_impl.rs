@@ -361,7 +361,7 @@ where
     S1: Storage<T, R1> + RawStorageMut<T, R1>,
     S2: Storage<T, R2>,
 {
-    fn elementwise_max(mut self, other: Vector<T, R2, S2>) -> Option<Self> {
+    fn elementwise_max(mut self, other: &Vector<T, R2, S2>) -> Option<Self> {
         let (r1, _) = self.shape_generic();
         let (r2, _) = other.shape_generic();
         if r1.value() != r2.value() {
@@ -385,7 +385,7 @@ where
     R: Dim,
     S: Storage<T, R> + RawStorageMut<T, R>,
 {
-    fn replace_if_less_eq(mut self, threshold: T, replacement: T) -> Self {
+    fn replace_if_leq(mut self, threshold: T, replacement: T) -> Self {
         self.iter_mut().for_each(|elem| {
             if !matches!(elem.total_cmp(&threshold), Ordering::Greater) {
                 *elem = replacement;

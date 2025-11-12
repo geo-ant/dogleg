@@ -3,9 +3,13 @@ use crate::Error;
 use crate::LeastSquaresProblem;
 use crate::MagicConst;
 use crate::TerminationFailure;
+use dogleg_matx::Addx;
 use dogleg_matx::ColEnormsx;
+use dogleg_matx::DiagLeftMulx;
+use dogleg_matx::DiagRightMulx;
 use dogleg_matx::ElementwiseMaxx;
 use dogleg_matx::ElementwiseReplaceLeqx;
+use dogleg_matx::Invert;
 use dogleg_matx::MaxScaledDivx;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use num_traits::Float;
@@ -54,6 +58,21 @@ macro_rules! try_opt {
                 return Err($crate::Error {
                     problem: $problem,
                     termination : $failure
+                });
+            }
+        }
+    };
+}
+
+/// a try macro for results that can be
+macro_rules! try2 {
+    ($expr:expr, problem = $problem:ident) => {
+        match $expr {
+            Ok(val) => val,
+            Err(failure) => {
+                return Err($crate::Error {
+                    problem: $problem,
+                    termination: failure,
                 });
             }
         }
@@ -238,6 +257,9 @@ where
 /// type of J^T r
 type GradType<T, J, R> = <J as TrMatVecMulx<T, R>>::Output;
 
+/// step of the dogleg solver
+type StepType<T, J, R> = GradType<T, J, R>;
+
 /// column norms type of matrix J
 type ColNormsType<T, J> = <J as ColEnormsx<T>>::Output;
 
@@ -285,7 +307,10 @@ impl<T> Dogleg<T> {
     //     self.minimize_generic::<SvdStepSolver<_, _, _, _>, _>(adapter);
     // }
 
-    pub fn minimize_generic<S, P>(&self, problem: P) -> Result<(P, MinimizationReport<T>), Error<P>>
+    pub fn minimize_generic<S, P>(
+        &self,
+        mut problem: P,
+    ) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
         T: Float + MagicConst,
         P: LeastSquaresProblem<T>,
@@ -309,6 +334,13 @@ impl<T> Dogleg<T> {
         // for calculating the diagonal weights
         DiagonalWeightsType<T, P::Jacobian>:
             ElementwiseReplaceLeqx<T> + ElementwiseMaxx<ColNormsType<T, P::Jacobian>>,
+        // for scaling the jacobian
+        P::Jacobian: DiagRightMulx<DiagonalWeightsType<T, P::Jacobian>>,
+        // for scaling the gradient and the parameters
+        StepType<T, P::Jacobian, P::Residuals>: DiagLeftMulx<DiagonalWeightsType<T, P::Jacobian>>,
+        GradType<T, P::Jacobian, P::Residuals>: DiagLeftMulx<DiagonalWeightsType<T, P::Jacobian>>,
+        // for calculating the new params x' = x + p = p + x
+        P::Parameters: Addx<T, StepType<T, P::Jacobian, P::Residuals>>,
     {
         // @todo(geo-ant) maybe refactor this at a later date, but for the
         // intended use of this library, the number of parameters being near
@@ -371,7 +403,7 @@ impl<T> Dogleg<T> {
             }
 
             nfunc_evals += 1;
-            let jacobian = try_opt!(
+            let mut jacobian = try_opt!(
                 problem.jacobian(),
                 on_none = TerminationFailure::JacobianEval
             );
@@ -385,7 +417,6 @@ impl<T> Dogleg<T> {
                 if delta.is_zero() {
                     delta = self.factor;
                 }
-                is_first_iteration = false;
 
                 if self.scale_diag {
                     // see the MINPACK User guide, chapter 2.5 on scaling. In the
@@ -399,7 +430,7 @@ impl<T> Dogleg<T> {
                 }
             }
 
-            let gradient = try_opt!(
+            let mut gradient = try_opt!(
                 jacobian.tr_mulv(&residuals),
                 on_none = TerminationFailure::WrongDimensions("J^T r"),
                 problem = problem
@@ -426,7 +457,7 @@ impl<T> Dogleg<T> {
                 ));
             }
 
-            // compute new scaling matrix (if scaling is requested)
+            // compute new scaling matrix (if scaling is requested) and perform the scaling
             // note: if scaling is requested, the diagonal weights will be Some(...)
             if let Some(diag) = diagonal_weights.take() {
                 let diag = try_opt!(
@@ -436,15 +467,86 @@ impl<T> Dogleg<T> {
                     ),
                     problem = problem
                 );
+
+                // scaled jacobian is J' = J D^-1
+                let scaled_jac = try_opt!(
+                    jacobian.mul_diag_right(&diag, Invert::Yes),
+                    on_none = TerminationFailure::WrongDimensions(
+                        "jacobian and weights have incompatible dimensions"
+                    ),
+                    problem = problem
+                );
+                jacobian = scaled_jac;
+
+                // scaled gradient is g' = D^-1 g
+                let scaled_grad = try_opt!(
+                    gradient.diag_mul_left(&diag, Invert::Yes),
+                    on_none = TerminationFailure::WrongDimensions(
+                        "gradient and weights have incompatible dimensions"
+                    ),
+                    problem = problem
+                );
+                gradient = scaled_grad;
                 diagonal_weights = Some(diag);
             }
 
-            let mut step_solver = S::init(jacobian, residuals, gradient).unwrap();
+            // initialize the step solver with the given (unscaled) residuals, and the
+            // (possibly scaled) gradient and (possibly scaled) jacobian.
+            // Note that the returned step is thus p' = Dp.
+            let mut step_solver = try2!(S::init(jacobian, residuals, gradient), problem = problem);
 
-            let (step, solver) = step_solver.calc_step(delta).unwrap();
+            // again, note that the step is p' = Dp, i.e. the possibly scaled step
+            let (step, solver) = try2!(step_solver.calc_step(delta), problem = problem);
             step_solver = solver;
 
-            let params = problem.params().into_owned();
+            // this is (like in MINPACK) the possibly scaled norm of p
+            let DoglegStep {
+                // this is scaled p' = Dp
+                // if we have no scaling, this is just p
+                p: p_scaled,
+                // this is the norm of scaled p
+                p_norm: p_scaled_norm,
+                predicted_reduction,
+            } = step;
+
+            // adjust the initial step bound on first iteration
+            if is_first_iteration {
+                // it's correct to use the scaled norm here
+                // cf. the minpack implementation of lmder
+                delta = delta.min(p_scaled_norm);
+            }
+
+            // get the new step candidate depending on whether we use scaling
+            // or not. If we use scaling, we have to convert the step to unscaled
+            // space
+            let p = if let Some(diag) = diagonal_weights.as_ref() {
+                try_opt!(
+                    p_scaled.diag_mul_left(&diag, Invert::Yes),
+                    on_none = TerminationFailure::WrongDimensions(
+                        "parameter and weights have incompatible dimensions"
+                    ),
+                    problem = problem
+                )
+            } else {
+                p_scaled
+            };
+
+            // candidate for the new parameters
+            // x_new = x + p
+            let new_params = try_opt!(
+                problem.params().add(&p),
+                on_none = TerminationFailure::WrongDimensions(
+                    "parameters and step have incompatible dimensions"
+                ),
+                problem = problem
+            );
+
+            //@todo(geo) this is not correct, just making sure this works
+            problem.set_params(new_params);
+
+            // let x_candidate = problem.params().into_owned() + ;
+
+            is_first_iteration = false;
 
             if !is_first_iteration {
                 break;

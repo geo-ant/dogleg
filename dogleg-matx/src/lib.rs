@@ -7,6 +7,8 @@
 //! everyone can profit from this and use this crate with your
 //! favorite matrix backend.
 
+use num_traits::ConstOne;
+
 mod faer_impl;
 mod nalgebra_impl;
 mod utility;
@@ -69,6 +71,15 @@ pub trait Scalex<T> {
 pub trait Addx<T, V = Self>: Sized {
     /// calculate self + factor*y. Return `None` on dimension mismatch.
     fn scaled_add(self, factor: T, y: &V) -> Option<Self>;
+
+    #[inline]
+    /// calculate self + y
+    fn add(self, y: &V) -> Option<Self>
+    where
+        T: ConstOne,
+    {
+        self.scaled_add(T::ONE, y)
+    }
 }
 
 /// scalar (dot) product of two column vectors

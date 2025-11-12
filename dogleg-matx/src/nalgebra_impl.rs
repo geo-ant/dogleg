@@ -36,6 +36,14 @@ where
     fn clone_owned(&self) -> Self::Owned {
         Matrix::<_, _, _, _>::clone_owned(self)
     }
+
+    fn ncols(&self) -> u64 {
+        self.ncols().try_into().unwrap()
+    }
+
+    fn nrows(&self) -> u64 {
+        self.nrows().try_into().unwrap()
+    }
 }
 
 impl<T, R, C> Ownedx for OMatrix<T, R, C>

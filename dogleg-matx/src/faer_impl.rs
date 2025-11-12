@@ -68,6 +68,7 @@ where
     T: Clone,
     R: faer::Shape,
     C: faer::Shape,
+    u64: TryFrom<C> + TryFrom<R>,
 {
     type Owned = Self;
 
@@ -78,6 +79,18 @@ where
     fn clone_owned(&self) -> Self::Owned {
         self.clone()
     }
+
+    fn ncols(&self) -> u64 {
+        self.ncols()
+            .try_into()
+            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
+    }
+
+    fn nrows(&self) -> u64 {
+        self.nrows()
+            .try_into()
+            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
+    }
 }
 
 impl<T, R, C> Matx<T> for MatRef<'_, T, R, C>
@@ -85,6 +98,7 @@ where
     T: Clone + RealField,
     R: faer::Shape,
     C: faer::Shape,
+    u64: TryFrom<C> + TryFrom<R>,
 {
     type Owned = Mat<T, R, C>;
 
@@ -94,6 +108,17 @@ where
 
     fn clone_owned(&self) -> Self::Owned {
         self.to_owned()
+    }
+    fn ncols(&self) -> u64 {
+        self.ncols()
+            .try_into()
+            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
+    }
+
+    fn nrows(&self) -> u64 {
+        self.nrows()
+            .try_into()
+            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
     }
 }
 
@@ -102,6 +127,7 @@ where
     T: Clone + RealField,
     R: faer::Shape,
     C: faer::Shape,
+    u64: TryFrom<C> + TryFrom<R>,
 {
     type Owned = Mat<T, R, C>;
 
@@ -111,6 +137,17 @@ where
 
     fn clone_owned(&self) -> Self::Owned {
         self.to_owned()
+    }
+    fn ncols(&self) -> u64 {
+        self.ncols()
+            .try_into()
+            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
+    }
+
+    fn nrows(&self) -> u64 {
+        self.nrows()
+            .try_into()
+            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
     }
 }
 

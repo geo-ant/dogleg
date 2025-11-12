@@ -4,6 +4,8 @@ use crate::LeastSquaresProblem;
 use crate::MagicConst;
 use crate::TerminationFailure;
 use dogleg_matx::ColEnormsx;
+use dogleg_matx::ElementwiseMaxx;
+use dogleg_matx::ElementwiseReplaceLeqx;
 use dogleg_matx::MaxScaledDivx;
 use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use num_traits::Float;
@@ -301,6 +303,8 @@ impl<T> Dogleg<T> {
         GradType<T, P::Jacobian, P::Residuals>: Colx<T, Owned = <P::Parameters as Colx<T>>::Owned>,
         // for the calculation of the gtol criterion
         GradType<T, P::Jacobian, P::Residuals>: MaxScaledDivx<T, ColNormsType<T, P::Jacobian>>,
+        // for calculating the diagonal weights
+        <ColNormsType<T, P::Jacobian> as Colx<T>>::Owned: ElementwiseReplaceLeqx<T>,
     {
         // @todo(geo-ant) maybe refactor this at a later date, but for the
         // intended use of this library, the number of parameters being near
@@ -332,8 +336,11 @@ impl<T> Dogleg<T> {
         // some special case handling for the first loop iteration
         let mut is_first_iteration = true;
 
+        let mut diagonal_weights = None;
+
         // outer loop
         loop {
+            // calculate residuals and jacobian
             if nfunc_evals >= max_func_evals {
                 return Err(Error {
                     problem,
@@ -375,6 +382,17 @@ impl<T> Dogleg<T> {
                     delta = self.factor;
                 }
                 is_first_iteration = false;
+
+                if self.scale_diag {
+                    // see the MINPACK User guide, chapter 2.5 on scaling. In the
+                    // text they mention that they arbitrarily replace a zero
+                    // weighting by 1.
+                    diagonal_weights = Some(
+                        jacobian_col_norms
+                            .clone_owned()
+                            .replace_if_less_eq(T::ZERO, T::ONE),
+                    );
+                }
             }
 
             let gradient = try_opt!(

@@ -22,6 +22,13 @@ pub trait Matx<T> {
     fn into_owned(self) -> Self::Owned;
     /// clone into an owned type
     fn clone_owned(&self) -> Self::Owned;
+    /// number of columns in the matrix.
+    /// Panic if the number of elements exceeds u64 bounds, in which case you
+    /// shouldn't be using this library!!
+    fn ncols(&self) -> u64;
+    /// number of rows in the matrix. Panic if the number of elements
+    /// exceeds u64 bounds, in which case you shouldn't be using this library!!
+    fn nrows(&self) -> u64;
 }
 
 /// A matrix that owns its own storage
@@ -44,8 +51,9 @@ pub trait Colx<T> {
     fn into_owned(self) -> Self::Owned;
     /// the maximum element or `None` if the vector is empty
     fn max(&self) -> Option<T>;
-    /// the number of elements in this vector. Panic if the number of elements
-    /// exceeds u64 bounds, in which case you shouldn't be using this library!!
+    /// the number of elements in this vector.
+    /// Panic if the number of elements exceeds u64 bounds, in which case you
+    /// shouldn't be using this library!!
     fn dim(&self) -> u64;
 }
 
@@ -182,7 +190,7 @@ pub trait ElementwiseMaxx<V>: Sized {
 /// to eps with a replacement value.
 /// This is used on initial assignment for the diagonal scaling matrix.
 pub trait ElementwiseReplaceLeqx<T> {
-    /// replace all elements smaller or equal to `threshold` with `replacement`
+    /// replace all elements less or equal to `threshold` with `replacement`
     /// and return self again.
     fn replace_if_less_eq(self, threshold: T, replacement: T) -> Self;
 }

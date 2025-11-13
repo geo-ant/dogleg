@@ -257,13 +257,15 @@ where
 /// type of J^T r
 type GradType<T, J, R> = <J as TrMatVecMulx<T, R>>::Output;
 
-/// step of the dogleg solver
-type StepType<T, J, R> = GradType<T, J, R>;
+/// step type for a particular dogleg problem is equal to the gradient type
+/// (see also the dogleg solver)
+type StepType<T, P> =
+    GradType<T, <P as LeastSquaresProblem<T>>::Jacobian, <P as LeastSquaresProblem<T>>::Residuals>;
 
 /// column norms type of matrix J
 type ColNormsType<T, J> = <J as ColEnormsx<T>>::Output;
 
-/// Type of the diagonal weights (owned type of the column norms type)
+/// Type of the diagonal weights for a problem (owned type of the column norms type)
 type DiagonalWeightsType<T, J> = <ColNormsType<T, J> as Colx<T>>::Owned;
 
 // use crate::dogleg::svd_impl::SvdStepSolver;
@@ -337,10 +339,10 @@ impl<T> Dogleg<T> {
         // for scaling the jacobian
         P::Jacobian: DiagRightMulx<DiagonalWeightsType<T, P::Jacobian>>,
         // for scaling the gradient and the parameters
-        StepType<T, P::Jacobian, P::Residuals>: DiagLeftMulx<DiagonalWeightsType<T, P::Jacobian>>,
+        StepType<T, P>: DiagLeftMulx<DiagonalWeightsType<T, P::Jacobian>>,
         GradType<T, P::Jacobian, P::Residuals>: DiagLeftMulx<DiagonalWeightsType<T, P::Jacobian>>,
         // for calculating the new params x' = x + p = p + x
-        P::Parameters: Addx<T, StepType<T, P::Jacobian, P::Residuals>>,
+        P::Parameters: Addx<T, StepType<T, P>>,
         // for applying the scaling to the parameters
     {
         // @todo(geo-ant) maybe refactor this at a later date, but for the

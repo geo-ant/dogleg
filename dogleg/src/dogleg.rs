@@ -132,7 +132,7 @@ where
             ftol: user_tol,
             xtol: user_tol,
             gtol: user_tol,
-            factor: T::ONE_E2,
+            factor: T::ONE_HUNDRED,
             scale_diag: true,
             patience: 100,
         }
@@ -341,6 +341,7 @@ impl<T> Dogleg<T> {
         GradType<T, P::Jacobian, P::Residuals>: DiagLeftMulx<DiagonalWeightsType<T, P::Jacobian>>,
         // for calculating the new params x' = x + p = p + x
         P::Parameters: Addx<T, StepType<T, P::Jacobian, P::Residuals>>,
+        // for applying the scaling to the parameters
     {
         // @todo(geo-ant) maybe refactor this at a later date, but for the
         // intended use of this library, the number of parameters being near
@@ -384,6 +385,8 @@ impl<T> Dogleg<T> {
                 });
             }
 
+            let current_params = problem.params();
+
             let residuals = try_opt!(
                 problem.residuals(),
                 on_none = TerminationFailure::ResidualEval
@@ -401,8 +404,8 @@ impl<T> Dogleg<T> {
                     },
                 ));
             }
-
             nfunc_evals += 1;
+
             let mut jacobian = try_opt!(
                 problem.jacobian(),
                 on_none = TerminationFailure::JacobianEval
@@ -412,8 +415,7 @@ impl<T> Dogleg<T> {
 
             if is_first_iteration {
                 //@todo(geo) add scaling for parameters
-                let scaled_params = problem.params();
-                delta = scaled_params.enorm() * self.factor;
+                delta = current_params.enorm() * self.factor;
                 if delta.is_zero() {
                     delta = self.factor;
                 }
@@ -428,6 +430,14 @@ impl<T> Dogleg<T> {
                             .replace_if_leq(T::ZERO, T::ONE),
                     );
                 }
+
+                let scaled_param_norm = {
+                    if let Some(diag) = diagonal_weights.as_ref() {
+                        todo!()
+                    } else {
+                        todo!()
+                    }
+                };
             }
 
             let mut gradient = try_opt!(
@@ -506,13 +516,18 @@ impl<T> Dogleg<T> {
                 p: p_scaled,
                 // this is the norm of scaled p
                 p_norm: p_scaled_norm,
+                // the predicted reduction is independent of the scaling
+                // see the chapter on scaling in Nocedal&Wright using the definitions
+                // for scaled g, scaled J, and scaled p it turns out that
+                // all the D and D^-1 expressions will cancel out such
+                // that the predicted reduction is independent of scaling
                 predicted_reduction,
             } = step;
 
             // adjust the initial step bound on first iteration
             if is_first_iteration {
                 // it's correct to use the scaled norm here
-                // cf. the minpack implementation of lmder
+                // cf. the MINPACK implementation of lmder
                 delta = delta.min(p_scaled_norm);
             }
 

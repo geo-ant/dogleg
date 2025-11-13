@@ -47,7 +47,7 @@ pub trait DoglegStepSolver<T>: Sized {
     /// p_u = -1 * -----------    g = u * g, where u: scalar, g: vector
     ///             ||J g||^2
     ///
-    /// where g is the gradient of f : g = J^T r
+    /// where g is the gradient of f, where g = J^T r
     ///
     /// and p_b is the solution of min ||J p_b - (-r)||^2, where it
     /// makes sense to use some matrix decomposition rather than using the

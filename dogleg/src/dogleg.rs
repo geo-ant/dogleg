@@ -26,6 +26,23 @@ pub use common::DoglegStepSolver;
 pub use report::MinimizationReport;
 pub use report::TerminationReason;
 
+/// like debug_assert_eq, but doesn't require lhs, rhs to implement the Debug
+/// trait.
+macro_rules! debug_assert_eq2 {
+    ($lhs:expr, $rhs:expr) => {
+        #[cfg(debug_assertions)]
+        {
+            if $lhs != $rhs {
+                panic!(
+                    "Debug assertion failed: {}=={}",
+                    stringify!($lhs),
+                    stringify!($rhs)
+                )
+            }
+        }
+    };
+}
+
 /// utility macro that helps us return our error inline when the
 /// returned type of an expression is an optional. The challenge is
 /// that we need to bundle our problem and return it together with
@@ -266,7 +283,8 @@ type StepType<T, P> =
 type ColNormsType<T, J> = <J as ColEnormsx<T>>::Output;
 
 /// Type of the diagonal weights for a problem (owned type of the column norms type)
-type DiagonalWeightsType<T, J> = <ColNormsType<T, J> as Colx<T>>::Owned;
+type DiagonalWeightsType<T, P> =
+    <ColNormsType<T, <P as LeastSquaresProblem<T>>::Jacobian> as Colx<T>>::Owned;
 
 // use crate::dogleg::svd_impl::SvdStepSolver;
 // use crate::LevMarAdapter;
@@ -333,18 +351,22 @@ impl<T> Dogleg<T> {
         GradType<T, P::Jacobian, P::Residuals>: Colx<T, Owned = <P::Parameters as Colx<T>>::Owned>,
         // for the calculation of the gtol criterion
         GradType<T, P::Jacobian, P::Residuals>: MaxScaledDivx<T, ColNormsType<T, P::Jacobian>>,
-        // for calculating the diagonal weights
-        DiagonalWeightsType<T, P::Jacobian>:
-            ElementwiseReplaceLeqx<T> + ElementwiseMaxx<ColNormsType<T, P::Jacobian>>,
+        // for calculating the diagonal weights and replacing them
+        // @note(geo-ant) this assumes that they are the same as the gradient
+        // type, i.e. the result of J^T *r.
+        DiagonalWeightsType<T, P>:
+            ElementwiseReplaceLeqx<T> + ElementwiseMaxx<DiagonalWeightsType<T, P>>,
         // for scaling the jacobian
-        P::Jacobian: DiagRightMulx<DiagonalWeightsType<T, P::Jacobian>>,
+        P::Jacobian: DiagRightMulx<DiagonalWeightsType<T, P>>,
         // for scaling the gradient and the parameters
-        StepType<T, P>: DiagLeftMulx<DiagonalWeightsType<T, P::Jacobian>>,
-        GradType<T, P::Jacobian, P::Residuals>: DiagLeftMulx<DiagonalWeightsType<T, P::Jacobian>>,
+        StepType<T, P>: DiagLeftMulx<DiagonalWeightsType<T, P>>,
+        GradType<T, P::Jacobian, P::Residuals>: DiagLeftMulx<DiagonalWeightsType<T, P>>,
         // for calculating the new params x' = x + p = p + x
         P::Parameters: Addx<T, StepType<T, P>>,
         // for applying the scaling to the parameters
+        P::Parameters: DiagLeftMulx<DiagonalWeightsType<T, P>>,
     {
+        let mut current_params = problem.params();
         // @todo(geo-ant) maybe refactor this at a later date, but for the
         // intended use of this library, the number of parameters being near
         // the u64 limit is completely unreasonable, hence panicking here is
@@ -352,9 +374,7 @@ impl<T> Dogleg<T> {
         // shouldn't be using this algorithm anyway...
         // @note(geo-ant) this whole overflow checking is very pedantic,
         // but what the heck...
-        let (n_plus_one, overflow) = u64::try_from(problem.params().dim())
-            .expect("too many parameters for dogleg solver")
-            .overflowing_add(1);
+        let (n_plus_one, overflow) = current_params.dim().overflowing_add(1);
         let (max_func_evals, overflow2) = self.patience.overflowing_mul(n_plus_one);
         if overflow || overflow2 {
             panic!("too many parameters for dogleg solver");
@@ -387,14 +407,12 @@ impl<T> Dogleg<T> {
                 });
             }
 
-            let current_params = problem.params();
-
             let residuals = try_opt!(
                 problem.residuals(),
                 on_none = TerminationFailure::ResidualEval
             );
 
-            let rnorm = residuals.enorm();
+            let mut rnorm = residuals.enorm();
 
             if rnorm.is_zero() {
                 return Ok((
@@ -415,13 +433,8 @@ impl<T> Dogleg<T> {
 
             let jacobian_col_norms = jacobian.column_enorms();
 
+            // some special sauce (see the iter == 1 / iter .EQ. 1 blocks in MINPACK)
             if is_first_iteration {
-                //@todo(geo) add scaling for parameters
-                delta = current_params.enorm() * self.factor;
-                if delta.is_zero() {
-                    delta = self.factor;
-                }
-
                 if self.scale_diag {
                     // see the MINPACK User guide, chapter 2.5 on scaling. In the
                     // text they mention that they arbitrarily replace a zero
@@ -433,13 +446,25 @@ impl<T> Dogleg<T> {
                     );
                 }
 
-                let scaled_param_norm = {
+                // the norm of the (possibly scaled) parameters
+                let param_norm = {
                     if let Some(diag) = diagonal_weights.as_ref() {
-                        todo!()
+                        try_opt!(
+                            current_params.clone().diag_mul_left(&diag, Invert::No),
+                            on_none = TerminationFailure::WrongDimensions(
+                                "parameters have incompatible dimensions for weights"
+                            ),
+                            problem = problem
+                        )
+                        .enorm()
                     } else {
-                        todo!()
+                        current_params.enorm()
                     }
                 };
+                delta = param_norm * self.factor;
+                if delta.is_zero() {
+                    delta = self.factor;
+                }
             }
 
             let mut gradient = try_opt!(
@@ -523,6 +548,8 @@ impl<T> Dogleg<T> {
                 // for scaled g, scaled J, and scaled p it turns out that
                 // all the D and D^-1 expressions will cancel out such
                 // that the predicted reduction is independent of scaling
+                // @note(geo-ant) #2 that we still need to normalize the predicted
+                // retuction by the current function norm
                 predicted_reduction,
             } = step;
 
@@ -548,6 +575,8 @@ impl<T> Dogleg<T> {
                 p_scaled
             };
 
+            debug_assert_eq2!(problem.params(), current_params);
+
             // candidate for the new parameters
             // x_new = x + p
             let new_params = try_opt!(
@@ -559,8 +588,21 @@ impl<T> Dogleg<T> {
             );
 
             //@todo(geo) this is not correct, just making sure this works
-            problem.set_params(new_params);
+            problem.set_params(new_params.clone());
+            let rnorm1 = try_opt!(
+                problem.residuals(),
+                on_none = TerminationFailure::ResidualEval
+            )
+            .enorm();
 
+            let accept_step = true;
+
+            if accept_step {
+                current_params = new_params;
+                rnorm = rnorm1;
+            } else {
+                problem.set_params(current_params.clone());
+            }
             // let x_candidate = problem.params().into_owned() + ;
 
             is_first_iteration = false;

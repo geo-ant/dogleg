@@ -19,7 +19,7 @@ pub trait Ownedx {}
 /// matrix abstraction
 pub trait Matx<T> {
     /// the equivalent type that owns its own storage
-    type Owned: Ownedx;
+    type Owned: OwnedMatx<T>;
     /// consume `self` and give a copy in an owned type
     fn into_owned(self) -> Self::Owned;
     /// clone into an owned type
@@ -42,9 +42,9 @@ pub trait OwnedColx<T>: Colx<T, Owned = Self> {}
 impl<T, V> OwnedColx<T> for V where V: Colx<T, Owned = Self> {}
 
 /// column vector abstraction
-pub trait Colx<T> {
+pub trait Colx<T>: PartialEq {
     /// the corresponding owned column vector type of same dimensions and type
-    type Owned: Ownedx;
+    type Owned: OwnedColx<T>;
     /// calculate the euclidean norm of the vector
     fn enorm(&self) -> T;
     /// clone the values of `self` and return an owned instance.

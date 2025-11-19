@@ -63,7 +63,7 @@ where
         })
     }
 
-    fn calc_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), TerminationFailure> {
+    fn update_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), TerminationFailure> {
         // if we haven't already cached the calculations, do them now
         let cached = match self {
             Self::Init {

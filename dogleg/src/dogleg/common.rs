@@ -61,7 +61,7 @@ pub trait DoglegStepSolver<T>: Sized {
     /// Returns the step and the next iteration of the internal solver state
     /// on success. An error otherwise. Takes self by values and returns self
     /// rather than &mut self because I like the by-value state pattern more.
-    fn calc_step(
+    fn update_step(
         self,
         delta: T,
     ) -> Result<(DoglegStep<T, Self::Gradient>, Self), TerminationFailure>;

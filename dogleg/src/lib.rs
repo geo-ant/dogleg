@@ -3,6 +3,9 @@
 //@todo(geo) remove this
 #![allow(dead_code)]
 
+// #![deny(clippy::unwrap_used)]
+// #![deny(clippy::expect_used)]
+
 /// solver implementations
 pub mod dogleg;
 /// error types

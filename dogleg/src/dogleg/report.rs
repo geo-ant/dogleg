@@ -75,4 +75,6 @@ pub enum TerminationFailure {
     LostPatience,
     /// Wrong dimensions for a matrix or vector
     WrongDimensions(&'static str),
+    /// Matrix dimensions are too large
+    DimOutsideU64Bounds,
 }

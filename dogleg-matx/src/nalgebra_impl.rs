@@ -83,8 +83,8 @@ where
         Some(self.max())
     }
 
-    fn dim(&self) -> u64 {
-        self.nrows().try_into().unwrap()
+    fn dim(&self) -> Option<u64> {
+        self.nrows().try_into().ok()
     }
 }
 

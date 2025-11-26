@@ -172,8 +172,8 @@ where
         self.max()
     }
 
-    fn dim(&self) -> u64 {
-        self.nrows().try_into().expect("dimension out of bounds")
+    fn dim(&self) -> Option<u64> {
+        self.nrows().try_into().ok()
     }
 }
 
@@ -201,8 +201,8 @@ where
         self.max()
     }
 
-    fn dim(&self) -> u64 {
-        self.nrows().try_into().expect("dimension out of range")
+    fn dim(&self) -> Option<u64> {
+        self.nrows().try_into().ok()
     }
 }
 
@@ -230,8 +230,8 @@ where
         self.max()
     }
 
-    fn dim(&self) -> u64 {
-        self.nrows().try_into().expect("dimension out of range")
+    fn dim(&self) -> Option<u64> {
+        self.nrows().try_into().ok()
     }
 }
 

@@ -61,7 +61,7 @@ macro_rules! try_opt {
             None => {
                 return Err($crate::Error {
                     problem: $problem,
-                    termination : $failure
+                    failure : $failure
                 });
             }
         }
@@ -74,7 +74,7 @@ macro_rules! try_opt {
             None => {
                 return Err($crate::Error {
                     problem: $problem,
-                    termination : $failure
+                    failure : $failure
                 });
             }
         }
@@ -89,7 +89,7 @@ macro_rules! try2 {
             Err(failure) => {
                 return Err($crate::Error {
                     problem: $problem,
-                    termination: failure,
+                    failure: failure,
                 });
             }
         }
@@ -373,7 +373,13 @@ impl<T> Dogleg<T> {
         // shouldn't be using this algorithm anyway...
         // @note(geo-ant) this whole overflow checking is very pedantic,
         // but what the heck...
-        let (n_plus_one, overflow) = problem.params().dim().overflowing_add(1);
+        let maybe_dim = problem.params().dim();
+        let (n_plus_one, overflow) = try_opt!(
+            maybe_dim,
+            on_none = TerminationFailure::DimOutsideU64Bounds,
+            problem = problem
+        )
+        .overflowing_add(1);
         let (max_func_evals, overflow2) = self.patience.overflowing_mul(n_plus_one);
         if overflow || overflow2 {
             panic!("too many parameters for dogleg solver");
@@ -408,7 +414,7 @@ impl<T> Dogleg<T> {
             if nfunc_evals >= max_func_evals {
                 return Err(Error {
                     problem,
-                    termination: TerminationFailure::LostPatience,
+                    failure: TerminationFailure::LostPatience,
                 });
             }
 

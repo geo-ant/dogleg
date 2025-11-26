@@ -7,6 +7,11 @@
 //! everyone can profit from this and use this crate with your
 //! favorite matrix backend.
 
+// if the cloudflare outage taught us one thing, it's that we want to be
+// more strict about this...
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+
 use num_traits::ConstOne;
 
 mod faer_impl;
@@ -55,9 +60,9 @@ pub trait Colx<T>: PartialEq {
     /// the maximum element or `None` if the vector is empty
     fn max(&self) -> Option<T>;
     /// the number of elements in this vector.
-    /// Panic if the number of elements exceeds u64 bounds, in which case you
-    /// shouldn't be using this library!!
-    fn dim(&self) -> u64;
+    /// Return None if the number of columns doesn't fit into u64, in which
+    /// case you shouldn't be using this library anyways...
+    fn dim(&self) -> Option<u64>;
 }
 
 /// multiply a matrix or vector type by a constant factor

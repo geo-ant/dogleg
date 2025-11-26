@@ -67,7 +67,7 @@ pub trait Colx<T>: PartialEq {
     fn dim(&self) -> Option<u64>;
 }
 
-/// multiply a matrix or vector type by a constant factor
+/// multiply a vector type by a constant factor
 pub trait Scalex<T> {
     /// scale `self` by `factor`
     fn scale_mut(&mut self, factor: T);
@@ -75,7 +75,7 @@ pub trait Scalex<T> {
     fn scale(self, factor: T) -> Self;
 }
 
-/// add / subtract from this vector
+/// add / subtract from a vector
 pub trait Addx<T, V = Self>: Sized {
     /// calculate self + factor*y. Return `None` on dimension mismatch.
     fn scaled_add(self, factor: T, y: &V) -> Option<Self>;
@@ -117,7 +117,8 @@ pub trait TransformedVecNorm<T, V> {
     fn mulv_enorm(&self, v: &V) -> Option<T>;
 }
 
-/// The singular value decomposition of this matrix can be calculated
+/// For matrix `A` implementing this trait, its singular value decomposition
+/// can be calculated.
 pub trait ToSvdx<T> {
     type Svd;
 

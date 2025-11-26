@@ -1,6 +1,6 @@
 use approx::assert_relative_eq;
 
-use crate::{Colx, Matx, OwnedMatx};
+use crate::{Addx, Colx, Matx, OwnedMatx, Scalex};
 
 #[test]
 fn matx_base_functions_for_smat_and_dmatrix() {
@@ -50,4 +50,44 @@ fn vector_enorm() {
 
     assert_relative_eq!(Colx::<_>::enorm(&svec), svec.norm(), epsilon = 1e-10);
     assert_relative_eq!(Colx::<_>::enorm(&dvec), dvec.norm(), epsilon = 1e-10);
+}
+
+#[test]
+fn vector_scalex() {
+    let svec = nalgebra::vector!(123., 0.1, 1.337);
+    let dvec = nalgebra::dvector!(123., 0.1, 1.337);
+
+    let mut sscaled = svec.clone();
+    Scalex::scale_mut(&mut sscaled, 5.1);
+    assert_eq!(sscaled, svec * 5.1);
+    assert_eq!(sscaled, Scalex::scale(svec, 5.1));
+
+    let mut dscaled = dvec.clone();
+    Scalex::scale_mut(&mut dscaled, 5.1);
+    assert_eq!(dscaled, &dvec * 5.1);
+    assert_eq!(dscaled, Scalex::scale(dvec, 5.1));
+}
+
+#[test]
+fn vector_addx() {
+    let svec = nalgebra::vector!(123., 0.1, 1.337);
+    let dvec = nalgebra::dvector!(1.23, 0.005, 9.84);
+
+    assert_relative_eq!(
+        Addx::scaled_add(svec.clone(), -1., &svec).unwrap(),
+        nalgebra::vector!(0., 0., 0.),
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        Addx::scaled_add(dvec.clone(), -1., &dvec).unwrap(),
+        nalgebra::dvector!(0., 0., 0.),
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        Addx::scaled_add(svec.clone(), -2., &dvec).unwrap(),
+        svec - dvec * 2.,
+        epsilon = 1e-10
+    );
 }

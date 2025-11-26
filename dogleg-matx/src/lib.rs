@@ -177,15 +177,17 @@ pub trait DiagLeftMulx<V>: Sized {
 /// We have two VECTORS (of same lenth) `self` and `v`, and a scalar `s`.
 /// What we now calculate is:
 ///
+/// ```math
 ///            self_i
 /// max_i  ------------
 ///          s*||v_i||
+/// ```
 ///
 /// This seems a bit weird, but it's only used when `self` is the gradient
-/// of the problem self = J^T r (such that self_i = g_i = j_i^T r),
-/// and v = the column norms of J, and s = ||r|| (the residual norm).
+/// of the problem self = J^T r (such that `self_i` = `g_i` = `j_i^T r`),
+/// and `v` = the column norms of `J`, and `s = ||r||` (the residual norm).
 /// This is how this gets used for the gtol criterion, see also
-/// MINPACK user guide p22.
+/// MINPACK user guide p.22.
 ///
 pub trait MaxScaledDivx<T, V> {
     /// calculation as described above where None means the vectors

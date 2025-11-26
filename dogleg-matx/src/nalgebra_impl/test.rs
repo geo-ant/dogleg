@@ -1,6 +1,7 @@
 use approx::assert_relative_eq;
+use nalgebra::Vector;
 
-use crate::{Addx, Colx, Matx, OwnedMatx, Scalex};
+use crate::{Addx, Colx, Dotx, Matx, OwnedMatx, Scalex};
 
 #[test]
 fn matx_base_functions_for_smat_and_dmatrix() {
@@ -74,7 +75,7 @@ fn vector_addx() {
     let dvec = nalgebra::dvector!(1.23, 0.005, 9.84);
 
     assert_relative_eq!(
-        Addx::scaled_add(svec.clone(), -1., &svec).unwrap(),
+        Addx::scaled_add(svec, -1., &svec).unwrap(),
         nalgebra::vector!(0., 0., 0.),
         epsilon = 1e-10
     );
@@ -86,8 +87,38 @@ fn vector_addx() {
     );
 
     assert_relative_eq!(
-        Addx::scaled_add(svec.clone(), -2., &dvec).unwrap(),
-        svec - dvec * 2.,
+        Addx::scaled_add(svec, -2., &dvec).unwrap(),
+        svec - &dvec * 2.,
         epsilon = 1e-10
     );
+
+    assert_relative_eq!(
+        Addx::add(svec, &dvec).unwrap(),
+        svec + dvec,
+        epsilon = 1e-10
+    );
+
+    assert!(Addx::scaled_add(svec, -2., &nalgebra::dvector!(1., 2.)).is_none());
+}
+
+#[test]
+fn vector_dotx() {
+    let svec1 = nalgebra::vector!(123., 0.1, 1.337);
+    let svec2 = nalgebra::vector!(-10., 4.234, -1234.);
+    let dvec1 = nalgebra::dvector!(1.23, 0.005, 9.84);
+    let dvec2 = nalgebra::dvector!(2.23, -10.005, 1995.);
+
+    assert_relative_eq!(
+        Dotx::dot(&svec1, &svec2).unwrap(),
+        Vector::dot(&svec1, &svec2),
+        epsilon = 1e-10
+    );
+    assert_relative_eq!(
+        Dotx::dot(&dvec1, &dvec2).unwrap(),
+        Vector::dot(&dvec1, &dvec2),
+        epsilon = 1e-10
+    );
+
+    assert!(Dotx::dot(&dvec1, &nalgebra::dvector!(1., 2.)).is_none());
+    assert!(Dotx::dot(&svec1, &nalgebra::dvector!(1., 2.)).is_none());
 }

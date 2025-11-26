@@ -25,12 +25,13 @@ pub trait Matx<T> {
     /// clone into an owned type
     fn clone_owned(&self) -> Self::Owned;
     /// number of columns in the matrix.
-    /// Panic if the number of elements exceeds u64 bounds, in which case you
-    /// shouldn't be using this library!!
-    fn ncols(&self) -> u64;
-    /// number of rows in the matrix. Panic if the number of elements
-    /// exceeds u64 bounds, in which case you shouldn't be using this library!!
-    fn nrows(&self) -> u64;
+    /// Return None if the number of columns doesn't fit into u64, in which
+    /// case you shouldn't be using this library anyways...
+    fn ncols(&self) -> Option<u64>;
+    /// number of columns in the matrix.
+    /// Return None if the number of columns doesn't fit into u64, in which
+    /// case you shouldn't be using this library anyways...
+    fn nrows(&self) -> Option<u64>;
 }
 
 /// A matrix that owns its own storage

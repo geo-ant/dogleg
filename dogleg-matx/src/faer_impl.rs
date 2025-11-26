@@ -80,16 +80,12 @@ where
         self.clone()
     }
 
-    fn ncols(&self) -> u64 {
-        self.ncols()
-            .try_into()
-            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
+    fn ncols(&self) -> Option<u64> {
+        self.ncols().try_into().ok()
     }
 
-    fn nrows(&self) -> u64 {
-        self.nrows()
-            .try_into()
-            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
+    fn nrows(&self) -> Option<u64> {
+        self.nrows().try_into().ok()
     }
 }
 
@@ -109,16 +105,12 @@ where
     fn clone_owned(&self) -> Self::Owned {
         self.to_owned()
     }
-    fn ncols(&self) -> u64 {
-        self.ncols()
-            .try_into()
-            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
+    fn ncols(&self) -> Option<u64> {
+        self.ncols().try_into().ok()
     }
 
-    fn nrows(&self) -> u64 {
-        self.nrows()
-            .try_into()
-            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
+    fn nrows(&self) -> Option<u64> {
+        self.nrows().try_into().ok()
     }
 }
 
@@ -138,16 +130,12 @@ where
     fn clone_owned(&self) -> Self::Owned {
         self.to_owned()
     }
-    fn ncols(&self) -> u64 {
-        self.ncols()
-            .try_into()
-            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
+    fn ncols(&self) -> Option<u64> {
+        self.ncols().try_into().ok()
     }
 
-    fn nrows(&self) -> u64 {
-        self.nrows()
-            .try_into()
-            .unwrap_or_else(|_| panic!("matrix dims outside u64 bounds"))
+    fn nrows(&self) -> Option<u64> {
+        self.nrows().try_into().ok()
     }
 }
 

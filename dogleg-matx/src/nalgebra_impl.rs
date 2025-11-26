@@ -37,12 +37,12 @@ where
         Matrix::<_, _, _, _>::clone_owned(self)
     }
 
-    fn ncols(&self) -> u64 {
-        self.ncols().try_into().unwrap()
+    fn ncols(&self) -> Option<u64> {
+        self.ncols().try_into().ok()
     }
 
-    fn nrows(&self) -> u64 {
-        self.nrows().try_into().unwrap()
+    fn nrows(&self) -> Option<u64> {
+        self.nrows().try_into().ok()
     }
 }
 

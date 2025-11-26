@@ -11,6 +11,7 @@
 // more strict about this...
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
+#![deny(clippy::panic)]
 
 use num_traits::ConstOne;
 

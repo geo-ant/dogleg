@@ -205,6 +205,7 @@ dependencies = [
 name = "dogleg-matx"
 version = "0.1.0"
 dependencies = [
+ "approx",
  "faer",
  "nalgebra",
  "num-traits",

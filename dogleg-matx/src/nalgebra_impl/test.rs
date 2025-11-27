@@ -1,7 +1,7 @@
 use approx::assert_relative_eq;
 use nalgebra::Vector;
 
-use crate::{Addx, Colx, Dotx, Matx, OwnedMatx, Scalex};
+use crate::{Addx, Colx, Dotx, Matx, Scalex, TrMatVecMulx};
 
 #[test]
 fn matx_base_functions_for_smat_and_dmatrix() {
@@ -121,4 +121,48 @@ fn vector_dotx() {
 
     assert!(Dotx::dot(&dvec1, &nalgebra::dvector!(1., 2.)).is_none());
     assert!(Dotx::dot(&svec1, &nalgebra::dvector!(1., 2.)).is_none());
+}
+
+#[test]
+fn tr_mat_mul_vec() {
+    let svec = nalgebra::vector![28.2, 0.1234];
+    let smat = nalgebra::matrix![
+        4., 99., 0.1,0.9;
+        8.,0.5, 3455.,777.;
+    ];
+    assert_relative_eq!(
+        TrMatVecMulx::tr_mulv(&smat, &svec).unwrap(),
+        smat.transpose() * svec,
+        epsilon = 1e-10,
+    );
+
+    let dvec = nalgebra::dvector![28.2, 0.1234];
+    let dmat = nalgebra::dmatrix![
+        4., 99., 0.1,0.9;
+        8.,0.5, 3455.,777.;
+    ];
+    assert_relative_eq!(
+        TrMatVecMulx::tr_mulv(&dmat, &dvec).unwrap(),
+        dmat.transpose() * dvec.clone(),
+        epsilon = 1e-10,
+    );
+
+    assert_relative_eq!(
+        TrMatVecMulx::tr_mulv(&smat, &dvec).unwrap(),
+        smat.transpose() * dvec.clone(),
+        epsilon = 1e-10,
+    );
+
+    assert_relative_eq!(
+        TrMatVecMulx::tr_mulv(&dmat, &svec).unwrap(),
+        dmat.transpose() * dvec,
+        epsilon = 1e-10,
+    );
+
+    assert!(TrMatVecMulx::tr_mulv(&dmat, &nalgebra::vector![1.]).is_none());
+}
+
+#[test]
+fn transformed_vec_norm_for_matrix() {
+    // @todo(geo-ant)
 }

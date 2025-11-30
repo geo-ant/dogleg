@@ -12,7 +12,7 @@ use nalgebra::{
 use nalgebra::{RawStorage, Scalar};
 use nalgebra::{RawStorageMut, RealField};
 use num_traits::float::TotalOrder;
-use num_traits::{ConstOne, ConstZero, Float, One, Zero};
+use num_traits::{ConstOne, Float, One, Zero};
 use std::cmp::Ordering;
 use std::ops::{Div, Mul};
 

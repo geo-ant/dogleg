@@ -15,6 +15,9 @@ use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::ops::{AddAssign, MulAssign};
 
+#[cfg(test)]
+mod test;
+
 /// marker trait to get around some conflicting impl trouble with nalgebra
 /// implementations.
 pub trait FaerType {}
@@ -215,7 +218,7 @@ where
     type Owned = Col<T, R>;
 
     fn enorm(&self) -> T {
-        crate::utility::enorm(self.clone().iter().copied())
+        crate::utility::enorm(self.iter().copied())
     }
 
     fn clone_owned(&self) -> Self::Owned {

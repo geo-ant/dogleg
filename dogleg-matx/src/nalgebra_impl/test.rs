@@ -1,8 +1,9 @@
 use crate::{
-    Addx, ColEnormsx, Colx, Dotx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Matx, Scalex, Svdx, ToSvdx,
+    TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
-use nalgebra::Vector;
+use nalgebra::{DMatrix, SMatrix, Vector};
 
 macro_rules! sdmat {
     ( $($($elem:expr),*);*) => {
@@ -247,5 +248,51 @@ fn matrix_col_enorms() {
 
     assert_relative_eq!(ColEnormsx::column_enorms(&smat), sexpected);
     assert_relative_eq!(ColEnormsx::column_enorms(&dmat), dexpected);
-    // assert_relative_eq!(ColEnormsx::column_enorms(&dmat), dexpected);
+}
+
+#[test]
+fn diag_right_mul() {
+    let (smat, dmat) = sdmat![
+        2.  , 0.1 , 99.;
+        91.8, 2.  , 444.4;
+        0.66, 123., 9.;
+        6.  , 77. , 0.18;
+    ];
+    let (sdiag, ddiag) = sdvec![0.4, 33., -18.];
+    let sdiagmat = SMatrix::from_diagonal(&sdiag);
+    let ddiagmat = DMatrix::from_diagonal(&ddiag);
+
+    assert_relative_eq!(
+        DiagRightMulx::mul_diag_right(smat, &sdiag, crate::Invert::No).unwrap(),
+        smat * sdiagmat,
+        epsilon = 1e-10
+    );
+    assert_relative_eq!(
+        DiagRightMulx::mul_diag_right(smat, &sdiag, crate::Invert::Yes).unwrap(),
+        smat * sdiagmat.try_inverse().unwrap(),
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        DiagRightMulx::mul_diag_right(dmat.clone(), &ddiag, crate::Invert::No).unwrap(),
+        dmat.clone() * ddiagmat.clone(),
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        DiagRightMulx::mul_diag_right(dmat.clone(), &ddiag, crate::Invert::Yes).unwrap(),
+        dmat.clone() * ddiagmat.try_inverse().unwrap(),
+        epsilon = 1e-10
+    );
+
+    assert!(DiagRightMulx::mul_diag_right(
+        dmat.clone(),
+        &nalgebra::dvector![1.],
+        crate::Invert::Yes
+    )
+    .is_none());
+
+    assert!(
+        DiagRightMulx::mul_diag_right(smat, &nalgebra::dvector![1.], crate::Invert::Yes).is_none()
+    );
 }

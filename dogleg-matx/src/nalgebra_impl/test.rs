@@ -295,4 +295,47 @@ fn diag_right_mul() {
     assert!(
         DiagRightMulx::mul_diag_right(smat, &nalgebra::dvector![1.], crate::Invert::Yes).is_none()
     );
+    assert!(
+        DiagRightMulx::mul_diag_right(dmat, &nalgebra::dvector![1.], crate::Invert::Yes).is_none()
+    );
+}
+
+#[test]
+fn diag_left_mul() {
+    let (svec, dvec) = sdvec![2., -0.1, 99., -0.1];
+    let (sdiag, ddiag) = sdvec![0.4, 33., -18., -77.6];
+    let sdiagmat = SMatrix::from_diagonal(&sdiag);
+    let ddiagmat = DMatrix::from_diagonal(&ddiag);
+
+    assert_relative_eq!(
+        DiagLeftMulx::diag_mul_left(svec, &sdiag, crate::Invert::No).unwrap(),
+        sdiagmat * svec,
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        DiagLeftMulx::diag_mul_left(svec, &sdiag, crate::Invert::Yes).unwrap(),
+        sdiagmat.try_inverse().unwrap() * svec,
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        DiagLeftMulx::diag_mul_left(dvec.clone(), &ddiag, crate::Invert::No).unwrap(),
+        ddiagmat.clone() * dvec.clone(),
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        DiagLeftMulx::diag_mul_left(dvec.clone(), &ddiag, crate::Invert::Yes).unwrap(),
+        ddiagmat.try_inverse().unwrap() * dvec.clone(),
+        epsilon = 1e-10
+    );
+
+    assert!(
+        DiagLeftMulx::diag_mul_left(svec, &nalgebra::dvector![1.], crate::Invert::Yes).is_none()
+    );
+
+    assert!(
+        DiagLeftMulx::diag_mul_left(dvec, &nalgebra::dvector![1.], crate::Invert::Yes).is_none()
+    );
 }

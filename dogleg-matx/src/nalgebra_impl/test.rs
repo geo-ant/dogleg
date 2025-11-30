@@ -1,4 +1,4 @@
-use crate::{Addx, Colx, Dotx, Matx, Scalex, TrMatVecMulx, TransformedVecNorm};
+use crate::{Addx, Colx, Dotx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
 use approx::assert_relative_eq;
 use nalgebra::Vector;
 
@@ -204,5 +204,31 @@ fn transformed_vec_norm_for_matrix() {
         TransformedVecNorm::mulv_enorm(&smat, &dvec).unwrap(),
         (smat * svec).enorm(),
         epsilon = 1e-10
+    );
+
+    assert!(TransformedVecNorm::mulv_enorm(&smat, &nalgebra::dvector![1.]).is_none());
+    assert!(TransformedVecNorm::mulv_enorm(&dmat, &nalgebra::dvector![1.]).is_none());
+}
+
+#[test]
+fn matrix_to_svd_and_solve_lsqr() {
+    let (svec, dvec) = sdvec![3., 1919., 0.1];
+    let (smat, dmat) = sdmat![
+        999.88, 0.1;
+        1.3,5.;
+        12.34,0.123
+    ];
+
+    let ssvd = ToSvdx::calc_svd(smat).unwrap();
+    let dsvd = ToSvdx::calc_svd(dmat.clone()).unwrap();
+
+    assert_relative_eq!(
+        Svdx::solve_lsqr(&ssvd, &svec).unwrap(),
+        smat.svd(true, true).solve(&svec, f64::EPSILON).unwrap()
+    );
+
+    assert_relative_eq!(
+        Svdx::solve_lsqr(&dsvd, &dvec).unwrap(),
+        dmat.svd(true, true).solve(&dvec, f64::EPSILON).unwrap()
     );
 }

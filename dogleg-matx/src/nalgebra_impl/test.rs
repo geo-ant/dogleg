@@ -1,6 +1,6 @@
 use crate::{
-    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, Matx, Scalex, Svdx, ToSvdx,
-    TrMatVecMulx, TransformedVecNorm,
+    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx, Matx, Scalex, Svdx,
+    ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
 use nalgebra::{DMatrix, SMatrix, Vector};
@@ -251,13 +251,14 @@ fn matrix_col_enorms() {
 }
 
 #[test]
-fn diag_right_mul() {
+fn diag_right_mul_for_matrix() {
     let (smat, dmat) = sdmat![
         2.  , 0.1 , 99.;
         91.8, 2.  , 444.4;
         0.66, 123., 9.;
         6.  , 77. , 0.18;
     ];
+
     let (sdiag, ddiag) = sdvec![0.4, 33., -18.];
     let sdiagmat = SMatrix::from_diagonal(&sdiag);
     let ddiagmat = DMatrix::from_diagonal(&ddiag);
@@ -338,4 +339,32 @@ fn diag_left_mul() {
     assert!(
         DiagLeftMulx::diag_mul_left(dvec, &nalgebra::dvector![1.], crate::Invert::Yes).is_none()
     );
+}
+
+#[test]
+fn max_scaled_div_for_matrix() {
+    todo!()
+}
+
+#[test]
+fn elementwise_max_for_vector() {
+    let (svec1, dvec1) = sdvec![-100., 0.1, 2., 99.1];
+    let (svec2, dvec2) = sdvec![-101., 0.2, 1.9, 99.2];
+    let (sexpected, dexpected) = sdvec![-100., 0.2, 2., 99.2];
+
+    assert_eq!(
+        ElementwiseMaxx::elementwise_max(svec1, &svec2).unwrap(),
+        sexpected
+    );
+    assert_eq!(
+        ElementwiseMaxx::elementwise_max(dvec1, &dvec2).unwrap(),
+        dexpected
+    );
+    assert!(ElementwiseMaxx::elementwise_max(dvec2, &nalgebra::vector![1.]).is_none());
+    assert!(ElementwiseMaxx::elementwise_max(svec2, &nalgebra::dvector![1.]).is_none());
+}
+
+#[test]
+fn elementwise_replace_if_leq_for_vector() {
+    todo!()
 }

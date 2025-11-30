@@ -187,7 +187,8 @@ pub trait DiagLeftMulx<V>: Sized {
 /// of the problem self = J^T r (such that `self_i` = `g_i` = `j_i^T r`),
 /// and `v` = the column norms of `J`, and `s = ||r||` (the residual norm).
 /// This is how this gets used for the gtol criterion, see also
-/// MINPACK user guide p.22.
+/// MINPACK user guide p.22. We can assume `s!=0`, because we'll have checked
+/// earlier if the residuals vanished (in which case iteration is successful).
 pub trait MaxScaledDivx<T, V> {
     /// calculation as described above where None means the vectors
     /// had no elements. The implementation is free to assume that the

@@ -1,6 +1,6 @@
 use crate::{
-    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx, Matx, Scalex, Svdx,
-    ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
+    ElementwiseReplaceLeqx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
 use nalgebra::{DMatrix, SMatrix, Vector};
@@ -366,5 +366,17 @@ fn elementwise_max_for_vector() {
 
 #[test]
 fn elementwise_replace_if_leq_for_vector() {
-    todo!()
+    let (svec, dvec) = sdvec![5.2, -100.1, 2., 99.1];
+    let threshold = 5.1;
+    let replacement = 123.;
+    let (sexpected, dexpected) = sdvec![5.2, 123., 123., 99.1];
+
+    assert_eq!(
+        ElementwiseReplaceLeqx::replace_if_leq(svec, threshold, replacement),
+        sexpected
+    );
+    assert_eq!(
+        ElementwiseReplaceLeqx::replace_if_leq(dvec, threshold, replacement),
+        dexpected
+    );
 }

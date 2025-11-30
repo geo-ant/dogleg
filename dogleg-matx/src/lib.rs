@@ -180,7 +180,7 @@ pub trait DiagLeftMulx<V>: Sized {
 /// ```math
 ///            self_i
 /// max_i  ------------
-///          s*||v_i||
+///           s * v_i
 /// ```
 ///
 /// This seems a bit weird, but it's only used when `self` is the gradient

@@ -1,15 +1,17 @@
-use crate::{Addx, Colx, Dotx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
+use crate::{
+    Addx, ColEnormsx, Colx, Dotx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+};
 use approx::assert_relative_eq;
 use nalgebra::Vector;
 
 macro_rules! sdmat {
-    ( $($($elem:literal),*);*) => {
+    ( $($($elem:expr),*);*) => {
         (nalgebra::matrix![$($($elem),*);*], nalgebra::dmatrix![$($($elem),*);*])
     };
 }
 
 macro_rules! sdvec {
-    ($($elem:literal),* $(,)?) => {
+    ($($elem:expr),* $(,)?) => {
         (nalgebra::vector![$($elem),*], nalgebra::dvector![$($elem),*])
     };
 }
@@ -231,4 +233,19 @@ fn matrix_to_svd_and_solve_lsqr() {
         Svdx::solve_lsqr(&dsvd, &dvec).unwrap(),
         dmat.svd(true, true).solve(&dvec, f64::EPSILON).unwrap()
     );
+}
+
+#[test]
+fn matrix_col_enorms() {
+    let (smat, dmat) = sdmat![
+        1.,4.;
+        2.,5.;
+        3.,6.;
+    ];
+
+    let (sexpected, dexpected) = sdvec!(14_f64.sqrt(), 77_f64.sqrt());
+
+    assert_relative_eq!(ColEnormsx::column_enorms(&smat), sexpected);
+    assert_relative_eq!(ColEnormsx::column_enorms(&dmat), dexpected);
+    // assert_relative_eq!(ColEnormsx::column_enorms(&dmat), dexpected);
 }

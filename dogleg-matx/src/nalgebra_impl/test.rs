@@ -1,7 +1,18 @@
+use crate::{Addx, Colx, Dotx, Matx, Scalex, TrMatVecMulx, TransformedVecNorm};
 use approx::assert_relative_eq;
 use nalgebra::Vector;
 
-use crate::{Addx, Colx, Dotx, Matx, Scalex, TrMatVecMulx};
+macro_rules! sdmat {
+    ( $($($elem:literal),*);*) => {
+        (nalgebra::matrix![$($($elem),*);*], nalgebra::dmatrix![$($($elem),*);*])
+    };
+}
+
+macro_rules! sdvec {
+    ($($elem:literal),* $(,)?) => {
+        (nalgebra::vector![$($elem),*], nalgebra::dvector![$($elem),*])
+    };
+}
 
 #[test]
 fn matx_base_functions_for_smat_and_dmatrix() {
@@ -164,5 +175,34 @@ fn tr_mat_mul_vec() {
 
 #[test]
 fn transformed_vec_norm_for_matrix() {
-    // @todo(geo-ant)
+    let (svec, dvec) = sdvec![3., 1919.];
+    let (smat, dmat) = sdmat![
+        999.88, 0.1;
+        1.3,5.;
+        12.34,0.123
+    ];
+
+    assert_relative_eq!(
+        TransformedVecNorm::mulv_enorm(&smat, &svec).unwrap(),
+        (smat * svec).enorm(),
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        TransformedVecNorm::mulv_enorm(&dmat, &svec).unwrap(),
+        (smat * svec).enorm(),
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        TransformedVecNorm::mulv_enorm(&dmat, &dvec).unwrap(),
+        (smat * svec).enorm(),
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        TransformedVecNorm::mulv_enorm(&smat, &dvec).unwrap(),
+        (smat * svec).enorm(),
+        epsilon = 1e-10
+    );
 }

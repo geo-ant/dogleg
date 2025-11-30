@@ -347,8 +347,9 @@ where
         self.iter()
             .copied()
             .zip(v.iter().copied())
-            .map(|(this_i, vi)| this_i / (s * vi))
+            .map(|(this_i, vi)| this_i / vi)
             .max_by(TotalOrder::total_cmp)
+            .map(|val| val / s)
     }
 }
 

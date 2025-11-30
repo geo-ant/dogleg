@@ -521,8 +521,9 @@ where
         let this = self.as_col_ref();
         let v = v.as_col_ref();
         faer::zip!(this, v)
-            .map(|faer::unzip!(this, rhs)| *this / (s * *rhs))
+            .map(|faer::unzip!(this, rhs)| *this / *rhs)
             .max()
+            .map(|val| val / s)
     }
 }
 

@@ -1,6 +1,6 @@
-use crate::{col_assert_relative_eq, Addx, Colx, Dotx, Matx, Scalex};
+use crate::{col_assert_relative_eq, Addx, Colx, Dotx, Matx, Scalex, TrMatVecMulx};
 use approx::assert_relative_eq;
-use faer::{mat::AsMatRef, Col};
+use faer::mat::AsMatRef;
 
 #[test]
 #[should_panic]
@@ -103,4 +103,17 @@ fn vector_dotx() {
         epsilon = 1e-10
     );
     assert!(Dotx::dot(&svec1, &faer::col!(1., 2.)).is_none());
+}
+
+#[test]
+fn tr_mat_mul_vec() {
+    let v = faer::col![28.2, 0.1234];
+    let mat = faer::mat![[4., 99., 0.1, 0.9], [8., 0.5, 3455., 777.]];
+    col_assert_relative_eq!(
+        TrMatVecMulx::tr_mulv(&mat, &v).unwrap(),
+        mat.transpose() * v,
+        epsilon = 1e-10,
+    );
+
+    assert!(TrMatVecMulx::tr_mulv(&mat, &faer::col![1.]).is_none());
 }

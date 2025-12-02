@@ -43,10 +43,11 @@ pub trait DoglegStepSolver<T>: Sized {
     ///
     /// p_u is calculated as
     ///
+    /// ```math
     ///              ||g||^2
     /// p_u = -1 * -----------    g = u * g, where u: scalar, g: vector
     ///             ||J g||^2
-    ///
+    /// ```
     /// where g is the gradient of f, where g = J^T r
     ///
     /// and p_b is the solution of min ||J p_b - (-r)||^2, where it
@@ -114,9 +115,11 @@ where
 ///
 /// The dogleg path is parametrized using a real numer tau in [0,2]
 ///
+/// ```math
 ///          { tau* p_u                    ; tau in [0,1]
 /// p(tau) = {
 ///          { p_u + (tau-1) * (p_b - p_u) ; in (1,2]
+/// ```
 ///
 /// We return the largest step for which p(tau) <= detla
 //@note(geo) we can also make this for different types PB, PU, in which case

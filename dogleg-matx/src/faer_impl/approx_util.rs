@@ -5,7 +5,7 @@ use faer::{col::AsColRef, ColRef, Shape};
 /// with the approx crate.
 #[macro_export]
 macro_rules! col_assert_relative_eq {
-    ($lhs:expr,$rhs:expr $(, epsilon = $eps:literal)?) => {
+    ($lhs:expr,$rhs:expr $(, epsilon = $eps:literal)? $(,)?) => {
         ::approx::assert_relative_eq!(
             $crate::faer_impl::approx_util::approx_col(& $lhs),
             $crate::faer_impl::approx_util::approx_col(& $rhs)

@@ -1,6 +1,6 @@
 use crate::{
-    col_assert_relative_eq, Addx, Colx, Dotx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx,
-    TransformedVecNorm,
+    col_assert_relative_eq, mat_assert_relative_eq, Addx, ColEnormsx, Colx, DiagRightMulx, Dotx,
+    Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
 use faer::{mat::AsMatRef, prelude::SolveLstsq};
@@ -145,5 +145,41 @@ fn matrix_to_svd_and_solve_lsqr() {
     col_assert_relative_eq!(
         Svdx::solve_lsqr(&svd, &v).unwrap(),
         SolveLstsq::solve_lstsq(&mat.svd().unwrap(), &v)
+    );
+}
+
+#[test]
+fn matrix_col_enorms() {
+    let mat = faer::mat![[1., 4.], [2., 5.], [3., 6.]];
+    let expected = faer::col!(14_f64.sqrt(), 77_f64.sqrt());
+
+    col_assert_relative_eq!(ColEnormsx::column_enorms(&mat), expected);
+}
+
+#[test]
+fn diag_right_mul_for_matrix() {
+    let mat = faer::mat![
+        [2., 0.1, 99.],
+        [91.8, 2., 444.4],
+        [0.66, 123., 9.],
+        [6., 77., 0.18]
+    ];
+
+    let diag = faer::col![0.4, 33., -18.];
+    let diagmat = diag.as_diagonal();
+
+    let idiag = faer::col![1. / 0.4, 1. / 33., -1. / 18.];
+    let idiagmat = idiag.as_diagonal();
+
+    mat_assert_relative_eq!(
+        DiagRightMulx::mul_diag_right(mat.clone(), &diag, crate::Invert::No).unwrap(),
+        &mat * diagmat,
+        epsilon = 1e-10
+    );
+
+    mat_assert_relative_eq!(
+        DiagRightMulx::mul_diag_right(mat.clone(), &diag, crate::Invert::Yes).unwrap(),
+        mat * idiagmat,
+        epsilon = 1e-10
     );
 }

@@ -1,6 +1,9 @@
-use crate::{col_assert_relative_eq, Addx, Colx, Dotx, Matx, Scalex, TrMatVecMulx};
+use crate::{
+    col_assert_relative_eq, Addx, Colx, Dotx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx,
+    TransformedVecNorm,
+};
 use approx::assert_relative_eq;
-use faer::mat::AsMatRef;
+use faer::{mat::AsMatRef, prelude::SolveLstsq};
 
 #[test]
 #[should_panic]
@@ -116,4 +119,31 @@ fn tr_mat_mul_vec() {
     );
 
     assert!(TrMatVecMulx::tr_mulv(&mat, &faer::col![1.]).is_none());
+}
+
+#[test]
+fn transformed_vec_norm_for_matrix() {
+    let v = faer::col![3., 1919.];
+    let mat = faer::mat![[999.88, 0.1], [1.3, 5.], [12.34, 0.12]];
+
+    assert_relative_eq!(
+        TransformedVecNorm::mulv_enorm(&mat, &v).unwrap(),
+        (&mat * v).enorm(),
+        epsilon = 1e-10
+    );
+
+    assert!(TransformedVecNorm::mulv_enorm(&mat, &faer::col![1.]).is_none());
+}
+
+#[test]
+fn matrix_to_svd_and_solve_lsqr() {
+    let v = faer::col![3., 1919., 0.1];
+    let mat = faer::mat![[999.88, 0.1], [1.3, 5.], [12.34, 0.12]];
+
+    let svd = ToSvdx::calc_svd(mat.clone()).unwrap();
+
+    col_assert_relative_eq!(
+        Svdx::solve_lsqr(&svd, &v).unwrap(),
+        SolveLstsq::solve_lstsq(&mat.svd().unwrap(), &v)
+    );
 }

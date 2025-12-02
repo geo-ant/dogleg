@@ -18,6 +18,9 @@ use std::ops::{AddAssign, MulAssign};
 #[cfg(test)]
 mod test;
 
+#[cfg(test)]
+pub mod approx_util;
+
 /// marker trait to get around some conflicting impl trouble with nalgebra
 /// implementations.
 pub trait FaerType {}

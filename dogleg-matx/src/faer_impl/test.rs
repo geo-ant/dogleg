@@ -1,6 +1,24 @@
-use crate::{Addx, Colx, Matx, Scalex};
-use approx::{assert_abs_diff_eq, assert_relative_eq};
-use faer::mat::AsMatRef;
+use crate::{col_assert_relative_eq, Addx, Colx, Dotx, Matx, Scalex};
+use approx::assert_relative_eq;
+use faer::{mat::AsMatRef, Col};
+
+#[test]
+#[should_panic]
+fn col_assert_relative_eq_test_should_panic() {
+    col_assert_relative_eq!(faer::col!(1., 2.), faer::col!(1.000000001, 2.));
+}
+
+#[test]
+#[should_panic]
+fn col_assert_relative_eq_test_should_panic2() {
+    col_assert_relative_eq!(faer::col!(1., 2.), faer::col!(1., 2.000000001));
+}
+
+#[test]
+fn col_assert_relative_eq_test_works() {
+    col_assert_relative_eq!(faer::col!(1., 2.), faer::col!(1., 2.), epsilon = 1e-10);
+    col_assert_relative_eq!(faer::col!(1., 2.), faer::col!(1.1, 1.9), epsilon = 0.2);
+}
 
 #[test]
 fn matx_base_functions() {
@@ -25,8 +43,7 @@ fn colx_base_functions_for_svec_and_dvector() {
 }
 
 #[test]
-// @todo(geo-ant): we need proptests for this, but this serves as a reasonable
-// smoketest plus one.
+// @todo(geo-ant): also make proptests
 fn vector_enorm() {
     let v = faer::col!(123., 0.1, 1.337);
 
@@ -41,4 +58,49 @@ fn vector_scalex() {
     Scalex::scale_mut(&mut scaled, 5.1);
     assert_eq!(scaled, 5.1 * v.clone());
     assert_eq!(scaled, Scalex::scale(v, 5.1));
+}
+
+#[test]
+fn vector_addx() {
+    let v1 = faer::col!(123., 0.1, 1.337);
+    let v2 = faer::col!(1.23, 0.005, 9.84);
+
+    col_assert_relative_eq!(
+        Addx::scaled_add(v1.clone(), -1., &v1).unwrap(),
+        &faer::col!(0., 0., 0.),
+        epsilon = 1e-10
+    );
+
+    col_assert_relative_eq!(
+        Addx::scaled_add(v2.clone(), -1., &v2).unwrap(),
+        faer::col!(0., 0., 0.),
+        epsilon = 1e-10
+    );
+
+    col_assert_relative_eq!(
+        Addx::scaled_add(v1.clone(), -2., &v2).unwrap(),
+        &v1 - &v2 * 2.,
+        epsilon = 1e-10
+    );
+
+    col_assert_relative_eq!(
+        Addx::add(v1.clone(), &v2).unwrap(),
+        &v1 + &v2,
+        epsilon = 1e-10
+    );
+
+    assert!(Addx::scaled_add(v1, -2., &faer::col!(1., 2.)).is_none());
+}
+
+#[test]
+fn vector_dotx() {
+    let svec1 = faer::col!(123., 0.1, 1.337);
+    let svec2 = faer::col!(-10., 4.234, -1234.);
+
+    assert_relative_eq!(
+        Dotx::dot(&svec1, &svec2).unwrap(),
+        -123. * 10. + 0.1 * 4.234 - 1.337 * 1234.,
+        epsilon = 1e-10
+    );
+    assert!(Dotx::dot(&svec1, &faer::col!(1., 2.)).is_none());
 }

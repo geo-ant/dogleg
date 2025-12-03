@@ -1,6 +1,7 @@
 use crate::{
     col_assert_relative_eq, mat_assert_relative_eq, Addx, ColEnormsx, Colx, DiagLeftMulx,
-    DiagRightMulx, Dotx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    DiagRightMulx, Dotx, ElementwiseMaxx, ElementwiseReplaceLeqx, Matx, MaxScaledDivx, Scalex,
+    Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
 use faer::{mat::AsMatRef, prelude::SolveLstsq};
@@ -18,9 +19,53 @@ fn col_assert_relative_eq_test_should_panic2() {
 }
 
 #[test]
+#[should_panic]
+fn col_assert_relative_eq_test_should_panic3() {
+    col_assert_relative_eq!(faer::col!(1., 2.), faer::col!(1.));
+}
+
+#[test]
 fn col_assert_relative_eq_test_works() {
     col_assert_relative_eq!(faer::col!(1., 2.), faer::col!(1., 2.), epsilon = 1e-10);
     col_assert_relative_eq!(faer::col!(1., 2.), faer::col!(1.1, 1.9), epsilon = 0.2);
+}
+
+#[test]
+#[should_panic]
+fn mat_assert_relative_eq_test_should_panic() {
+    mat_assert_relative_eq!(
+        faer::mat!([1., 2.], [3., 4.]),
+        faer::mat!([1.000000001, 2.], [3., 4.])
+    );
+}
+
+#[test]
+#[should_panic]
+fn mat_assert_relative_eq_test_should_panic2() {
+    mat_assert_relative_eq!(
+        faer::mat!([1., 2.], [3., 4.]),
+        faer::mat!([1., 2.000000001], [3., 4.])
+    );
+}
+
+#[test]
+#[should_panic]
+fn mat_assert_relative_eq_test_should_panic3() {
+    mat_assert_relative_eq!(faer::mat!([1., 2.], [3., 4.]), faer::mat!([1., 2.]));
+}
+
+#[test]
+fn mat_assert_relative_eq_test_works() {
+    mat_assert_relative_eq!(
+        faer::mat!([1., 2.], [3., 4.]),
+        faer::mat!([1., 2.], [3., 4.]),
+        epsilon = 1e-10
+    );
+    mat_assert_relative_eq!(
+        faer::mat!([1., 2.], [3., 4.]),
+        faer::mat!([1.1, 1.9], [3., 4.]),
+        epsilon = 0.2
+    );
 }
 
 #[test]
@@ -205,4 +250,39 @@ fn diag_left_mul() {
     );
 
     assert!(DiagLeftMulx::diag_mul_left(v, &faer::col![1.], crate::Invert::Yes).is_none());
+}
+
+#[test]
+fn max_scaled_div_for_vector() {
+    let v1 = faer::col![2., 3., 4.];
+    let v2 = faer::col![8., 6., 100.];
+    let scale = 2.;
+
+    assert_eq!(
+        MaxScaledDivx::max_scaled_div(&v1, scale, &v2).unwrap(),
+        (3. / 12.)
+    );
+}
+
+#[test]
+fn elementwise_max_for_vector() {
+    let v1 = faer::col![-100., 0.1, 2., 99.1];
+    let v2 = faer::col![-101., 0.2, 1.9, 99.2];
+    let expected = faer::col![-100., 0.2, 2., 99.2];
+
+    assert_eq!(ElementwiseMaxx::elementwise_max(v1, &v2).unwrap(), expected);
+    assert!(ElementwiseMaxx::elementwise_max(v2, &faer::col![1.]).is_none());
+}
+
+#[test]
+fn elementwise_replace_if_leq_for_vector() {
+    let v = faer::col![5.2, -100.1, 2., 99.1];
+    let threshold = 5.1;
+    let replacement = 123.;
+    let expected = faer::col![5.2, 123., 123., 99.1];
+
+    assert_eq!(
+        ElementwiseReplaceLeqx::replace_if_leq(v, threshold, replacement),
+        expected
+    );
 }

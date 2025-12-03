@@ -118,6 +118,9 @@ where
         epsilon: Self::Epsilon,
         max_relative: Self::Epsilon,
     ) -> bool {
+        if self.0.nrows() != other.0.nrows() {
+            return false;
+        }
         self.0
             .iter()
             .zip(other.0.iter())
@@ -137,7 +140,7 @@ where
     }
 
     fn abs_diff_eq(&self, other: &Self, epsilon: Self::Epsilon) -> bool {
-        if self.0.nrows() != other.0.nrows() {
+        if self.0.nrows() != other.0.nrows() || self.0.ncols() != other.0.ncols() {
             return false;
         }
         self.0
@@ -168,6 +171,9 @@ where
         epsilon: Self::Epsilon,
         max_relative: Self::Epsilon,
     ) -> bool {
+        if self.0.nrows() != other.0.nrows() || self.0.ncols() != other.0.ncols() {
+            return false;
+        }
         self.0
             .col_iter()
             .zip(other.0.col_iter())

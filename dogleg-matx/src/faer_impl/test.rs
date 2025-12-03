@@ -1,6 +1,6 @@
 use crate::{
-    col_assert_relative_eq, mat_assert_relative_eq, Addx, ColEnormsx, Colx, DiagRightMulx, Dotx,
-    Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    col_assert_relative_eq, mat_assert_relative_eq, Addx, ColEnormsx, Colx, DiagLeftMulx,
+    DiagRightMulx, Dotx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
 use faer::{mat::AsMatRef, prelude::SolveLstsq};
@@ -182,4 +182,27 @@ fn diag_right_mul_for_matrix() {
         mat * idiagmat,
         epsilon = 1e-10
     );
+}
+
+#[test]
+fn diag_left_mul() {
+    let v = faer::col![2., -0.1, 99., -0.1];
+    let diag = faer::col![0.4, 33., -18., -77.6];
+    let diagmat = diag.as_diagonal();
+    let idiag = faer::col![1. / 0.4, 1. / 33., -1. / 18., -1. / 77.6];
+    let idiagmat = idiag.as_diagonal();
+
+    col_assert_relative_eq!(
+        DiagLeftMulx::diag_mul_left(v.clone(), &diag, crate::Invert::No).unwrap(),
+        diagmat * &v,
+        epsilon = 1e-10
+    );
+
+    col_assert_relative_eq!(
+        DiagLeftMulx::diag_mul_left(v.clone(), &diag, crate::Invert::Yes).unwrap(),
+        idiagmat * &v,
+        epsilon = 1e-10
+    );
+
+    assert!(DiagLeftMulx::diag_mul_left(v, &faer::col![1.], crate::Invert::Yes).is_none());
 }

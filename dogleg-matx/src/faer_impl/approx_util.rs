@@ -1,6 +1,9 @@
 use approx::{AbsDiffEq, RelativeEq};
 use faer::{col::AsColRef, mat::AsMatRef, ColRef, MatRef, Shape};
 
+#[cfg(test)]
+mod test;
+
 /// utility macro because faer doesn't natively expose facilities to work
 /// with the approx crate.
 #[macro_export]

@@ -45,7 +45,7 @@ pub trait DoglegStepSolver<T>: Sized {
     ///
     /// ```math
     ///              ||g||^2
-    /// p_u = -1 * -----------    g = u * g, where u: scalar, g: vector
+    /// p_u = -1 * ----------- g  := u * g, where u: scalar, g: vector
     ///             ||J g||^2
     /// ```
     /// where g is the gradient of f, where g = J^T r

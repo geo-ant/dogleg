@@ -272,12 +272,11 @@ where
 }
 
 /// type of J^T r
-type GradType<T, J, R> = <J as TrMatVecMulx<T, R>>::Output;
+type GradType<T, P> = <P as LeastSquaresProblem<T>>::Parameters;
 
 /// step type for a particular dogleg problem is equal to the gradient type
 /// (see also the dogleg solver)
-type StepType<T, P> =
-    GradType<T, <P as LeastSquaresProblem<T>>::Jacobian, <P as LeastSquaresProblem<T>>::Residuals>;
+type StepType<T, P> = GradType<T, P>;
 
 /// column norms type of matrix J
 type ColNormsType<T, J> = <J as ColEnormsx<T>>::Output;
@@ -339,7 +338,9 @@ impl<T> Dogleg<T> {
         S: DoglegStepSolver<
             T,
             Jacobian = P::Jacobian,
-            Gradient = GradType<T, P::Jacobian, P::Residuals>,
+            //@note(geo-ant) maybe restricting this output here is not smart,
+            // but I think in practice it doesn't matter.
+            Gradient = P::Parameters,
             Residuals = P::Residuals,
         >,
         // for max func eval calculation
@@ -347,10 +348,11 @@ impl<T> Dogleg<T> {
         // @note(geo-ant) what this means is: (J^T * r).to_owned() has the
         // same type as P::Parameters::Owned, which should not be a restriction in practice
         // because the dimensions of J^T r and the parameters must be identical
-        P::Jacobian: TrMatVecMulx<T, P::Residuals> + ColEnormsx<T>,
-        GradType<T, P::Jacobian, P::Residuals>: Colx<T, Owned = <P::Parameters as Colx<T>>::Owned>,
+        //
+        // @note(geo-ant): maybe restricting the output of
+        P::Jacobian: TrMatVecMulx<T, P::Residuals, Output = P::Parameters> + ColEnormsx<T>,
+        // GradType<T, P::Jacobian, P::Residuals>: Colx<T, Owned = <P::Parameters as Colx<T>>::Owned>,
         // for the calculation of the gtol criterion
-        GradType<T, P::Jacobian, P::Residuals>: MaxScaledDivx<T, ColNormsType<T, P::Jacobian>>,
         // for calculating the diagonal weights and replacing them
         // @note(geo-ant) this assumes that they are the same as the gradient
         // type, i.e. the result of J^T *r.
@@ -360,12 +362,23 @@ impl<T> Dogleg<T> {
         P::Jacobian: DiagRightMulx<DiagonalWeightsType<T, P>>,
         // for scaling the gradient and the parameters
         StepType<T, P>: DiagLeftMulx<DiagonalWeightsType<T, P>>,
-        GradType<T, P::Jacobian, P::Residuals>: DiagLeftMulx<DiagonalWeightsType<T, P>>,
-        // for calculating the new params x' = x + p = p + x
-        P::Parameters: Addx<T, StepType<T, P>>,
+        GradType<T, P>: DiagLeftMulx<DiagonalWeightsType<T, P>>,
+        // // for calculating the new params x' = x + p = p + x
+        // P::Parameters: Addx<T, StepType<T, P>>,
         // for applying the scaling to the parameters
         P::Parameters: DiagLeftMulx<DiagonalWeightsType<T, P>>,
+        // for gtol calculation
+        P::Parameters: MaxScaledDivx<T, DiagonalWeightsType<T, P>>,
+        // so that we can add parameters to the step (step type = gradient)
+        // for calculating the new params x' = x + p = p + x
+        GradType<T, P>: Addx<P::Parameters>,
     {
+        // the current parameters of the problems. We have to keep track of
+        // them because the problem struct itself could have parameters set
+        // that are discarded. Later in the code we also keep track of the
+        // residuals and the jacobian for those parameters. That frees us
+        // from having to "fork" the model.
+        let mut params = problem.params();
         // @todo(geo-ant) maybe refactor this at a later date, but for the
         // intended use of this library, the number of parameters being near
         // the u64 limit is completely unreasonable, hence panicking here is
@@ -373,7 +386,7 @@ impl<T> Dogleg<T> {
         // shouldn't be using this algorithm anyway...
         // @note(geo-ant) this whole overflow checking is very pedantic,
         // but what the heck...
-        let maybe_dim = problem.params().dim();
+        let maybe_dim = params.dim();
         let (n_plus_one, overflow) = try_opt!(
             maybe_dim,
             on_none = TerminationFailure::DimOutsideU64Bounds,
@@ -454,7 +467,7 @@ impl<T> Dogleg<T> {
                 let param_norm = {
                     if let Some(diag) = diagonal_weights.as_ref() {
                         try_opt!(
-                            problem.params().diag_mul_left(&diag, Invert::No),
+                            params.clone().diag_mul_left(&diag, Invert::No),
                             on_none = TerminationFailure::WrongDimensions(
                                 "parameters have incompatible dimensions for weights"
                             ),
@@ -462,7 +475,7 @@ impl<T> Dogleg<T> {
                         )
                         .enorm()
                     } else {
-                        problem.params().enorm()
+                        params.enorm()
                     }
                 };
                 delta = param_norm * self.factor;
@@ -536,139 +549,130 @@ impl<T> Dogleg<T> {
             // Note that the returned step is thus p' = Dp.
             let mut step_solver = try2!(S::init(jacobian, residuals, gradient), problem = problem);
 
-            loop {
-                // again, note that the step is p' = Dp, i.e. the possibly scaled step
-                let (step, solver) = try2!(step_solver.update_step(delta), problem = problem);
-                step_solver = solver;
+            // loop {
+            //     // again, note that the step is p' = Dp, i.e. the possibly scaled step
+            //     let (dogleg_step, solver) =
+            //         try2!(step_solver.update_step(delta), problem = problem);
+            //     step_solver = solver;
 
-                // this is (like in MINPACK) the possibly scaled norm of p
-                let DoglegStep {
-                    // this is scaled p' = Dp
-                    // if we have no scaling, this is just p
-                    p: p_scaled,
-                    // this is the norm of scaled p
-                    p_norm: p_scaled_norm,
-                    // the predicted reduction is independent of the scaling
-                    // see the chapter on scaling in Nocedal&Wright using the definitions
-                    // for scaled g, scaled J, and scaled p it turns out that
-                    // all the D and D^-1 expressions will cancel out such
-                    // that the predicted reduction is independent of scaling
-                    // @note(geo-ant) #2 that we still need to normalize the predicted
-                    // retuction by the current function norm
-                    predicted_reduction,
-                } = step;
+            //     // this is (like in MINPACK) the possibly scaled norm of p
+            //     let DoglegStep {
+            //         // this is scaled p' = Dp
+            //         // if we have no scaling, this is just p
+            //         p: step_scaled,
+            //         // this is the norm of scaled p
+            //         p_norm: p_scaled_norm,
+            //         // the predicted reduction is independent of the scaling
+            //         // see the chapter on scaling in Nocedal&Wright using the definitions
+            //         // for scaled g, scaled J, and scaled p it turns out that
+            //         // all the D and D^-1 expressions will cancel out such
+            //         // that the predicted reduction is independent of scaling
+            //         // @note(geo-ant) #2 that we still need to normalize the predicted
+            //         // retuction by the current function norm
+            //         predicted_reduction,
+            //     } = dogleg_step;
 
-                // adjust the initial step bound on first iteration
-                if is_first_iteration {
-                    // it's correct to use the scaled norm here
-                    // cf. the MINPACK implementation of lmder
-                    delta = delta.min(p_scaled_norm);
-                }
+            //     // adjust the initial step bound on first iteration
+            //     if is_first_iteration {
+            //         // it's correct to use the scaled norm here
+            //         // cf. the MINPACK implementation of lmder
+            //         delta = delta.min(p_scaled_norm);
+            //     }
 
-                // get the new step candidate depending on whether we use scaling
-                // or not. If we use scaling, we have to convert the step to unscaled
-                // space
-                let p = if let Some(diag) = diagonal_weights.as_ref() {
-                    try_opt!(
-                        p_scaled.diag_mul_left(&diag, Invert::Yes),
-                        on_none = TerminationFailure::WrongDimensions(
-                            "parameter and weights have incompatible dimensions"
-                        ),
-                        problem = problem
-                    )
-                } else {
-                    p_scaled
-                };
+            //     // get the new step candidate depending on whether we use scaling
+            //     // or not. If we use scaling, we have to convert the step to unscaled
+            //     // space
+            //     let step = if let Some(diag) = diagonal_weights.as_ref() {
+            //         try_opt!(
+            //             step_scaled.diag_mul_left(&diag, Invert::Yes),
+            //             on_none = TerminationFailure::WrongDimensions(
+            //                 "parameter and weights have incompatible dimensions"
+            //             ),
+            //             problem = problem
+            //         )
+            //     } else {
+            //         step_scaled
+            //     };
 
-                // candidate for the new parameters
-                // x_new = x + p
-                let new_params = try_opt!(
-                    problem.params().add(&p),
-                    on_none = TerminationFailure::WrongDimensions(
-                        "parameters and step have incompatible dimensions"
-                    ),
-                    problem = problem
-                );
+            //     // candidate for the new parameters
+            //     // x_new = x + p
+            //     let new_params = try_opt!(
+            //         // !!!!!!!!!!!!!!! we got to keep track of the current parameters!!!!!
+            //         // the problem parameters could be intermediate values that we discarded!!
+            //         // !!!!!!!!!!!!
+            //         // !!!!!!!!!!!!!!!!
+            //         step.add(&params),
+            //         on_none = TerminationFailure::WrongDimensions(
+            //             "parameters and step have incompatible dimensions"
+            //         ),
+            //         problem = problem
+            //     );
 
-                //@todo(geo) this is not correct, just making sure this works
-                problem.set_params(new_params.clone());
-                let new_residuals = try_opt!(
-                    problem.residuals(),
-                    on_none = TerminationFailure::ResidualEval
-                );
-                let new_rnorm = new_residuals.enorm();
+            //     //@todo(geo) this is not correct, just making sure this works
+            //     problem.set_params(new_params.clone_owned());
+            //     let new_residuals = try_opt!(
+            //         problem.residuals(),
+            //         on_none = TerminationFailure::ResidualEval
+            //     );
+            //     let new_rnorm = new_residuals.enorm();
 
-                let accept_update = true;
+            //     // this is the same as in the minpack implementation
+            //     let actual_reduction = if T::P1 * new_rnorm < rnorm {
+            //         T::ONE - Float::powi(new_rnorm / rnorm, 2)
+            //     } else {
+            //         -T::ONE
+            //     };
 
-                if accept_update {
-                    rnorm = new_rnorm;
-                    residuals = new_residuals;
-                } else {
-                }
-                // let x_candidate = problem.params().into_owned() + ;
+            //     // this is also the same as in MINPACK
+            //     let ratio = if predicted_reduction != T::ZERO {
+            //         actual_reduction / predicted_reduction
+            //     } else {
+            //         T::ZERO
+            //     };
 
-                is_first_iteration = false;
+            //     // adjust the trust region
+            //     if ratio < T::P25 {
+            //         // this is identical to minpack with one exception. MINPACK
+            //         // considers the directional derivative to adjust the trust
+            //         // region radius in the case actred < 0 to potentially
+            //         // "soften the blow". I'm just taking the worst case,
+            //         // because I'm not sure how to use this in my case.
 
-                if !is_first_iteration {
-                    //@todo
-                    break;
-                }
-            } //inner loop
+            //         let mut temp = if actual_reduction >= T::ZERO {
+            //             T::P5
+            //         } else {
+            //             T::P1
+            //         };
+            //         if (T::P1 * new_rnorm >= rnorm || temp < T::P1) {
+            //             temp = T::P1;
+            //         }
+            //         delta = temp * T::min(delta, T::TEN * step.enorm());
+            //     } else if ratio >= T::P75 {
+            //         delta = T::TWO * step.enorm()
+            //     } else {
+            //     }
 
-            //@todo
+            //     let accept_update = ratio >= T::P0001;
+
+            //     if accept_update {
+            //         rnorm = new_rnorm;
+            //         residuals = new_residuals;
+            //         params = new_params;
+            //     } else {
+            //     }
+
+            //     is_first_iteration = false;
+
+            //     if !is_first_iteration {
+            //         //@todo
+            //         break;
+            //     }
+            // } //inner loop
+
+            // @todo
             break;
         } //outer loop
 
         todo!()
-    }
-}
-
-struct ParameterResetGuard<'a, P, T>
-where
-    P: LeastSquaresProblem<T>,
-{
-    problem: &'a mut P,
-    // if this is Some(...) then those parameters are set when this guard
-    // is dropped.
-    old_params: Option<P::Parameters>,
-}
-
-impl<'a, P, T> ParameterResetGuard<'a, P, T>
-where
-    P: LeastSquaresProblem<T>,
-{
-    pub fn new(problem: &'a mut P) -> Self {
-        Self {
-            problem,
-            old_params: None,
-        }
-    }
-
-    pub fn params(&self) -> P::Parameters {
-        self.problem.params()
-    }
-
-    pub fn set_params(&mut self, params: P::Parameters) {
-        self.old_params = Some(self.problem.params());
-        self.problem.set_params(params);
-    }
-
-    pub fn defuse(&mut self) {
-        debug_assert!(
-            self.old_params.is_some(),
-            "commit params called twice or called without setting parameters first"
-        );
-        self.old_params = None;
-    }
-}
-
-impl<'a, P, T> Drop for ParameterResetGuard<'a, P, T>
-where
-    P: LeastSquaresProblem<T>,
-{
-    fn drop(&mut self) {
-        if let Some(params) = self.old_params.take() {
-            self.problem.set_params(params);
-        }
     }
 }

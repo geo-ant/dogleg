@@ -100,7 +100,7 @@ pub trait Dotx<T, V = Self> {
 /// For a matrix `A` that implements this, we can calculate the matrix-vector
 /// product `A^T v` with a suitably sized vector.
 pub trait TrMatVecMulx<T, V> {
-    type Output: Colx<T>;
+    type Output: OwnedColx<T>;
     /// calculate `A^T v`. Returns `None` if there is a
     /// dimensions mismatch.
     fn tr_mulv(&self, v: &V) -> Option<Self::Output>;

@@ -11,7 +11,7 @@ use dogleg_matx::ElementwiseMaxx;
 use dogleg_matx::ElementwiseReplaceLeqx;
 use dogleg_matx::Invert;
 use dogleg_matx::MaxScaledDivx;
-use dogleg_matx::{Colx, Matx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm};
+use dogleg_matx::{Colx, TrMatVecMulx};
 use num_traits::Float;
 use std::num::NonZero;
 
@@ -645,7 +645,7 @@ impl<T> Dogleg<T> {
                     } else {
                         T::P1
                     };
-                    if (T::P1 * new_rnorm >= rnorm || temp < T::P1) {
+                    if T::P1 * new_rnorm >= rnorm || temp < T::P1 {
                         temp = T::P1;
                     }
                     delta = temp * T::min(delta, T::TEN * step_enorm);

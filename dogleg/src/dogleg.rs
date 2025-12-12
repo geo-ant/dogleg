@@ -371,7 +371,7 @@ impl<T> Dogleg<T> {
         P::Parameters: MaxScaledDivx<T, DiagonalWeightsType<T, P>>,
         // so that we can add parameters to the step (step type = gradient)
         // for calculating the new params x' = x + p = p + x
-        GradType<T, P>: Addx<P::Parameters>,
+        GradType<T, P>: Addx<T, P::Parameters>,
     {
         // the current parameters of the problems. We have to keep track of
         // them because the problem struct itself could have parameters set
@@ -549,125 +549,127 @@ impl<T> Dogleg<T> {
             // Note that the returned step is thus p' = Dp.
             let mut step_solver = try2!(S::init(jacobian, residuals, gradient), problem = problem);
 
-            // loop {
-            //     // again, note that the step is p' = Dp, i.e. the possibly scaled step
-            //     let (dogleg_step, solver) =
-            //         try2!(step_solver.update_step(delta), problem = problem);
-            //     step_solver = solver;
+            loop {
+                // again, note that the step is p' = Dp, i.e. the possibly scaled step
+                let (dogleg_step, solver) =
+                    try2!(step_solver.update_step(delta), problem = problem);
+                step_solver = solver;
 
-            //     // this is (like in MINPACK) the possibly scaled norm of p
-            //     let DoglegStep {
-            //         // this is scaled p' = Dp
-            //         // if we have no scaling, this is just p
-            //         p: step_scaled,
-            //         // this is the norm of scaled p
-            //         p_norm: p_scaled_norm,
-            //         // the predicted reduction is independent of the scaling
-            //         // see the chapter on scaling in Nocedal&Wright using the definitions
-            //         // for scaled g, scaled J, and scaled p it turns out that
-            //         // all the D and D^-1 expressions will cancel out such
-            //         // that the predicted reduction is independent of scaling
-            //         // @note(geo-ant) #2 that we still need to normalize the predicted
-            //         // retuction by the current function norm
-            //         predicted_reduction,
-            //     } = dogleg_step;
+                // this is (like in MINPACK) the possibly scaled norm of p
+                let DoglegStep {
+                    // this is scaled p' = Dp
+                    // if we have no scaling, this is just p
+                    p: step_scaled,
+                    // this is the norm of scaled p
+                    p_norm: p_scaled_norm,
+                    // the predicted reduction is independent of the scaling
+                    // see the chapter on scaling in Nocedal&Wright using the definitions
+                    // for scaled g, scaled J, and scaled p it turns out that
+                    // all the D and D^-1 expressions will cancel out such
+                    // that the predicted reduction is independent of scaling
+                    // @note(geo-ant) #2 that we still need to normalize the predicted
+                    // retuction by the current function norm
+                    predicted_reduction,
+                } = dogleg_step;
 
-            //     // adjust the initial step bound on first iteration
-            //     if is_first_iteration {
-            //         // it's correct to use the scaled norm here
-            //         // cf. the MINPACK implementation of lmder
-            //         delta = delta.min(p_scaled_norm);
-            //     }
+                // adjust the initial step bound on first iteration
+                if is_first_iteration {
+                    // it's correct to use the scaled norm here
+                    // cf. the MINPACK implementation of lmder
+                    delta = delta.min(p_scaled_norm);
+                }
 
-            //     // get the new step candidate depending on whether we use scaling
-            //     // or not. If we use scaling, we have to convert the step to unscaled
-            //     // space
-            //     let step = if let Some(diag) = diagonal_weights.as_ref() {
-            //         try_opt!(
-            //             step_scaled.diag_mul_left(&diag, Invert::Yes),
-            //             on_none = TerminationFailure::WrongDimensions(
-            //                 "parameter and weights have incompatible dimensions"
-            //             ),
-            //             problem = problem
-            //         )
-            //     } else {
-            //         step_scaled
-            //     };
+                // get the new step candidate depending on whether we use scaling
+                // or not. If we use scaling, we have to convert the step to unscaled
+                // space
+                let step = if let Some(diag) = diagonal_weights.as_ref() {
+                    try_opt!(
+                        step_scaled.diag_mul_left(&diag, Invert::Yes),
+                        on_none = TerminationFailure::WrongDimensions(
+                            "parameter and weights have incompatible dimensions"
+                        ),
+                        problem = problem
+                    )
+                } else {
+                    step_scaled
+                };
 
-            //     // candidate for the new parameters
-            //     // x_new = x + p
-            //     let new_params = try_opt!(
-            //         // !!!!!!!!!!!!!!! we got to keep track of the current parameters!!!!!
-            //         // the problem parameters could be intermediate values that we discarded!!
-            //         // !!!!!!!!!!!!
-            //         // !!!!!!!!!!!!!!!!
-            //         step.add(&params),
-            //         on_none = TerminationFailure::WrongDimensions(
-            //             "parameters and step have incompatible dimensions"
-            //         ),
-            //         problem = problem
-            //     );
+                let step_enorm = step.enorm();
 
-            //     //@todo(geo) this is not correct, just making sure this works
-            //     problem.set_params(new_params.clone_owned());
-            //     let new_residuals = try_opt!(
-            //         problem.residuals(),
-            //         on_none = TerminationFailure::ResidualEval
-            //     );
-            //     let new_rnorm = new_residuals.enorm();
+                // candidate for the new parameters
+                // x_new = x + p
+                let new_params = try_opt!(
+                    // !!!!!!!!!!!!!!! we got to keep track of the current parameters!!!!!
+                    // the problem parameters could be intermediate values that we discarded!!
+                    // !!!!!!!!!!!!
+                    // !!!!!!!!!!!!!!!!
+                    step.add(&params),
+                    on_none = TerminationFailure::WrongDimensions(
+                        "parameters and step have incompatible dimensions"
+                    ),
+                    problem = problem
+                );
 
-            //     // this is the same as in the minpack implementation
-            //     let actual_reduction = if T::P1 * new_rnorm < rnorm {
-            //         T::ONE - Float::powi(new_rnorm / rnorm, 2)
-            //     } else {
-            //         -T::ONE
-            //     };
+                //@todo(geo) this is not correct, just making sure this works
+                problem.set_params(new_params.clone_owned());
+                let new_residuals = try_opt!(
+                    problem.residuals(),
+                    on_none = TerminationFailure::ResidualEval
+                );
+                let new_rnorm = new_residuals.enorm();
 
-            //     // this is also the same as in MINPACK
-            //     let ratio = if predicted_reduction != T::ZERO {
-            //         actual_reduction / predicted_reduction
-            //     } else {
-            //         T::ZERO
-            //     };
+                // this is the same as in the minpack implementation
+                let actual_reduction = if T::P1 * new_rnorm < rnorm {
+                    T::ONE - Float::powi(new_rnorm / rnorm, 2)
+                } else {
+                    -T::ONE
+                };
 
-            //     // adjust the trust region
-            //     if ratio < T::P25 {
-            //         // this is identical to minpack with one exception. MINPACK
-            //         // considers the directional derivative to adjust the trust
-            //         // region radius in the case actred < 0 to potentially
-            //         // "soften the blow". I'm just taking the worst case,
-            //         // because I'm not sure how to use this in my case.
+                // this is also the same as in MINPACK
+                let ratio = if predicted_reduction != T::ZERO {
+                    actual_reduction / predicted_reduction
+                } else {
+                    T::ZERO
+                };
 
-            //         let mut temp = if actual_reduction >= T::ZERO {
-            //             T::P5
-            //         } else {
-            //             T::P1
-            //         };
-            //         if (T::P1 * new_rnorm >= rnorm || temp < T::P1) {
-            //             temp = T::P1;
-            //         }
-            //         delta = temp * T::min(delta, T::TEN * step.enorm());
-            //     } else if ratio >= T::P75 {
-            //         delta = T::TWO * step.enorm()
-            //     } else {
-            //     }
+                // adjust the trust region
+                if ratio < T::P25 {
+                    // this is identical to minpack with one exception. MINPACK
+                    // considers the directional derivative to adjust the trust
+                    // region radius in the case actred < 0 to potentially
+                    // "soften the blow". I'm just taking the worst case,
+                    // because I'm not sure how to use this in my case.
 
-            //     let accept_update = ratio >= T::P0001;
+                    let mut temp = if actual_reduction >= T::ZERO {
+                        T::P5
+                    } else {
+                        T::P1
+                    };
+                    if (T::P1 * new_rnorm >= rnorm || temp < T::P1) {
+                        temp = T::P1;
+                    }
+                    delta = temp * T::min(delta, T::TEN * step_enorm);
+                } else if ratio >= T::P75 {
+                    delta = T::TWO * step_enorm
+                } else {
+                }
 
-            //     if accept_update {
-            //         rnorm = new_rnorm;
-            //         residuals = new_residuals;
-            //         params = new_params;
-            //     } else {
-            //     }
+                let accept_update = ratio >= T::P0001;
 
-            //     is_first_iteration = false;
+                if accept_update {
+                    rnorm = new_rnorm;
+                    residuals = new_residuals;
+                    params = new_params;
+                } else {
+                }
 
-            //     if !is_first_iteration {
-            //         //@todo
-            //         break;
-            //     }
-            // } //inner loop
+                is_first_iteration = false;
+
+                if !is_first_iteration {
+                    //@todo
+                    break;
+                }
+            } //inner loop
 
             // @todo
             break;

@@ -20,6 +20,8 @@ mod hack;
 mod qr_impl;
 mod svd_impl;
 
+mod reset_guard;
+
 pub mod report;
 pub use common::DoglegStep;
 pub use common::DoglegStepSolver;
@@ -29,7 +31,7 @@ pub use report::TerminationReason;
 /// like debug_assert_eq, but doesn't require lhs, rhs to implement the Debug
 /// trait.
 macro_rules! debug_assert_eq2 {
-    ($lhs:expr, $rhs:expr) => {
+    ($lhs:expr, $rhs:expr $(,)?) => {
         #[cfg(debug_assertions)]
         {
             if $lhs != $rhs {
@@ -68,10 +70,12 @@ macro_rules! try_opt {
     };
 
     // for calls like jacobian.mul_tr(&residuals)
-    ($expr:expr, on_none = $failure:expr, problem = $problem:ident) => {
+    // also if there's a RAII drop guard, this will drop it before return, if given
+    ($expr:expr, on_none = $failure:expr, problem = $problem:ident $(,guard = $guard:ident)? $(,)?) => {
         match $expr {
             Some(val) => val,
             None => {
+                $(drop($guard);)?
                 return Err($crate::Error {
                     problem: $problem,
                     failure : $failure
@@ -298,7 +302,10 @@ type DiagonalWeightsType<T, P> =
 // use nalgebra::Scalar;
 // use nalgebra::U1;
 // use num_traits::ConstOne;
-impl<T> Dogleg<T> {
+impl<T> Dogleg<T>
+where
+    T: std::ops::AddAssign,
+{
     // // @todo(geo) this works with only nalgebra trait bounds
     // pub fn min_levmar<P, M, N>(self, p: P)
     // where
@@ -419,6 +426,7 @@ impl<T> Dogleg<T> {
             problem.residuals(),
             on_none = TerminationFailure::ResidualEval
         );
+        nfunc_evals += 1;
         let mut rnorm = residuals.enorm();
 
         // outer loop
@@ -441,7 +449,6 @@ impl<T> Dogleg<T> {
                     },
                 ));
             }
-            nfunc_evals += 1;
 
             let mut jacobian = try_opt!(
                 problem.jacobian(),
@@ -509,6 +516,15 @@ impl<T> Dogleg<T> {
                         objective_function: T::P5 * rnorm,
                     },
                 ));
+            }
+
+            if gmax <= Float::epsilon() {
+                return Err(Error {
+                    problem,
+                    failure: TerminationFailure::NoImprovementPossible(
+                        report::StoppingCriterion::Gtol,
+                    ),
+                });
             }
 
             // compute new scaling matrix (if scaling is requested) and perform the scaling
@@ -610,65 +626,161 @@ impl<T> Dogleg<T> {
                     problem = problem
                 );
 
-                //@todo(geo) this is not correct, just making sure this works
-                problem.set_params(new_params.clone_owned());
-                let new_residuals = try_opt!(
-                    problem.residuals(),
-                    on_none = TerminationFailure::ResidualEval
-                );
-                let new_rnorm = new_residuals.enorm();
+                {
+                    let mut problem_guard =
+                        reset_guard::update_params(&mut problem, new_params.clone_owned());
+                    nfunc_evals += 1;
 
-                // this is the same as in the minpack implementation
-                let actual_reduction = if T::P1 * new_rnorm < rnorm {
-                    T::ONE - Float::powi(new_rnorm / rnorm, 2)
-                } else {
-                    -T::ONE
-                };
+                    //@todo(geo) this is not correct, just making sure this works
+                    let new_residuals = try_opt!(
+                        problem_guard.residuals(),
+                        on_none = TerminationFailure::ResidualEval,
+                        problem = problem,
+                        guard = problem_guard
+                    );
+                    let new_rnorm = new_residuals.enorm();
 
-                // this is also the same as in MINPACK
-                let ratio = if predicted_reduction != T::ZERO {
-                    actual_reduction / predicted_reduction
-                } else {
-                    T::ZERO
-                };
-
-                // adjust the trust region
-                if ratio < T::P25 {
-                    // this is identical to minpack with one exception. MINPACK
-                    // considers the directional derivative to adjust the trust
-                    // region radius in the case actred < 0 to potentially
-                    // "soften the blow". I'm just taking the worst case,
-                    // because I'm not sure how to use this in my case.
-
-                    let mut temp = if actual_reduction >= T::ZERO {
-                        T::P5
+                    // this is the same as in the minpack implementation
+                    let actual_reduction = if T::P1 * new_rnorm < rnorm {
+                        T::ONE - Float::powi(new_rnorm / rnorm, 2)
                     } else {
-                        T::P1
+                        -T::ONE
                     };
-                    if T::P1 * new_rnorm >= rnorm || temp < T::P1 {
-                        temp = T::P1;
+
+                    // this is also the same as in MINPACK
+                    let ratio = if predicted_reduction != T::ZERO {
+                        actual_reduction / predicted_reduction
+                    } else {
+                        T::ZERO
+                    };
+
+                    // adjust the trust region
+                    if ratio < T::P25 {
+                        // this is identical to minpack with one exception. MINPACK
+                        // considers the directional derivative to adjust the trust
+                        // region radius in the case actred < 0 to potentially
+                        // "soften the blow". I'm just taking the worst case,
+                        // because I'm not sure how to use this in my case.
+
+                        let mut temp = if actual_reduction >= T::ZERO {
+                            T::P5
+                        } else {
+                            T::P1
+                        };
+                        if T::P1 * new_rnorm >= rnorm || temp < T::P1 {
+                            temp = T::P1;
+                        }
+                        delta = temp * T::min(delta, T::TEN * step_enorm);
+                    } else if ratio >= T::P75 {
+                        delta = T::TWO * step_enorm
+                    } else {
                     }
-                    delta = temp * T::min(delta, T::TEN * step_enorm);
-                } else if ratio >= T::P75 {
-                    delta = T::TWO * step_enorm
-                } else {
-                }
 
-                let accept_update = ratio >= T::P0001;
+                    let accept_update = ratio >= T::P0001;
 
-                if accept_update {
-                    rnorm = new_rnorm;
-                    residuals = new_residuals;
-                    params = new_params;
-                } else {
-                }
+                    if accept_update {
+                        rnorm = new_rnorm;
+                        residuals = new_residuals;
+                        rnorm = residuals.enorm();
+                        params = new_params;
+                        problem_guard.defuse();
+                    } else {
+                    }
 
-                // Convergence checks
+                    // Convergence checks
 
-                // F-convergence check, see MINPACK user guide p. 22-24
-                let ftol_check = predicted_reduction <= self.ftol
-                    && Float::abs(actual_reduction) <= self.ftol
-                    && ratio <= MagicConst::TWO;
+                    // F-convergence check, see MINPACK user guide p. 22-24
+                    if (FtolCheck {
+                        predicted_reduction,
+                        actual_reduction,
+                        ratio,
+                        tol: self.ftol,
+                    })
+                    .check()
+                    {
+                        drop(problem_guard);
+                        return Ok((
+                            problem,
+                            MinimizationReport {
+                                termination: TerminationReason::Converged {
+                                    criterion: report::StoppingCriterion::Ftol,
+                                },
+                                number_of_evaluations: nfunc_evals,
+                                objective_function: T::P5 * rnorm,
+                            },
+                        ));
+                    }
+
+                    // X-convergence check (for parameters), MINPACK user guide p. 23
+                    let xnorm = match diagonal_weights.as_ref() {
+                        Some(weights) => {
+                            try_opt!(
+                                params.diag_mul_left_enorm(weights),
+                                on_none = TerminationFailure::WrongDimensions(
+                                    "parameter and weights have incompatible dimensions"
+                                ),
+                                problem = problem,
+                                guard = problem_guard
+                            )
+                        }
+                        // params.diag_mul_left_enorm(weights).unwrap(),
+                        None => params.enorm(),
+                    };
+                    let xtol_check = delta <= self.xtol * xnorm;
+
+                    if xtol_check {
+                        drop(problem_guard);
+                        return Ok((
+                            problem,
+                            MinimizationReport {
+                                termination: TerminationReason::Converged {
+                                    criterion: report::StoppingCriterion::Xtol,
+                                },
+                                number_of_evaluations: nfunc_evals,
+                                objective_function: T::P5 * rnorm,
+                            },
+                        ));
+                    }
+
+                    if nfunc_evals >= max_func_evals {
+                        drop(problem_guard);
+                        return Err(Error {
+                            problem,
+                            failure: TerminationFailure::LostPatience,
+                        });
+                    }
+
+                    // repeat the tests for the convergence criteria with the machine
+                    // epsilon. If those conditions are hit, it means no improvements
+                    // are possible and the tolerances must be made bigger.
+                    if (FtolCheck {
+                        predicted_reduction,
+                        actual_reduction,
+                        ratio,
+                        tol: T::EPS,
+                    })
+                    .check()
+                    {
+                        drop(problem_guard);
+                        return Err(Error {
+                            problem,
+                            failure: TerminationFailure::NoImprovementPossible(
+                                report::StoppingCriterion::Ftol,
+                            ),
+                        });
+                    }
+
+                    // this is for xtol
+                    if delta <= T::EPS {
+                        drop(problem_guard);
+                        return Err(Error {
+                            problem,
+                            failure: TerminationFailure::NoImprovementPossible(
+                                report::StoppingCriterion::Xtol,
+                            ),
+                        });
+                    }
+                } // scope for setting new step and checking return conditions
 
                 if !is_first_iteration {
                     //@todo
@@ -681,5 +793,24 @@ impl<T> Dogleg<T> {
         } //outer loop
 
         todo!()
+    }
+}
+
+#[derive(Debug)]
+/// helper structure to factor out the F-convergence check,
+/// see MINPACK user guide p. 22-24
+struct FtolCheck<T> {
+    pub predicted_reduction: T,
+    pub actual_reduction: T,
+    pub ratio: T,
+    pub tol: T,
+}
+
+impl<T: Float + MagicConst> FtolCheck<T> {
+    fn check(self) -> bool {
+        debug_assert_eq2!(self.ratio, self.actual_reduction / self.predicted_reduction);
+        self.predicted_reduction <= self.tol
+            && Float::abs(self.actual_reduction) <= self.tol
+            && self.ratio <= MagicConst::TWO
     }
 }

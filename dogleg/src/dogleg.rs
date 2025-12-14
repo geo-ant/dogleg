@@ -340,6 +340,7 @@ where
     where
         T: Float + MagicConst,
         P: LeastSquaresProblem<T>,
+        P::Residuals: Clone,
         // see below, we require the gradient, i.e. the of J^T r to be the owned type of P.
         // This should barely be a restriction...
         S: DoglegStepSolver<
@@ -563,7 +564,10 @@ where
             // initialize the step solver with the given (unscaled) residuals, and the
             // (possibly scaled) gradient and (possibly scaled) jacobian.
             // Note that the returned step is thus p' = Dp.
-            let mut step_solver = try2!(S::init(jacobian, residuals, gradient), problem = problem);
+            let mut step_solver = try2!(
+                S::init(jacobian, residuals.clone(), gradient),
+                problem = problem
+            );
 
             loop {
                 // again, note that the step is p' = Dp, i.e. the possibly scaled step
@@ -681,9 +685,9 @@ where
                     if accept_update {
                         rnorm = new_rnorm;
                         residuals = new_residuals;
-                        rnorm = residuals.enorm();
                         params = new_params;
                         problem_guard.defuse();
+                        is_first_iteration = false;
                     } else {
                     }
 
@@ -757,7 +761,7 @@ where
                         predicted_reduction,
                         actual_reduction,
                         ratio,
-                        tol: T::EPS,
+                        tol: T::EPSMCH,
                     })
                     .check()
                     {
@@ -771,7 +775,7 @@ where
                     }
 
                     // this is for xtol
-                    if delta <= T::EPS {
+                    if delta <= T::EPSMCH {
                         drop(problem_guard);
                         return Err(Error {
                             problem,
@@ -780,19 +784,12 @@ where
                             ),
                         });
                     }
+                    if accept_update {
+                        break; // inner loop
+                    }
                 } // scope for setting new step and checking return conditions
-
-                if !is_first_iteration {
-                    //@todo
-                    break;
-                }
             } //inner loop
-
-            // @todo
-            break;
         } //outer loop
-
-        todo!()
     }
 }
 

@@ -14,9 +14,8 @@
 #![deny(clippy::panic)]
 #![deny(clippy::panicking_unwrap)]
 
-use std::{iter::Sum, ops::AddAssign};
-
 use num_traits::ConstOne;
+use std::ops::AddAssign;
 
 mod faer_impl;
 mod nalgebra_impl;

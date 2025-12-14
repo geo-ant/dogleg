@@ -14,7 +14,6 @@ use num_traits::float::TotalOrder;
 use num_traits::{ConstOne, Float};
 use rayon::prelude::*;
 use std::cmp::Ordering;
-use std::iter::Sum;
 use std::ops::{AddAssign, MulAssign};
 
 #[cfg(test)]

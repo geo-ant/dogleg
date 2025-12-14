@@ -17,16 +17,14 @@ use std::num::NonZero;
 
 mod common;
 mod qr_impl;
-mod svd_impl;
-
 mod reset_guard;
+mod svd_impl;
 
 pub mod report;
 pub use common::DoglegStep;
 pub use common::DoglegStepSolver;
 pub use report::MinimizationReport;
 pub use report::TerminationReason;
-
 pub use svd_impl::SvdStepSolver;
 
 /// like debug_assert_eq, but doesn't require lhs, rhs to implement the Debug

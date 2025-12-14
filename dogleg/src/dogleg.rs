@@ -141,6 +141,15 @@ pub struct Dogleg<T> {
     patience: u64,
 }
 
+impl<T> Default for Dogleg<T>
+where
+    T: Float + MagicConst,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Dogleg<T>
 where
     T: Float + MagicConst,
@@ -678,7 +687,7 @@ where
                         delta = temp * T::min(delta, T::TEN * step_enorm);
                     } else if ratio >= T::P75 {
                         delta = T::TWO * step_enorm
-                    } 
+                    }
 
                     let accept_update = ratio >= T::P0001;
 
@@ -688,7 +697,7 @@ where
                         params = new_params;
                         problem_guard.defuse();
                         is_first_iteration = false;
-                    } 
+                    }
 
                     // Convergence checks
 

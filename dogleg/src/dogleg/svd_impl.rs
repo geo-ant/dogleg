@@ -72,14 +72,20 @@ where
                 residuals,
             } => {
                 // ||J g||
-                let jg_norm = jacobian.mulv_enorm(&gradient).unwrap();
+                let jg_norm = jacobian
+                    .mulv_enorm(&gradient)
+                    .ok_or(TerminationFailure::WrongDimensions("gradient and jacobian"))?;
                 // ||g||
                 let g_norm = gradient.enorm();
 
                 let jacobian_clone = jacobian.clone_owned();
-                let svd = jacobian_clone.calc_svd().unwrap();
+                let svd = jacobian_clone
+                    .calc_svd()
+                    .ok_or(TerminationFailure::Numerical("svd"))?;
                 let minus_r = residuals.scale(-T::ONE);
-                let pb = svd.solve_lsqr(&minus_r).unwrap();
+                let pb = svd
+                    .solve_lsqr(&minus_r)
+                    .ok_or(TerminationFailure::Numerical("lsqr solve"))?;
                 let pb_norm = pb.enorm();
                 let u = Float::powi(g_norm, 2) / Float::powi(jg_norm, 2);
                 SvdSolverCache {
@@ -99,7 +105,7 @@ where
         // @todo(geo-ant) this method can be made more efficient by also
         // providing the already calculated norms
         let pu = cached.g.clone_owned().scale(cached.u);
-        let p = dogleg_step(&pu, &cached.pb, delta).unwrap();
+        let p = dogleg_step(&pu, &cached.pb, delta)?;
 
         let half = T::ONE / (T::ONE + T::ONE); // 1/2
                                                // predicted reduction is
@@ -108,8 +114,18 @@ where
                                                // be a good sanity check)
                                                // But we don't save g here, but we know
 
-        let predicted_reduction = -cached.g.dot(&p).unwrap()
-            - half * Float::powi(cached.jacobian.mulv_enorm(&p).unwrap(), 2);
+        let predicted_reduction = -cached
+            .g
+            .dot(&p)
+            .ok_or(TerminationFailure::WrongDimensions("gradient and step"))?
+            - half
+                * Float::powi(
+                    cached
+                        .jacobian
+                        .mulv_enorm(&p)
+                        .ok_or(TerminationFailure::WrongDimensions("jacobian and step"))?,
+                    2,
+                );
         debug_assert!(predicted_reduction.is_sign_positive() || predicted_reduction.is_zero());
 
         let p_norm = p.enorm();

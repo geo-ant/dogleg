@@ -126,7 +126,7 @@ where
 // we have to use into_ownedx() for the return types and Option<PU::Ownedx> and
 // constrain the PU : Colx<T, Ownedx= PB::Ownedx>. But I won't do it unless I
 // have to.
-pub fn dogleg_step<T, P>(pu: &P, pb: &P, delta: T) -> Option<P::Owned>
+pub fn dogleg_step<T, P>(pu: &P, pb: &P, delta: T) -> Result<P::Owned, TerminationFailure>
 where
     T: Float + ConstOne,
     P: Colx<T, Owned = P> + Addx<T, P> + Dotx<T, P> + Scalex<T>,
@@ -139,12 +139,12 @@ where
     if pb_norm <= delta {
         // 1) in this case the entire dogleg lies inside the trust region radius
         // and we can just return the value for tau = 2, which is p_b
-        Some(pb.clone_owned())
+        Ok(pb.clone_owned())
     } else if pu_norm >= delta {
         // 2) in this case the first part of the dogleg path lies inside
         // the trust region, so we can just find the tau in [0,1] for
         // which ||p|| = delta, which is just tau = delta/pu_norm.
-        Some(pu.clone_owned().scale(delta / pu_norm))
+        Ok(pu.clone_owned().scale(delta / pu_norm))
     } else {
         // 3) in this case the rust region intersects somewhere inside the
         // second part of the dogleg and we have to do some algebra
@@ -160,8 +160,13 @@ where
         // in x and then with a little bit of rearranging, we can find a solution
         let a = Float::powi(pu_norm, 2);
         // pb - pu
-        let pb_pu = pb.clone_owned().scaled_add(-T::ONE, pu)?;
-        let b = pu.dot(&pb_pu)?;
+        let pb_pu = pb
+            .clone_owned()
+            .scaled_add(-T::ONE, pu)
+            .ok_or(TerminationFailure::WrongDimensions("dogleg step"))?;
+        let b = pu
+            .dot(&pb_pu)
+            .ok_or(TerminationFailure::WrongDimensions("dogleg step"))?;
 
         let c = Float::powi(pb_pu.enorm(), 2);
         let d = Float::powi(delta, 2);
@@ -171,10 +176,11 @@ where
         // mathematically, but numerically c can be small. The case c-> 0 implies
         // b/c -> inf, such that tau-1 = 0.
         if !b_c.is_finite() || b_c >= Float::sqrt(<T as Float>::max_value()) {
-            return Some(pu.clone_owned());
+            return Ok(pu.clone_owned());
         }
         let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
         pu.clone_owned()
             .scaled_add(T::ONE, &pb_pu.scale(tau_minus_one))
+            .ok_or(TerminationFailure::WrongDimensions("dogleg step"))
     }
 }

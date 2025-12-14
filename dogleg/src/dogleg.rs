@@ -361,12 +361,12 @@ impl<T> Dogleg<T> {
         // for scaling the jacobian
         P::Jacobian: DiagRightMulx<DiagonalWeightsType<T, P>>,
         // for scaling the gradient and the parameters
-        StepType<T, P>: DiagLeftMulx<DiagonalWeightsType<T, P>>,
-        GradType<T, P>: DiagLeftMulx<DiagonalWeightsType<T, P>>,
+        StepType<T, P>: DiagLeftMulx<T, DiagonalWeightsType<T, P>>,
+        GradType<T, P>: DiagLeftMulx<T, DiagonalWeightsType<T, P>>,
         // // for calculating the new params x' = x + p = p + x
         // P::Parameters: Addx<T, StepType<T, P>>,
         // for applying the scaling to the parameters
-        P::Parameters: DiagLeftMulx<DiagonalWeightsType<T, P>>,
+        P::Parameters: DiagLeftMulx<T, DiagonalWeightsType<T, P>>,
         // for gtol calculation
         P::Parameters: MaxScaledDivx<T, DiagonalWeightsType<T, P>>,
         // so that we can add parameters to the step (step type = gradient)
@@ -663,7 +663,12 @@ impl<T> Dogleg<T> {
                 } else {
                 }
 
-                is_first_iteration = false;
+                // Convergence checks
+
+                // F-convergence check, see MINPACK user guide p. 22-24
+                let ftol_check = predicted_reduction <= self.ftol
+                    && Float::abs(actual_reduction) <= self.ftol
+                    && ratio <= MagicConst::TWO;
 
                 if !is_first_iteration {
                     //@todo

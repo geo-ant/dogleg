@@ -161,12 +161,17 @@ pub trait DiagRightMulx<V>: Sized {
 
 /// trait for left-multiplying a diagonal matrix `D` to a vector
 /// `v` to calculate `D v` or `(D^-1) v`.
-pub trait DiagLeftMulx<V>: Sized {
+pub trait DiagLeftMulx<T, V>: Sized {
     /// returns the result `D v` or `(D^-1) v`, depending on the value
     /// of `invert`. `D` is given by the vector
     /// of its diagonal elements or `None`, if the dimensions are wrong
     /// or if the inversion could not be carried out.
     fn diag_mul_left(self, diagonal: &V, invert: Invert) -> Option<Self>;
+
+    // /// returns ||D v||, meaning the euclidean norm of the vector
+    // /// self times the diagonal. Very dogleg specific and we don't need
+    // /// to be able to invert the diagonal here.
+    // fn diag_mul_left(&self, diagonal: &V) -> Option<T>;
 }
 
 /// a calculation that is pretty specific to the trust region problem.

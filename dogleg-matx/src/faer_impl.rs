@@ -473,7 +473,7 @@ where
     }
 }
 
-impl<T, V, R, M> DiagLeftMulx<V> for M
+impl<T, V, R, M> DiagLeftMulx<T, V> for M
 where
     M: FaerType + AsColMut<T = T, Rows = R>,
     R: Shape,

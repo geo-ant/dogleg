@@ -305,7 +305,7 @@ where
     }
 }
 
-impl<T, R2, S2, R1, S1> DiagLeftMulx<Vector<T, R1, S1>> for Vector<T, R2, S2>
+impl<T, R2, S2, R1, S1> DiagLeftMulx<T, Vector<T, R1, S1>> for Vector<T, R2, S2>
 where
     T: RealField + Scalar + Float + Copy,
     R2: Dim,

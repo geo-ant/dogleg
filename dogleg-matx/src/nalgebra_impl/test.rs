@@ -310,6 +310,12 @@ fn diag_left_mul() {
     let ddiagmat = DMatrix::from_diagonal(&ddiag);
 
     assert_relative_eq!(
+        DiagLeftMulx::diag_mul_left_enorm(&svec, &sdiag).unwrap(),
+        (sdiagmat * svec).enorm(),
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
         DiagLeftMulx::diag_mul_left(svec, &sdiag, crate::Invert::No).unwrap(),
         sdiagmat * svec,
         epsilon = 1e-10
@@ -318,6 +324,18 @@ fn diag_left_mul() {
     assert_relative_eq!(
         DiagLeftMulx::diag_mul_left(svec, &sdiag, crate::Invert::Yes).unwrap(),
         sdiagmat.try_inverse().unwrap() * svec,
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        DiagLeftMulx::diag_mul_left_enorm(&dvec, &sdiag).unwrap(),
+        (sdiagmat * &dvec).enorm(),
+        epsilon = 1e-10
+    );
+
+    assert_relative_eq!(
+        DiagLeftMulx::diag_mul_left_enorm(&dvec.clone(), &ddiag).unwrap(),
+        (&ddiagmat * &dvec).enorm(),
         epsilon = 1e-10
     );
 

@@ -1,3 +1,4 @@
+use crate::utility::enorm;
 use crate::{
     Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
     ElementwiseReplaceLeqx, Invert, Matx, MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx,
@@ -14,7 +15,7 @@ use nalgebra::{RawStorageMut, RealField};
 use num_traits::float::TotalOrder;
 use num_traits::{ConstOne, Float, One, Zero};
 use std::cmp::Ordering;
-use std::ops::{Div, Mul};
+use std::ops::{AddAssign, Div, Mul};
 
 #[cfg(test)]
 mod test;
@@ -332,6 +333,24 @@ where
             });
 
         Some(self)
+    }
+
+    fn diag_mul_left_enorm(&self, diagonal: &Vector<T, R1, S1>) -> Option<T>
+    where
+        T: AddAssign,
+    {
+        let (r2, _) = self.shape_generic();
+        let (r1, _) = diagonal.shape_generic();
+        if r1.value() != r2.value() {
+            return None;
+        }
+
+        Some(enorm(
+            self.iter()
+                .copied()
+                .zip(diagonal.iter().copied())
+                .map(|(elem, diag)| elem * diag),
+        ))
     }
 }
 

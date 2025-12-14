@@ -175,6 +175,12 @@ fn diag_left_mul() {
     let idiag = faer::col![1. / 0.4, 1. / 33., -1. / 18., -1. / 77.6];
     let idiagmat = idiag.as_diagonal();
 
+    assert_relative_eq!(
+        DiagLeftMulx::diag_mul_left_enorm(&v, &diag).unwrap(),
+        (&diagmat * &v).enorm(),
+        epsilon = 1e-10
+    );
+
     col_assert_relative_eq!(
         DiagLeftMulx::diag_mul_left(v.clone(), &diag, crate::Invert::No).unwrap(),
         diagmat * &v,

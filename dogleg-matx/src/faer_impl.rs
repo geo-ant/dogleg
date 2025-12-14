@@ -1,3 +1,4 @@
+use crate::utility::enorm;
 use crate::{
     Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
     ElementwiseReplaceLeqx, Invert, Matx, MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx,
@@ -13,6 +14,7 @@ use num_traits::float::TotalOrder;
 use num_traits::{ConstOne, Float};
 use rayon::prelude::*;
 use std::cmp::Ordering;
+use std::iter::Sum;
 use std::ops::{AddAssign, MulAssign};
 
 #[cfg(test)]
@@ -513,6 +515,25 @@ where
             }
         };
         Some(self)
+    }
+
+    fn diag_mul_left_enorm(&self, diagonal: &V) -> Option<T>
+    where
+        T: AddAssign,
+    {
+        let this = self.as_col_ref();
+        let diagonal = diagonal.as_col_ref();
+
+        if this.nrows() != diagonal.nrows() {
+            return None;
+        }
+
+        Some(enorm(
+            this.iter()
+                .copied()
+                .zip(diagonal.iter().copied())
+                .map(|(elem, diag)| elem * diag),
+        ))
     }
 }
 

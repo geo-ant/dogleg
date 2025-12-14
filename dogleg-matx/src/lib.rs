@@ -14,6 +14,8 @@
 #![deny(clippy::panic)]
 #![deny(clippy::panicking_unwrap)]
 
+use std::{iter::Sum, ops::AddAssign};
+
 use num_traits::ConstOne;
 
 mod faer_impl;
@@ -168,10 +170,12 @@ pub trait DiagLeftMulx<T, V>: Sized {
     /// or if the inversion could not be carried out.
     fn diag_mul_left(self, diagonal: &V, invert: Invert) -> Option<Self>;
 
-    // /// returns ||D v||, meaning the euclidean norm of the vector
-    // /// self times the diagonal. Very dogleg specific and we don't need
-    // /// to be able to invert the diagonal here.
-    // fn diag_mul_left(&self, diagonal: &V) -> Option<T>;
+    /// returns ||D v||, meaning the euclidean norm of the vector
+    /// self times the diagonal. Very dogleg specific and we don't need
+    /// to be able to invert the diagonal here.
+    fn diag_mul_left_enorm(&self, diagonal: &V) -> Option<T>
+    where
+        T: AddAssign;
 }
 
 /// a calculation that is pretty specific to the trust region problem.

@@ -94,7 +94,7 @@ macro_rules! try2 {
             Err(failure) => {
                 return Err($crate::Error {
                     problem: $problem,
-                    failure: failure,
+                    failure,
                 });
             }
         }
@@ -476,7 +476,7 @@ where
                 let param_norm = {
                     if let Some(diag) = diagonal_weights.as_ref() {
                         try_opt!(
-                            params.clone().diag_mul_left(&diag, Invert::No),
+                            params.clone().diag_mul_left(diag, Invert::No),
                             on_none = TerminationFailure::WrongDimensions(
                                 "parameters have incompatible dimensions for weights"
                             ),
@@ -605,7 +605,7 @@ where
                 // space
                 let step = if let Some(diag) = diagonal_weights.as_ref() {
                     try_opt!(
-                        step_scaled.diag_mul_left(&diag, Invert::Yes),
+                        step_scaled.diag_mul_left(diag, Invert::Yes),
                         on_none = TerminationFailure::WrongDimensions(
                             "parameter and weights have incompatible dimensions"
                         ),
@@ -678,8 +678,7 @@ where
                         delta = temp * T::min(delta, T::TEN * step_enorm);
                     } else if ratio >= T::P75 {
                         delta = T::TWO * step_enorm
-                    } else {
-                    }
+                    } 
 
                     let accept_update = ratio >= T::P0001;
 
@@ -689,8 +688,7 @@ where
                         params = new_params;
                         problem_guard.defuse();
                         is_first_iteration = false;
-                    } else {
-                    }
+                    } 
 
                     // Convergence checks
 

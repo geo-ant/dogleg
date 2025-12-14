@@ -160,7 +160,7 @@ where
         // in x and then with a little bit of rearranging, we can find a solution
         let a = Float::powi(pu_norm, 2);
         // pb - pu
-        let pb_pu = pb.clone_owned().scaled_add(-T::ONE, &pu)?;
+        let pb_pu = pb.clone_owned().scaled_add(-T::ONE, pu)?;
         let b = pu.dot(&pb_pu)?;
 
         let c = Float::powi(pb_pu.enorm(), 2);

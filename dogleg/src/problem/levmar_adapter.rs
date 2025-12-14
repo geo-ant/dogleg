@@ -50,7 +50,7 @@ where
     fn from(problem: P) -> Self {
         Self {
             problem,
-            phantom: PhantomData::default(),
+            phantom: PhantomData,
         }
     }
 }

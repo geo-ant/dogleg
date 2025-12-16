@@ -5,6 +5,9 @@
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 
+#[cfg(test)]
+mod test_examples;
+
 /// solver implementations
 pub mod dogleg;
 /// error types

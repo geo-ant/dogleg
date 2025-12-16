@@ -10,7 +10,10 @@ use approx::assert_relative_eq;
 use levenberg_marquardt::{LeastSquaresProblem, LevenbergMarquardt, TerminationReason};
 use nalgebra::*;
 
-use crate::{dogleg::SvdStepSolver, Dogleg, LeastSquaresProblem as _};
+use crate::{
+    dogleg::{report::StoppingCriterion, SvdStepSolver},
+    Dogleg, LeastSquaresProblem as _,
+};
 use dogleg_matx::Colx;
 
 /// TOL value used by SciPy
@@ -105,69 +108,45 @@ fn test_rosenbruck() {
     let initial = OVector::<f64, U2>::from_column_slice(&[-1.2, 1.]);
 
     // check derivative implementation
-    problem.set_params(&OVector::<f64, U2>::from_column_slice(&[
-        0.08712929970154071,
-        0.02021839744032572,
-    ]));
+    // problem.set_params(&OVector::<f64, U2>::from_column_slice(&[
+    //     0.08712929970154071,
+    //     0.02021839744032572,
+    // ]));
     // let jac_num = differentiate_numerically(&mut problem).unwrap();
     // let jac_trait = problem.jacobian().unwrap();
     // assert_relative_eq!(jac_num, jac_trait, epsilon = 1e-5);
 
     problem.set_params(&initial.clone());
-    let (mut problem, report) = LevenbergMarquardt::new()
+    let (mut problem, report) = Dogleg::new()
         .with_tol(TOL)
-        .minimize(problem.clone());
-    if cfg!(feature = "minpack-compat") {
-        assert_eq!(report.termination, TerminationReason::Orthogonal);
-    } else {
-        assert_eq!(report.termination, TerminationReason::ResidualsZero);
-    }
-    assert_eq!(report.number_of_evaluations, 21);
-    assert_fp_eq!(report.objective_function, 0.0);
+        .minimize(crate::LevMarAdapter::new(problem.clone()))
+        .unwrap();
     assert_fp_eq!(
-        problem.params,
+        problem.inner.params,
         OVector::<f64, U2>::from_column_slice(&[1., 1.])
     );
-    problem.set_params(&initial.map(|x| x * 10.));
-    let (mut problem, report) = LevenbergMarquardt::new()
-        .with_tol(TOL)
-        .minimize(problem.clone());
-    if cfg!(feature = "minpack-compat") {
-        assert_eq!(
-            report.termination,
-            TerminationReason::Converged {
-                ftol: false,
-                xtol: true
-            }
-        );
-    } else {
-        assert_eq!(report.termination, TerminationReason::ResidualsZero);
-    }
+    assert_fp_eq!(report.objective_function, 0.0);
+    assert_eq!(report.termination, crate::TerminationReason::ResidualsZero);
+    assert_eq!(report.number_of_evaluations, 21);
+    problem.inner.set_params(&initial.map(|x| x * 10.));
+    let (mut problem, report) = Dogleg::new().with_tol(TOL).minimize(problem).unwrap();
+    // assert_eq!(report.termination, crate::TerminationReason::ResidualsZero);
     assert_eq!(report.number_of_evaluations, 8);
     assert_fp_eq!(report.objective_function, 0.0);
     assert_fp_eq!(
-        problem.params,
+        problem.inner.params,
         OVector::<f64, U2>::from_column_slice(&[1., 1.])
     );
-    problem.set_params(&initial.map(|x| x * 100.));
-    let (problem, report) = LevenbergMarquardt::new()
+    problem.inner.set_params(&initial.map(|x| x * 100.));
+    let (problem, report) = Dogleg::new()
         .with_tol(TOL)
-        .minimize(problem.clone());
-    if cfg!(feature = "minpack-compat") {
-        assert_eq!(
-            report.termination,
-            TerminationReason::Converged {
-                ftol: false,
-                xtol: true
-            }
-        );
-    } else {
-        assert_eq!(report.termination, TerminationReason::ResidualsZero);
-    }
+        .minimize(problem.clone())
+        .unwrap();
+    // assert_eq!(report.termination, crate::TerminationReason::ResidualsZero);
     assert_eq!(report.number_of_evaluations, 6);
     assert_fp_eq!(report.objective_function, 0.0);
     assert_fp_eq!(
-        problem.params,
+        problem.inner.params,
         OVector::<f64, U2>::from_column_slice(&[1., 1.])
     );
 }

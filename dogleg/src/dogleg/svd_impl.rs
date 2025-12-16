@@ -134,7 +134,7 @@ where
 
         // @note(geo-ant) mathematically, the predicted reduction is always >= zero,
         // but due to numerical reasons, this can have very small values.
-        debug_assert!(predicted_reduction >= T::ZERO || predicted_reduction >= -T::EPSMCH);
+        debug_assert!(predicted_reduction >= -T::EPSMCH);
         let predicted_reduction = predicted_reduction.abs();
 
         let p_norm = p.enorm();

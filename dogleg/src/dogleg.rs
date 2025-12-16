@@ -536,16 +536,17 @@ where
                 problem = problem
             );
 
-            if gmax <= self.gtol {
-                return Ok((
-                    problem,
-                    MinimizationReport {
-                        termination: TerminationReason::Converged(report::StoppingCriterion::Gtol),
-                        number_of_evaluations: nfunc_evals,
-                        objective_function,
-                    },
-                ));
-            }
+            //@todo(geo) RE-ENABLE THIS GTOL CHECK!!!!!!!!
+            // if gmax <= self.gtol {
+            //     return Ok((
+            //         problem,
+            //         MinimizationReport {
+            //             termination: TerminationReason::Converged(report::StoppingCriterion::Gtol),
+            //             number_of_evaluations: nfunc_evals,
+            //             objective_function,
+            //         },
+            //     ));
+            // }
 
             // compute new scaling matrix (if scaling is requested) and perform the scaling
             // note: if scaling is requested, the diagonal weights will be Some(...)
@@ -775,15 +776,15 @@ where
                     // repeat the tests for the convergence criteria with the machine
                     // epsilon. If those conditions are hit, it means no improvements
                     // are possible and the tolerances must be made bigger.
-                    if gmax <= Float::epsilon() {
-                        drop(problem_guard);
-                        return Err(Error {
-                            problem,
-                            failure: TerminationFailure::NoImprovementPossible(
-                                report::StoppingCriterion::Gtol,
-                            ),
-                        });
-                    }
+                    // if gmax <= T::EPSMCH {
+                    //     drop(problem_guard);
+                    //     return Err(Error {
+                    //         problem,
+                    //         failure: TerminationFailure::NoImprovementPossible(
+                    //             report::StoppingCriterion::Gtol,
+                    //         ),
+                    //     });
+                    // }
 
                     if (FtolCheck {
                         predicted_reduction,

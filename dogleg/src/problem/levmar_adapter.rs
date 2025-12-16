@@ -13,6 +13,7 @@ use std::marker::PhantomData;
 ///
 /// Simply create an a `LevMarAdapter` from it and throw it to the dogleg
 /// minimizer and you're good to go.
+#[derive(Debug)]
 pub struct LevMarAdapter<P, T, M, N>
 where
     T: Copy + nalgebra::ComplexField,
@@ -22,6 +23,30 @@ where
 {
     pub inner: P,
     phantom: PhantomData<(T, M, N)>,
+}
+
+impl<P, T, M, N> Clone for LevMarAdapter<P, T, M, N>
+where
+    T: Copy + nalgebra::ComplexField,
+    P: LevMarLeastSquaresProblem<T, M, N> + Clone,
+    N: nalgebra::Dim,
+    M: nalgebra::Dim,
+{
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            phantom: self.phantom.clone(),
+        }
+    }
+}
+
+impl<P, T, M, N> Copy for LevMarAdapter<P, T, M, N>
+where
+    T: Copy + nalgebra::ComplexField,
+    P: LevMarLeastSquaresProblem<T, M, N> + Copy,
+    N: nalgebra::Dim,
+    M: nalgebra::Dim,
+{
 }
 
 impl<P, T, M, N> LevMarAdapter<P, T, M, N>

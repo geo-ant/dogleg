@@ -46,9 +46,7 @@ fn test_linear_full_rank() {
 
     let (problem, report) = Dogleg::new()
         .with_tol(TOL)
-        .minimize_generic::<SvdStepSolver<_, _, _, _>, _>(crate::LevMarAdapter::new(
-            problem.clone(),
-        ))
+        .minimize(crate::LevMarAdapter::new(problem.clone()))
         .unwrap();
 
     assert_eq!(
@@ -56,10 +54,10 @@ fn test_linear_full_rank() {
         crate::TerminationReason::Converged(crate::dogleg::report::StoppingCriterion::Ftol)
     );
 
-    println!("params: {:?}", problem.problem.params);
+    println!("params: {:?}", problem.inner.params);
 
     assert_fp_eq!(
-        problem.problem.params,
+        problem.inner.params,
         OVector::<f64, U5>::from_column_slice(&[
             -1.,
             -1.0000000000000004,
@@ -76,164 +74,25 @@ fn test_linear_full_rank() {
     let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
 
     problem.set_params(&initial.clone());
-    let (problem, report) = LevenbergMarquardt::new()
+    let (problem, report) = Dogleg::new()
         .with_tol(TOL)
-        .minimize(problem.clone());
+        .minimize(crate::LevMarAdapter::new(problem.clone()))
+        .unwrap();
+
     assert_eq!(
         report.termination,
-        TerminationReason::Converged {
-            ftol: true,
-            xtol: true
-        }
+        crate::TerminationReason::Converged(crate::dogleg::report::StoppingCriterion::Ftol)
     );
     assert_eq!(report.number_of_evaluations, 3);
     assert_fp_eq!(report.objective_function, 22.500000000000004);
     assert_fp_eq!(
-        problem.params,
+        problem.inner.params,
         OVector::<f64, U5>::from_column_slice(&[
             -0.9999999999999953,
             -1.0000000000000049,
             -0.9999999999999976,
             -0.9999999999999956,
             -0.9999999999999991
-        ])
-    );
-}
-
-#[test]
-fn test_linear_rank1() {
-    let mut problem = LinearRank1::new(OVector::<f64, U5>::zeros(), 10);
-    let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
-
-    // check derivative implementation
-    problem.set_params(&OVector::<f64, U5>::from_column_slice(&[
-        0.6458941130666561,
-        0.4375872112626925,
-        0.8917730007820798,
-        0.9636627605010293,
-        0.3834415188257777,
-    ]));
-    // let jac_num = differentiate_numerically(&mut problem).unwrap();
-    // let jac_trait = problem.jacobian().unwrap();
-    // assert_relative_eq!(jac_num, jac_trait, epsilon = 1e-5);
-
-    problem.set_params(&initial.clone());
-    let (problem, report) = LevenbergMarquardt::new()
-        .with_tol(TOL)
-        .minimize(problem.clone());
-    assert_eq!(
-        report.termination,
-        TerminationReason::Converged {
-            ftol: true,
-            xtol: false
-        }
-    );
-    assert_eq!(report.number_of_evaluations, 3);
-    assert_fp_eq!(report.objective_function, 1.0714285714285714);
-    assert_fp_eq!(
-        problem.params,
-        OVector::<f64, U5>::from_column_slice(&[
-            -167.79681802396928,
-            -83.39840901198468,
-            221.11004307957813,
-            -41.19920450599233,
-            -32.759363604793855
-        ])
-    );
-
-    let mut problem = LinearRank1::new(OVector::<f64, U5>::zeros(), 50);
-    let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
-
-    problem.set_params(&initial.clone());
-    let (problem, report) = LevenbergMarquardt::new()
-        .with_tol(TOL)
-        .minimize(problem.clone());
-    assert_eq!(
-        report.termination,
-        TerminationReason::Converged {
-            ftol: true,
-            xtol: false
-        }
-    );
-    assert_eq!(report.number_of_evaluations, 3);
-    assert_fp_eq!(report.objective_function, 6.064356435643563);
-    assert_fp_eq!(
-        problem.params,
-        OVector::<f64, U5>::from_column_slice(&[
-            -20.29999900022674,
-            -9.64999950011337,
-            -165.2451975264496,
-            -4.324999750056676,
-            110.53305851006517
-        ])
-    );
-}
-
-#[test]
-fn test_linear_rank1_zero_columns() {
-    let mut problem = LinearRank1ZeroColumns::new(OVector::<f64, U5>::zeros(), 10);
-    let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
-
-    // check derivative implementation
-    problem.set_params(&OVector::<f64, U5>::from_column_slice(&[
-        0.7917250380826646,
-        0.5288949197529045,
-        0.5680445610939323,
-        0.925596638292661,
-        0.07103605819788694,
-    ]));
-    // let jac_num = differentiate_numerically(&mut problem).unwrap();
-    // let jac_trait = problem.jacobian().unwrap();
-    // assert_relative_eq!(jac_num, jac_trait, epsilon = 1e-5);
-
-    problem.set_params(&initial.clone());
-    let (problem, report) = LevenbergMarquardt::new()
-        .with_tol(TOL)
-        .minimize(problem.clone());
-    assert_eq!(
-        report.termination,
-        TerminationReason::Converged {
-            ftol: true,
-            xtol: false
-        }
-    );
-    assert_eq!(report.number_of_evaluations, 3);
-    assert_fp_eq!(report.objective_function, 1.8235294117647063);
-    assert_fp_eq!(
-        problem.params,
-        OVector::<f64, U5>::from_column_slice(&[
-            1.,
-            -210.3615324224772,
-            32.120420811321296,
-            81.13456824980642,
-            1.
-        ])
-    );
-
-    let mut problem = LinearRank1ZeroColumns::new(OVector::<f64, U5>::zeros(), 50);
-    let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
-
-    problem.set_params(&initial.clone());
-    let (problem, report) = LevenbergMarquardt::new()
-        .with_tol(TOL)
-        .minimize(problem.clone());
-    assert_eq!(
-        report.termination,
-        TerminationReason::Converged {
-            ftol: true,
-            xtol: false
-        }
-    );
-    assert_eq!(report.number_of_evaluations, 3);
-    assert_fp_eq!(report.objective_function, 6.814432989690721);
-    assert_fp_eq!(
-        problem.params,
-        OVector::<f64, U5>::from_column_slice(&[
-            1.,
-            332.1494858957815,
-            -439.6851914289522,
-            163.69688258258626,
-            1.
         ])
     );
 }

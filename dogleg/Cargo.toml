@@ -14,6 +14,7 @@ thiserror = "2.0"
 levenberg-marquardt = {version = "0.15", optional = true}
 # todo remove
 nalgebra = "0.34"
+assert2 = {version = "0.3", optional = true}
 
 [features]
 # TODO remove this

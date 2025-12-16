@@ -1,10 +1,16 @@
 use super::common::DoglegStep;
-use crate::dogleg::{
-    common::{dogleg_step, DoglegStepSolver},
-    report::TerminationFailure,
+use crate::{
+    dogleg::{
+        common::{dogleg_step, DoglegStepSolver},
+        report::TerminationFailure,
+    },
+    MagicConst,
 };
 use dogleg_matx::{Addx, Colx, Dotx, Matx, Scalex, Svdx, ToSvdx, TransformedVecNorm};
-use num_traits::{ConstOne, Float};
+use num_traits::{ConstOne, ConstZero, Float};
+
+#[cfg(feature = "assert2")]
+use assert2::debug_assert;
 
 /// Dogleg solver using singular value decomposition internally, which is not
 /// the cheapest way to calculate the step, but it's available on both `faer`
@@ -40,7 +46,7 @@ pub struct SvdSolverCache<T, MMN, VN> {
 
 impl<T, MMN, VN, VM> DoglegStepSolver<T> for SvdStepSolver<T, MMN, VM, VN>
 where
-    T: ConstOne + Float,
+    T: Float + ConstZero + std::fmt::Debug + MagicConst,
     MMN: Matx<T> + TransformedVecNorm<T, VN>,
     MMN::Owned: ToSvdx<T>,
     // the output of the least squares solution of `j pb = -r` is a vector of dim N
@@ -107,18 +113,17 @@ where
         let pu = cached.g.clone_owned().scale(cached.u);
         let p = dogleg_step(&pu, &cached.pb, delta)?;
 
-        let half = T::ONE / (T::ONE + T::ONE); // 1/2
-                                               // predicted reduction is
-                                               // m(0) - m(p) = -g^T p - 1/2 ||J p||^2
-                                               // (mathematically, this must always be a positive number, so that should
-                                               // be a good sanity check)
-                                               // But we don't save g here, but we know
+        // predicted reduction is
+        // m(0) - m(p) = -g^T p - 1/2 ||J p||^2
+        // (mathematically, this must always be a positive number, so that should
+        // be a good sanity check)
+        // But we don't save g here, but we know
 
         let predicted_reduction = -cached
             .g
             .dot(&p)
             .ok_or(TerminationFailure::WrongDimensions("gradient and step"))?
-            - half
+            - T::P5
                 * Float::powi(
                     cached
                         .jacobian
@@ -126,7 +131,11 @@ where
                         .ok_or(TerminationFailure::WrongDimensions("jacobian and step"))?,
                     2,
                 );
-        debug_assert!(predicted_reduction.is_sign_positive() || predicted_reduction.is_zero());
+
+        // @note(geo-ant) mathematically, the predicted reduction is always >= zero,
+        // but due to numerical reasons, this can have very small values.
+        debug_assert!(predicted_reduction >= T::ZERO || predicted_reduction >= -T::EPSMCH);
+        let predicted_reduction = predicted_reduction.abs();
 
         let p_norm = p.enorm();
         let step = DoglegStep {

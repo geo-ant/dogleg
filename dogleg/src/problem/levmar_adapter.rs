@@ -20,7 +20,7 @@ where
     N: nalgebra::Dim,
     M: nalgebra::Dim,
 {
-    pub problem: P,
+    pub inner: P,
     phantom: PhantomData<(T, M, N)>,
 }
 
@@ -49,7 +49,7 @@ where
 {
     fn from(problem: P) -> Self {
         Self {
-            problem,
+            inner: problem,
             phantom: PhantomData,
         }
     }
@@ -74,18 +74,18 @@ where
     type Jacobian = Matrix<T, M, N, Owned<T, M, N>>;
 
     fn set_params(&mut self, x: Self::Parameters) {
-        self.problem.set_params(&x)
+        self.inner.set_params(&x)
     }
 
     fn params(&self) -> Self::Parameters {
-        self.problem.params()
+        self.inner.params()
     }
 
     fn residuals(&self) -> Option<Self::Residuals> {
-        self.problem.residuals()
+        self.inner.residuals()
     }
 
     fn jacobian(&self) -> Option<Self::Jacobian> {
-        self.problem.jacobian().map(|m| m.into_owned())
+        self.inner.jacobian().map(|m| m.into_owned())
     }
 }

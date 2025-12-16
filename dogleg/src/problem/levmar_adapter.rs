@@ -20,7 +20,7 @@ where
     N: nalgebra::Dim,
     M: nalgebra::Dim,
 {
-    problem: P,
+    pub problem: P,
     phantom: PhantomData<(T, M, N)>,
 }
 

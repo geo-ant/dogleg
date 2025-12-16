@@ -437,6 +437,7 @@ where
         );
         nfunc_evals += 1;
         let mut rnorm = residuals.enorm();
+        let mut objective_function = T::P5 * rnorm.powi(2);
 
         // outer loop
         loop {
@@ -454,7 +455,7 @@ where
                     MinimizationReport {
                         termination: TerminationReason::ResidualsZero,
                         number_of_evaluations: nfunc_evals,
-                        objective_function: T::P5 * rnorm,
+                        objective_function: T::P5 * rnorm.powi(2),
                     },
                 ));
             }
@@ -518,22 +519,11 @@ where
                 return Ok((
                     problem,
                     MinimizationReport {
-                        termination: TerminationReason::Converged {
-                            criterion: report::StoppingCriterion::Gtol,
-                        },
+                        termination: TerminationReason::Converged(report::StoppingCriterion::Gtol),
                         number_of_evaluations: nfunc_evals,
-                        objective_function: T::P5 * rnorm,
+                        objective_function,
                     },
                 ));
-            }
-
-            if gmax <= Float::epsilon() {
-                return Err(Error {
-                    problem,
-                    failure: TerminationFailure::NoImprovementPossible(
-                        report::StoppingCriterion::Gtol,
-                    ),
-                });
             }
 
             // compute new scaling matrix (if scaling is requested) and perform the scaling
@@ -691,6 +681,7 @@ where
 
                     if accept_update {
                         rnorm = new_rnorm;
+                        objective_function = T::P5 * rnorm.powi(2);
                         residuals = new_residuals;
                         params = new_params;
                         problem_guard.defuse();
@@ -712,11 +703,11 @@ where
                         return Ok((
                             problem,
                             MinimizationReport {
-                                termination: TerminationReason::Converged {
-                                    criterion: report::StoppingCriterion::Ftol,
-                                },
+                                termination: TerminationReason::Converged(
+                                    report::StoppingCriterion::Ftol,
+                                ),
                                 number_of_evaluations: nfunc_evals,
-                                objective_function: T::P5 * rnorm,
+                                objective_function,
                             },
                         ));
                     }
@@ -743,11 +734,11 @@ where
                         return Ok((
                             problem,
                             MinimizationReport {
-                                termination: TerminationReason::Converged {
-                                    criterion: report::StoppingCriterion::Xtol,
-                                },
+                                termination: TerminationReason::Converged(
+                                    report::StoppingCriterion::Xtol,
+                                ),
                                 number_of_evaluations: nfunc_evals,
-                                objective_function: T::P5 * rnorm,
+                                objective_function,
                             },
                         ));
                     }
@@ -763,6 +754,16 @@ where
                     // repeat the tests for the convergence criteria with the machine
                     // epsilon. If those conditions are hit, it means no improvements
                     // are possible and the tolerances must be made bigger.
+                    if gmax <= Float::epsilon() {
+                        drop(problem_guard);
+                        return Err(Error {
+                            problem,
+                            failure: TerminationFailure::NoImprovementPossible(
+                                report::StoppingCriterion::Gtol,
+                            ),
+                        });
+                    }
+
                     if (FtolCheck {
                         predicted_reduction,
                         actual_reduction,

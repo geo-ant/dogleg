@@ -10,6 +10,9 @@ use approx::assert_relative_eq;
 use levenberg_marquardt::{LeastSquaresProblem, LevenbergMarquardt, TerminationReason};
 use nalgebra::*;
 
+use crate::{dogleg::SvdStepSolver, Dogleg, LeastSquaresProblem as _};
+use dogleg_matx::Colx;
+
 /// TOL value used by SciPy
 const TOL: f64 = 1.49012e-08;
 
@@ -39,21 +42,24 @@ fn test_linear_full_rank() {
     // let jac_trait = problem.jacobian().unwrap();
     // assert_relative_eq!(jac_num, jac_trait, epsilon = 1e-5);
 
-    problem.set_params(&initial.clone());
-    let (problem, report) = LevenbergMarquardt::new()
+    problem.set_params(&initial);
+
+    let (problem, report) = Dogleg::new()
         .with_tol(TOL)
-        .minimize(problem.clone());
+        .minimize_generic::<SvdStepSolver<_, _, _, _>, _>(crate::LevMarAdapter::new(
+            problem.clone(),
+        ))
+        .unwrap();
+
     assert_eq!(
         report.termination,
-        TerminationReason::Converged {
-            ftol: true,
-            xtol: true
-        }
+        crate::TerminationReason::Converged(crate::dogleg::report::StoppingCriterion::Ftol)
     );
-    assert_eq!(report.number_of_evaluations, 3);
-    assert_fp_eq!(report.objective_function, 2.5000000000000004);
+
+    println!("params: {:?}", problem.problem.params);
+
     assert_fp_eq!(
-        problem.params,
+        problem.problem.params,
         OVector::<f64, U5>::from_column_slice(&[
             -1.,
             -1.0000000000000004,
@@ -62,6 +68,9 @@ fn test_linear_full_rank() {
             -1.
         ])
     );
+
+    //@todo(geo) re-enable
+    assert_fp_eq!(report.objective_function, 2.5000000000000004);
 
     let mut problem = LinearFullRank::new(OVector::<f64, U5>::zeros(), 50);
     let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);

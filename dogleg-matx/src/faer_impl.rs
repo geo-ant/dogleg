@@ -409,6 +409,10 @@ where
         let x = self.solve_lstsq(v.as_col_ref());
         Some(x)
     }
+
+    fn rank(&self) -> usize {
+        todo!("remove this function")
+    }
 }
 
 impl<T, R, C, M> ColEnormsx<T> for M
@@ -538,16 +542,16 @@ where
 
 impl<T, R, V1, V2> MaxScaledDivx<T, V2> for V1
 where
-    T: RealField + Copy,
+    T: Float + RealField + Copy,
     R: Shape,
     V1: FaerType + AsColRef<T = T, Rows = R>,
     V2: FaerType + AsColRef<T = T, Rows = R>,
 {
-    fn max_scaled_div(&self, s: T, v: &V2) -> Option<T> {
+    fn max_abs_scaled_div(&self, s: T, v: &V2) -> Option<T> {
         let this = self.as_col_ref();
         let v = v.as_col_ref();
         faer::zip!(this, v)
-            .map(|faer::unzip!(this, rhs)| *this / *rhs)
+            .map(|faer::unzip!(this, rhs)| this.abs() / *rhs)
             .max()
             .map(|val| val / s)
     }

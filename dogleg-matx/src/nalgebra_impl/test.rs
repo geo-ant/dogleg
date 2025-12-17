@@ -367,11 +367,24 @@ fn max_scaled_div_for_vector() {
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_scaled_div(&svec1, scale, &svec2).unwrap(),
+        MaxScaledDivx::max_abs_scaled_div(&svec1, scale, &svec2).unwrap(),
         (3. / 12.)
     );
     assert_eq!(
-        MaxScaledDivx::max_scaled_div(&dvec1, scale, &dvec2).unwrap(),
+        MaxScaledDivx::max_abs_scaled_div(&dvec1, scale, &dvec2).unwrap(),
+        (3. / 12.)
+    );
+
+    let (svec1, dvec1) = sdvec![2., -3., 4.];
+    let (svec2, dvec2) = sdvec![8., 6., 100.];
+    let scale = 2.;
+
+    assert_eq!(
+        MaxScaledDivx::max_abs_scaled_div(&svec1, scale, &svec2).unwrap(),
+        (3. / 12.)
+    );
+    assert_eq!(
+        MaxScaledDivx::max_abs_scaled_div(&dvec1, scale, &dvec2).unwrap(),
         (3. / 12.)
     );
 }

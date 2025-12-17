@@ -4,6 +4,9 @@ use crate::{
     ElementwiseReplaceLeqx, Invert, Matx, MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx,
     TrMatVecMulx, TransformedVecNorm,
 };
+#[cfg(feature = "assert2")]
+use assert2::debug_assert;
+
 use nalgebra::allocator::Allocator;
 use nalgebra::constraint::{AreMultipliable, DimEq, ShapeConstraint};
 use nalgebra::{
@@ -216,14 +219,18 @@ where
     type Svd = SVD<T, R, C>;
 
     fn calc_svd(self) -> Option<Self::Svd> {
-        SVD::try_new_unordered(
+        let dim = self.nrows().min(self.ncols());
+        let svd = SVD::try_new_unordered(
             self,
             true,
             true,
             // these are the parameters that SVD::new() uses in the nalgebra code
             <T as Float>::epsilon() * nalgebra::convert(5.0),
             0,
-        )
+        )?;
+        let rank = svd.rank(T::epsilon());
+        debug_assert!(rank == dim);
+        Some(svd)
     }
 }
 
@@ -249,6 +256,10 @@ where
         // we could also be smarter and use a fraction of the largest eigenvalue,
         // like we do in nalgebra-lapack (for the QR decomposition).
         self.solve(v, Float::sqrt(Float::epsilon())).ok()
+    }
+
+    fn rank(&self) -> usize {
+        self.rank(Float::epsilon())
     }
 }
 
@@ -356,17 +367,17 @@ where
 
 impl<T, R1, R2, S1, S2> MaxScaledDivx<T, Vector<T, R2, S2>> for Vector<T, R1, S1>
 where
-    T: Scalar + Copy + Mul<Output = T> + Div<Output = T> + TotalOrder,
+    T: Float + Scalar + Copy + Mul<Output = T> + Div<Output = T> + TotalOrder,
     R1: Dim,
     R2: Dim,
     S1: Storage<T, R1> + RawStorage<T, R1>,
     S2: Storage<T, R2>,
 {
-    fn max_scaled_div(&self, s: T, v: &Vector<T, R2, S2>) -> Option<T> {
+    fn max_abs_scaled_div(&self, s: T, v: &Vector<T, R2, S2>) -> Option<T> {
         self.iter()
             .copied()
             .zip(v.iter().copied())
-            .map(|(this_i, vi)| this_i / vi)
+            .map(|(this_i, vi)| this_i.abs() / vi)
             .max_by(TotalOrder::total_cmp)
             .map(|val| val / s)
     }

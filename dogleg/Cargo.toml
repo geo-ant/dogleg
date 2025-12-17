@@ -19,6 +19,7 @@ assert2 = {version = "0.3", optional = true}
 [features]
 # TODO remove this
 default = ["levenberg-marquardt"]
+assert2 = ["dep:assert2","dogleg-matx/assert2"]
 
 [dev-dependencies]
 approx = "0.5"

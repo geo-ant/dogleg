@@ -107,7 +107,7 @@ where
         gradient.dim(),
         "jacobian must have same number of columns as gradient"
     );
-    gradient.max_scaled_div(residual_norm, jacobian_norms)
+    gradient.max_abs_scaled_div(residual_norm, jacobian_norms)
 }
 
 /// this calculates the dogleg step from the component vectors p_b, p_u,

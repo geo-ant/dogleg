@@ -197,13 +197,22 @@ fn diag_left_mul() {
 }
 
 #[test]
-fn max_scaled_div_for_vector() {
+fn max_abs_scaled_div_for_vector() {
     let v1 = faer::col![2., 3., 4.];
     let v2 = faer::col![8., 6., 100.];
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_scaled_div(&v1, scale, &v2).unwrap(),
+        MaxScaledDivx::max_abs_scaled_div(&v1, scale, &v2).unwrap(),
+        (3. / 12.)
+    );
+
+    let v1 = faer::col![2., -3., 4.];
+    let v2 = faer::col![8., 6., 100.];
+    let scale = 2.;
+
+    assert_eq!(
+        MaxScaledDivx::max_abs_scaled_div(&v1, scale, &v2).unwrap(),
         (3. / 12.)
     );
 }

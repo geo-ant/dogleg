@@ -237,6 +237,7 @@ name = "dogleg-matx"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "assert2",
  "faer",
  "nalgebra",
  "num-traits",

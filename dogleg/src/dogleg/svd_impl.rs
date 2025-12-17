@@ -7,7 +7,7 @@ use crate::{
     MagicConst,
 };
 use dogleg_matx::{Addx, Colx, Dotx, Matx, Scalex, Svdx, ToSvdx, TransformedVecNorm};
-use num_traits::{ConstOne, ConstZero, Float};
+use num_traits::{ConstZero, Float};
 
 #[cfg(feature = "assert2")]
 use assert2::debug_assert;
@@ -42,6 +42,8 @@ pub struct SvdSolverCache<T, MMN, VN> {
     pb: VN,
     /// ||pb||
     pb_norm: T,
+    /// @todo remove!!
+    rank: usize,
 }
 
 impl<T, MMN, VN, VM> DoglegStepSolver<T> for SvdStepSolver<T, MMN, VM, VN>
@@ -85,6 +87,19 @@ where
                 let g_norm = gradient.enorm();
 
                 let jacobian_clone = jacobian.clone_owned();
+                // we need to enforce this somewhere else! My assumptions might
+                // not hold for underdetermined problems.
+                debug_assert!(jacobian.nrows().unwrap() >= jacobian.ncols().unwrap());
+                //@todo remove
+                let matdim = jacobian_clone
+                    .nrows()
+                    .unwrap()
+                    .min(jacobian_clone.ncols().unwrap());
+                // @todo!! maybe this isn't actually true, since the number of
+                // rows can be less than the number of cols
+                // @todo also remove!!
+                debug_assert!(gradient.dim().unwrap() == matdim);
+
                 let svd = jacobian_clone
                     .calc_svd()
                     .ok_or(TerminationFailure::Numerical("svd"))?;
@@ -94,6 +109,7 @@ where
                     .ok_or(TerminationFailure::Numerical("lsqr solve"))?;
                 let pb_norm = pb.enorm();
                 let u = Float::powi(g_norm, 2) / Float::powi(jg_norm, 2);
+                let rank = svd.rank();
                 SvdSolverCache {
                     u,
                     g: gradient,
@@ -101,6 +117,7 @@ where
                     pb,
                     jacobian,
                     pb_norm,
+                    rank,
                 }
             }
             Self::Cached(cached) => cached,
@@ -134,7 +151,12 @@ where
 
         // @note(geo-ant) mathematically, the predicted reduction is always >= zero,
         // but due to numerical reasons, this can have very small values.
-        debug_assert!(predicted_reduction >= -T::EPSMCH);
+        debug_assert!(
+            predicted_reduction >= -T::EPSMCH,
+            "rank is {} of {}",
+            cached.rank,
+            cached.g.dim().unwrap()
+        );
         let predicted_reduction = predicted_reduction.abs();
 
         let p_norm = p.enorm();

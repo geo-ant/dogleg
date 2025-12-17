@@ -1,6 +1,9 @@
-use crate::dogleg::report::TerminationFailure;
+use crate::{MagicConst, dogleg::report::TerminationFailure};
 use dogleg_matx::{Addx, Colx, Dotx, Matx, MaxScaledDivx, OwnedColx, Scalex};
 use num_traits::{ConstOne, Float};
+
+#[cfg(feature = "assert2")]
+use assert2::debug_assert;
 
 #[derive(Debug, Clone, PartialEq)]
 //@note(geo-ant) why do these generic have those weird names?
@@ -128,7 +131,7 @@ where
 // have to.
 pub fn dogleg_step<T, P>(pu: &P, pb: &P, delta: T) -> Result<P::Owned, TerminationFailure>
 where
-    T: Float + ConstOne,
+    T: Float + MagicConst + std::fmt::Debug,
     P: Colx<T, Owned = P> + Addx<T, P> + Dotx<T, P> + Scalex<T>,
     P::Owned: Scalex<T> + Addx<T, P> + Colx<T>,
 {
@@ -179,8 +182,10 @@ where
             return Ok(pu.clone_owned());
         }
         let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
+        debug_assert!(tau_minus_one>=T::ZERO-T::EPSMCH);
+        debug_assert!(tau_minus_one<=T::ONE+T::EPSMCH);
         pu.clone_owned()
-            .scaled_add(T::ONE, &pb_pu.scale(tau_minus_one))
+            .add(&pb_pu.scale(tau_minus_one))
             .ok_or(TerminationFailure::WrongDimensions("dogleg step"))
     }
 }

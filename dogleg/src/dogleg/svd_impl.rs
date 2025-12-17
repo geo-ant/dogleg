@@ -103,6 +103,10 @@ where
                 let svd = jacobian_clone
                     .calc_svd()
                     .ok_or(TerminationFailure::Numerical("svd"))?;
+                // @todo(geo-ant) PERF: this is inefficient. Better make it so
+                // that the signs of pb and u are positive here and use the minus
+                // in other calculations later. But this is closer to the original
+                // text, so I won't stray from this for now.
                 let minus_r = residuals.scale(-T::ONE);
                 let pb = svd
                     .solve_lsqr(&minus_r)

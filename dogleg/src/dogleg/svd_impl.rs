@@ -108,7 +108,7 @@ where
                     .solve_lsqr(&minus_r)
                     .ok_or(TerminationFailure::Numerical("lsqr solve"))?;
                 let pb_norm = pb.enorm();
-                let u = Float::powi(g_norm, 2) / Float::powi(jg_norm, 2);
+                let u = -Float::powi(g_norm, 2) / Float::powi(jg_norm, 2);
                 let rank = svd.rank();
                 SvdSolverCache {
                     u,

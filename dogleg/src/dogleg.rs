@@ -536,7 +536,6 @@ where
                 problem = problem
             );
 
-            // @todo(geo) RE-ENABLE THIS GTOL CHECK!!!!!!!!
             if gmax <= self.gtol {
                 return Ok((
                     problem,
@@ -773,7 +772,6 @@ where
                         });
                     }
 
-                    // @todo(geo-ant) re-enable this gtol check!!
                     // repeat the tests for the convergence criteria with the machine
                     // epsilon. If those conditions are hit, it means no improvements
                     // are possible and the tolerances must be made bigger.

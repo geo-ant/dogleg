@@ -698,7 +698,7 @@ where
                         delta = temp * T::min(delta, T::TEN * step_enorm);
                     } else if ratio >= T::P75 {
                         //  !!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        delta = T::TWO * step_enorm //@todo(geo) should this be the scaled step norm??
+                        delta = T::TWO * p_scaled_norm //@todo(geo) should this be the scaled step norm??
                     }
 
                     let accept_update = ratio >= T::P0001;

@@ -89,16 +89,16 @@ where
                 let jacobian_clone = jacobian.clone_owned();
                 // we need to enforce this somewhere else! My assumptions might
                 // not hold for underdetermined problems.
-                debug_assert!(jacobian.nrows().unwrap() >= jacobian.ncols().unwrap());
+                // debug_assert!(jacobian.nrows().unwrap() >= jacobian.ncols().unwrap());
                 //@todo remove
-                let matdim = jacobian_clone
-                    .nrows()
-                    .unwrap()
-                    .min(jacobian_clone.ncols().unwrap());
+                // let matdim = jacobian_clone
+                //     .nrows()
+                //     .unwrap()
+                //     .min(jacobian_clone.ncols().unwrap());
                 // @todo!! maybe this isn't actually true, since the number of
                 // rows can be less than the number of cols
                 // @todo also remove!!
-                debug_assert!(gradient.dim().unwrap() == matdim);
+                // debug_assert!(gradient.dim().unwrap() == matdim);
 
                 let svd = jacobian_clone
                     .calc_svd()

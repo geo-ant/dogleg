@@ -57,8 +57,6 @@ fn test_linear_full_rank() {
         crate::TerminationReason::Converged(crate::dogleg::report::StoppingCriterion::Ftol)
     );
 
-    println!("params: {:?}", problem.inner.params);
-
     assert_fp_eq!(
         problem.inner.params,
         OVector::<f64, U5>::from_column_slice(&[

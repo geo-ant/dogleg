@@ -230,9 +230,9 @@ fn elementwise_max_for_vector() {
 #[test]
 fn elementwise_replace_if_leq_for_vector() {
     let v = faer::col![5.2, -100.1, 2., 99.1];
-    let threshold = 5.1;
+    let threshold = 5.2;
     let replacement = 123.;
-    let expected = faer::col![5.2, 123., 123., 99.1];
+    let expected = faer::col![123., 123., 123., 99.1];
 
     assert_eq!(
         ElementwiseReplaceLeqx::replace_if_leq(v, threshold, replacement),

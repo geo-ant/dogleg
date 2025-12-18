@@ -458,6 +458,7 @@ where
         );
         nfunc_evals += 1;
         let mut rnorm = residuals.enorm();
+        // f = 1/2 ||r||^2
         let mut objective_function = T::P5 * rnorm.powi(2);
 
         // outer loop
@@ -476,7 +477,7 @@ where
                     MinimizationReport {
                         termination: TerminationReason::ResidualsZero,
                         number_of_evaluations: nfunc_evals,
-                        objective_function: T::P5 * rnorm.powi(2),
+                        objective_function,
                     },
                 ));
             }
@@ -577,6 +578,7 @@ where
                     problem = problem
                 );
                 gradient = scaled_grad;
+
                 diagonal_weights = Some(diag);
             }
 
@@ -588,6 +590,7 @@ where
                 problem = problem
             );
 
+            // inner loop
             loop {
                 // again, note that the step is p' = Dp, i.e. the possibly scaled step
                 let (dogleg_step, solver) =
@@ -650,8 +653,7 @@ where
                 );
 
                 {
-                    let mut problem_guard =
-                        reset_guard::update_params(&mut problem, new_params.clone_owned());
+                    let mut problem_guard = reset_guard::update_params(&mut problem, new_params);
                     nfunc_evals += 1;
 
                     //@todo(geo) this is not correct, just making sure this works
@@ -678,7 +680,7 @@ where
                     };
 
                     // adjust the trust region
-                    if ratio < T::P25 {
+                    if ratio <= T::P25 {
                         // this is identical to minpack with one exception. MINPACK
                         // considers the directional derivative to adjust the trust
                         // region radius in the case actred < 0 to potentially
@@ -695,7 +697,8 @@ where
                         }
                         delta = temp * T::min(delta, T::TEN * step_enorm);
                     } else if ratio >= T::P75 {
-                        delta = T::TWO * step_enorm
+                        //  !!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        delta = T::TWO * step_enorm //@todo(geo) should this be the scaled step norm??
                     }
 
                     let accept_update = ratio >= T::P0001;
@@ -704,7 +707,11 @@ where
                         rnorm = new_rnorm;
                         objective_function = T::P5 * rnorm.powi(2);
                         residuals = new_residuals;
-                        params = new_params;
+                        params = problem_guard.params();
+                        // defusing this is important here because otherwise
+                        // the guard will reset the parameters on drop, which
+                        // is only the correct thing to do if the parameters
+                        // are not accepted.
                         problem_guard.defuse();
                         is_first_iteration = false;
                     }

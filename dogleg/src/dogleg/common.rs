@@ -1,9 +1,12 @@
-use crate::{MagicConst, dogleg::report::TerminationFailure};
+use crate::{dogleg::report::TerminationFailure, MagicConst};
 use dogleg_matx::{Addx, Colx, Dotx, Matx, MaxScaledDivx, OwnedColx, Scalex};
 use num_traits::{ConstOne, Float};
 
 #[cfg(feature = "assert2")]
 use assert2::debug_assert;
+
+#[cfg(test)]
+mod test;
 
 #[derive(Debug, Clone, PartialEq)]
 //@note(geo-ant) why do these generic have those weird names?
@@ -182,10 +185,22 @@ where
             return Ok(pu.clone_owned());
         }
         let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
-        debug_assert!(tau_minus_one>=T::ZERO-T::EPSMCH);
-        debug_assert!(tau_minus_one<=T::ONE+T::EPSMCH);
-        pu.clone_owned()
+        debug_assert!(tau_minus_one >= T::ZERO - T::EPSMCH);
+        debug_assert!(tau_minus_one <= T::ONE + T::EPSMCH);
+
+        // just a sanity check to see that I picked the correct formula for tau-1
+        // (the square root allows for the +/- but my solution should only
+        // be the correct one that is always in [0,1].
+        let tau_minus_one_alt = -b_c - Float::sqrt((d - a) / c + Float::powi(b_c, 2));
+        debug_assert!(tau_minus_one_alt < T::ZERO || tau_minus_one_alt > T::ONE);
+
+        let p = pu
+            .clone_owned()
             .add(&pb_pu.scale(tau_minus_one))
-            .ok_or(TerminationFailure::WrongDimensions("dogleg step"))
+            .ok_or(TerminationFailure::WrongDimensions("dogleg step"))?;
+        debug_assert!(p.enorm() <= delta * delta);
+        debug_assert!(p.enorm() >= pu_norm);
+        debug_assert!(p.enorm() <= pb_norm);
+        Ok(p)
     }
 }

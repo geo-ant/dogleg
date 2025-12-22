@@ -645,7 +645,7 @@ where
                     // the problem parameters could be intermediate values that we discarded!!
                     // !!!!!!!!!!!!
                     // !!!!!!!!!!!!!!!!
-                    step.add(&params),
+                    step.scaled_add(T::ONE, &params),
                     on_none = TerminationFailure::WrongDimensions(
                         "parameters and step have incompatible dimensions"
                     ),

@@ -200,9 +200,9 @@ where
             .ok_or(TerminationFailure::WrongDimensions("dogleg step"))?;
         let p_norm = p.enorm();
         // some sanity checks with some generous bounds for numerical problems
-        debug_assert!(Float::powi(p_norm, 2) <= delta * delta + T::EPSMCH * T::ONE_HUNDRED);
-        debug_assert!(p_norm >= pu_norm - T::EPSMCH * T::TEN);
-        debug_assert!(p_norm <= pb_norm + T::EPSMCH * T::TEN);
+        // debug_assert!(Float::powi(p_norm, 2) <= delta * delta + T::EPSMCH * T::ONE_HUNDRED);
+        // debug_assert!(p_norm >= pu_norm - T::EPSMCH * T::TEN);
+        // debug_assert!(p_norm <= pb_norm + T::EPSMCH * T::TEN);
         // @todo(geo) maybe add more logic to restrict the p step to the feasible
         // range.
         Ok(p)

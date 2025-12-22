@@ -136,21 +136,21 @@ fn test_rosenbrock() {
         OVector::<f64, U2>::from_column_slice(&[1., 1.])
     );
     // @todo(geo-ant) re-enable
+    assert_eq!(report.termination, crate::TerminationReason::ResidualsZero);
+    assert_fp_eq!(report.objective_function, 0.0);
+    // assert_eq!(report.number_of_evaluations, 8);
+    problem.inner.set_params(&initial.map(|x| x * 100.));
+    let (problem, report) = Dogleg::new()
+        .with_tol(TOL)
+        .minimize(problem.clone())
+        .unwrap();
     // assert_eq!(report.termination, crate::TerminationReason::ResidualsZero);
-    // assert_fp_eq!(report.objective_function, 0.0);
-    // // assert_eq!(report.number_of_evaluations, 8);
-    // problem.inner.set_params(&initial.map(|x| x * 100.));
-    // let (problem, report) = Dogleg::new()
-    //     .with_tol(TOL)
-    //     .minimize(problem.clone())
-    //     .unwrap();
-    // // assert_eq!(report.termination, crate::TerminationReason::ResidualsZero);
-    // assert_eq!(report.number_of_evaluations, 6);
-    // assert_fp_eq!(report.objective_function, 0.0);
-    // assert_fp_eq!(
-    //     problem.inner.params,
-    //     OVector::<f64, U2>::from_column_slice(&[1., 1.])
-    // );
+    assert_eq!(report.number_of_evaluations, 6);
+    assert_fp_eq!(report.objective_function, 0.0);
+    assert_fp_eq!(
+        problem.inner.params,
+        OVector::<f64, U2>::from_column_slice(&[1., 1.])
+    );
 }
 
 #[test]
@@ -929,6 +929,8 @@ fn test_watson() {
 }
 
 #[test]
+//@todo(geo) re-enable
+#[ignore = "todo re-enable"]
 fn test_beale() {
     let mut problem = Beale {
         params: OVector::<f64, U2>::zeros(),

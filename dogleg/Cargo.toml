@@ -23,3 +23,4 @@ assert2 = ["dep:assert2","dogleg-matx/assert2"]
 
 [dev-dependencies]
 approx = "0.5"
+argmin-dogleg = {path = "../argmin-dogleg"}

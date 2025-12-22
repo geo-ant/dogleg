@@ -18,6 +18,8 @@ use num_traits::ConstOne;
 use std::ops::AddAssign;
 
 mod faer_impl;
+/// utility module for floating point constants
+pub mod magic_const;
 mod nalgebra_impl;
 mod utility;
 

@@ -1,0 +1,15 @@
+[package]
+name = "argmin-dogleg"
+version = "0.1.0"
+edition = "2021"
+description = "Argmin integration for the dogleg trust region solver"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+argmin = "0.11"
+argmin-math = { version = "0.5", features = ["nalgebra_0_34"] }
+dogleg = { version = "0.1", path = "../dogleg" }
+dogleg-matx = { version = "0.1", path = "../dogleg-matx" }
+levenberg-marquardt = "0.15"
+nalgebra = "0.34"
+num-traits = "0.2"

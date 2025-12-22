@@ -48,7 +48,6 @@ version = "0.1.0"
 dependencies = [
  "argmin",
  "argmin-math",
- "dogleg",
  "dogleg-matx",
  "levenberg-marquardt",
  "nalgebra",

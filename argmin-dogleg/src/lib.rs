@@ -3,8 +3,7 @@ use argmin::{
     solver::trustregion::Dogleg,
 };
 use argmin_math::ArgminInv;
-use dogleg::MagicConst;
-use dogleg_matx::Colx;
+use dogleg_matx::{magic_const::MagicConst, Colx};
 use nalgebra::{DefaultAllocator, Dim, OMatrix, OVector, RealField, Vector};
 use num_traits::{Float, FloatConst};
 use std::{marker::PhantomData, sync::Mutex};

@@ -1,3 +1,3 @@
 [workspace]
-members = ["./dogleg", "dogleg-matx", "argmin-dogleg"]
+members = ["./dogleg", "dogleg-matx", "argmin-dogleg", "ceres-dogleg"]
 resolver = "2"

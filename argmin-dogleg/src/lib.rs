@@ -1,10 +1,10 @@
 use argmin::{
-    core::{ArgminFloat, CostFunction, Executor, Gradient, Hessian},
-    solver::trustregion::Dogleg,
+    core::{ArgminFloat, CostFunction, Executor, Gradient, Hessian, State},
+    solver::trustregion::{Dogleg, TrustRegion},
 };
 use argmin_math::ArgminInv;
 use dogleg_matx::{magic_const::MagicConst, Colx};
-use nalgebra::{DefaultAllocator, Dim, OMatrix, OVector, RealField, Vector, Vector1};
+use nalgebra::{DefaultAllocator, Dim, OMatrix, OVector, RealField};
 use num_traits::{Float, FloatConst};
 use std::{marker::PhantomData, sync::Mutex};
 
@@ -29,24 +29,25 @@ where
     M: Dim,
     N: Dim,
     T: Float + Copy + RealField + MagicConst,
-    P: levenberg_marquardt::LeastSquaresProblem<T, M, N>,
+    P: levenberg_marquardt::LeastSquaresProblem<T, M, N, ParameterStorage = nalgebra::Owned<T, N>>,
     DefaultAllocator: nalgebra::allocator::Allocator<N>,
     DefaultAllocator: nalgebra::allocator::Allocator<M>,
 {
-    type Param = Vector<T, N, P::ParameterStorage>;
-    type Output = Vector1<T>;
+    type Param = OVector<T, N>;
+    type Output = T;
 
     fn cost(&self, param: &Self::Param) -> Result<Self::Output, argmin::core::Error> {
         let mut guard = self.inner.lock().unwrap();
         guard.set_params(param);
 
-        Ok(Vector1::new(
-            T::P5
-                * guard
+        Ok(T::P5
+            * Float::powi(
+                guard
                     .residuals()
                     .ok_or(argmin::core::Error::msg("residuals failed"))?
                     .enorm(),
-        ))
+                2,
+            ))
     }
 }
 
@@ -55,7 +56,7 @@ where
     M: Dim,
     N: Dim,
     T: Float + Copy + RealField + MagicConst,
-    P: levenberg_marquardt::LeastSquaresProblem<T, M, N>,
+    P: levenberg_marquardt::LeastSquaresProblem<T, M, N, ParameterStorage = nalgebra::Owned<T, N>>,
     DefaultAllocator: nalgebra::allocator::Allocator<N>,
     DefaultAllocator: nalgebra::allocator::Allocator<M>,
     DefaultAllocator: nalgebra::allocator::Allocator<N, M>,
@@ -81,15 +82,12 @@ where
     M: Dim,
     N: Dim,
     T: Float + Copy + RealField + MagicConst,
-    P: levenberg_marquardt::LeastSquaresProblem<T, M, N>,
+    P: levenberg_marquardt::LeastSquaresProblem<T, M, N, ParameterStorage = nalgebra::Owned<T, N>>,
     DefaultAllocator: nalgebra::allocator::Allocator<N>,
     DefaultAllocator: nalgebra::allocator::Allocator<M>,
     DefaultAllocator: nalgebra::allocator::Allocator<N, M>,
     DefaultAllocator: nalgebra::allocator::Allocator<N, N>,
 {
-    // type ResidualStorage: RawStorageMut<F, M> + Storage<F, M> + IsContiguous;
-    // type JacobianStorage: RawStorageMut<F, M, N> + Storage<F, M, N> + IsContiguous;
-    // type ParameterStorage: RawStorageMut<F, N> + Storage<F, N> + IsContiguous + Clone;
     type Param = <Self as CostFunction>::Param;
     type Hessian = OMatrix<T, N, N>;
 
@@ -103,23 +101,25 @@ where
     }
 }
 
-pub fn run_dogleg<P, T, M, N>(problem: P, initial: Vector<T, N, P::ParameterStorage>)
+pub fn run_dogleg<P, T, M, N>(
+    problem: P,
+    initial: OVector<T, N>,
+) -> Result<OVector<T, N>, argmin::core::Error>
 where
     M: Dim,
     N: Dim,
     T: Float + Copy + RealField + MagicConst + FloatConst + ArgminFloat,
-    P: levenberg_marquardt::LeastSquaresProblem<T, M, N>,
+    P: levenberg_marquardt::LeastSquaresProblem<T, M, N, ParameterStorage = nalgebra::Owned<T, N>>,
     DefaultAllocator: nalgebra::allocator::Allocator<N>,
     DefaultAllocator: nalgebra::allocator::Allocator<M>,
     DefaultAllocator: nalgebra::allocator::Allocator<N, M>,
     DefaultAllocator: nalgebra::allocator::Allocator<N, N>,
-    OMatrix<T, N, N>: ArgminInv<T>,
+    OMatrix<T, N, N>: ArgminInv<OMatrix<T, N, N>>,
 {
-    // let subproblem = argmin::solver::trustregion::Dogleg::new();
-    // let trustregion = argmin::solver::trustregion::TrustRegion::new(subproblem);
-    // let exec = Executor::new(ArgminWrapper::new(problem), trustregion)
-    //     .configure(|state| state.param(initial).max_iters(100));
-    // exec.run()?
-    // todo!()
-    todo!()
+    let subproblem = Dogleg::<T>::new();
+    let trustregion = TrustRegion::new(subproblem);
+    let exec = Executor::new(ArgminWrapper::new(problem), trustregion)
+        .configure(|state| state.param(initial.clone()).max_iters(1000));
+    let res = exec.run()?;
+    Ok(res.state().get_best_param().cloned().unwrap_or(initial))
 }

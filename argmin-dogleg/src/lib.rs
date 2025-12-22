@@ -4,7 +4,7 @@ use argmin::{
 };
 use argmin_math::ArgminInv;
 use dogleg_matx::{magic_const::MagicConst, Colx};
-use nalgebra::{DefaultAllocator, Dim, OMatrix, OVector, RealField, Vector};
+use nalgebra::{DefaultAllocator, Dim, OMatrix, OVector, RealField, Vector, Vector1};
 use num_traits::{Float, FloatConst};
 use std::{marker::PhantomData, sync::Mutex};
 
@@ -34,17 +34,19 @@ where
     DefaultAllocator: nalgebra::allocator::Allocator<M>,
 {
     type Param = Vector<T, N, P::ParameterStorage>;
-    type Output = T;
+    type Output = Vector1<T>;
 
     fn cost(&self, param: &Self::Param) -> Result<Self::Output, argmin::core::Error> {
         let mut guard = self.inner.lock().unwrap();
         guard.set_params(param);
 
-        Ok(T::P5
-            * guard
-                .residuals()
-                .ok_or(argmin::core::Error::msg("residuals failed"))?
-                .enorm())
+        Ok(Vector1::new(
+            T::P5
+                * guard
+                    .residuals()
+                    .ok_or(argmin::core::Error::msg("residuals failed"))?
+                    .enorm(),
+        ))
     }
 }
 
@@ -113,10 +115,11 @@ where
     DefaultAllocator: nalgebra::allocator::Allocator<N, N>,
     OMatrix<T, N, N>: ArgminInv<T>,
 {
-    let subproblem = argmin::solver::trustregion::Dogleg::new();
-    let trustregion = argmin::solver::trustregion::TrustRegion::new(subproblem);
-    let exec = Executor::new(ArgminWrapper::new(problem), trustregion)
-        .configure(|state| state.param(initial).max_iters(100));
-    exec.run()?
+    // let subproblem = argmin::solver::trustregion::Dogleg::new();
+    // let trustregion = argmin::solver::trustregion::TrustRegion::new(subproblem);
+    // let exec = Executor::new(ArgminWrapper::new(problem), trustregion)
+    //     .configure(|state| state.param(initial).max_iters(100));
+    // exec.run()?
+    // todo!()
     todo!()
 }

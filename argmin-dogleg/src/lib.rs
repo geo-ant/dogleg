@@ -113,10 +113,10 @@ where
     DefaultAllocator: nalgebra::allocator::Allocator<N, N>,
     OMatrix<T, N, N>: ArgminInv<T>,
 {
-    // let subproblem = argmin::solver::trustregion::Dogleg::new();
-    // let trustregion = argmin::solver::trustregion::TrustRegion::new(subproblem);
-    // let exec = Executor::new(ArgminWrapper::new(problem), trustregion)
-    //     .configure(|state| state.param(initial).max_iters(100));
-    // exec.run()
+    let subproblem = argmin::solver::trustregion::Dogleg::new();
+    let trustregion = argmin::solver::trustregion::TrustRegion::new(subproblem);
+    let exec = Executor::new(ArgminWrapper::new(problem), trustregion)
+        .configure(|state| state.param(initial).max_iters(100));
+    exec.run()?
     todo!()
 }

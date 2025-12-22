@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 argmin = "0.11"
-argmin-math = { version = "0.5", features = ["nalgebra_0_34"] }
+argmin-math = { version = "0.5", features = ["nalgebra_v0_34"] }
 dogleg-matx = { version = "0.1", path = "../dogleg-matx" }
 levenberg-marquardt = "0.15"
 nalgebra = "0.34"

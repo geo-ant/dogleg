@@ -23,4 +23,7 @@ assert2 = ["dep:assert2","dogleg-matx/assert2"]
 
 [dev-dependencies]
 approx = "0.5"
-argmin-dogleg = {path = "../argmin-dogleg"}
+# argmin-dogleg = {path = "../argmin-dogleg"}
+# ceres-dogleg = {path = "../ceres-dogleg"}
+# ceres-solver-sys = {version = "0.5", default-features = false, features = ["source"]}
+# ceres-solver = {version = "0.5", default-features = false, features = ["source"]}

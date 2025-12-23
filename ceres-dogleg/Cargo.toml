@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ceres-solver = "0.5"
+ceres-solver = {version = "0.5", default-features = false, features = ["source"]}
 nalgebra = "0.34"
 levenberg-marquardt = "0.15"
+anyhow = "1.0"

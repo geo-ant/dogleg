@@ -191,7 +191,7 @@ impl LeastSquaresProblem<f64, Dyn, U5> for LinearRank1ZeroColumns {
 
 #[derive(Clone)]
 pub struct Rosenbruck {
-    params: OVector<f64, U2>,
+    pub params: OVector<f64, U2>,
 }
 impl LeastSquaresProblem<f64, U2, U2> for Rosenbruck {
     type ParameterStorage = Owned<f64, U2>;

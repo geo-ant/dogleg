@@ -1,10 +1,11 @@
 use argmin::{
+    argmin_error,
     core::{ArgminFloat, CostFunction, Executor, Gradient, Hessian, State},
     solver::trustregion::{Dogleg, TrustRegion},
 };
 use argmin_math::ArgminInv;
 use dogleg_matx::{magic_const::MagicConst, Colx};
-use nalgebra::{DefaultAllocator, Dim, OMatrix, OVector, RealField, Vector};
+use nalgebra::{allocator::Allocator, DefaultAllocator, Dim, OMatrix, OVector, RealField, Vector};
 use num_traits::{Float, FloatConst};
 use std::{marker::PhantomData, sync::Mutex};
 
@@ -103,12 +104,22 @@ where
     }
 }
 
+pub struct ArgminReport<T, N>
+where
+    T: nalgebra::Scalar,
+    N: Dim,
+    DefaultAllocator: Allocator<N>,
+{
+    pub params: OVector<T, N>,
+    pub objective_function: T,
+}
+
 /// run the dogleg minimizer in argmin on a `levenberg-marquardt::LeastSquaresProblem`
 /// instance.
 pub fn run_argmin_dogleg<P, T, M, N>(
     problem: P,
     initial: OVector<T, N>,
-) -> Result<OVector<T, N>, argmin::core::Error>
+) -> Result<ArgminReport<T, N>, argmin::core::Error>
 where
     M: Dim,
     N: Dim,
@@ -125,5 +136,16 @@ where
     let exec = Executor::new(ArgminLevMarAdapter::new(problem), trustregion)
         .configure(|state| state.param(initial.clone()).max_iters(1000));
     let res = exec.run()?;
-    Ok(res.state().get_best_param().cloned().unwrap_or(initial))
+
+    let params = res
+        .state()
+        .get_best_param()
+        .cloned()
+        .ok_or(argmin::core::Error::msg("no best params"))?;
+
+    let objective_function = res.state().get_best_cost();
+    Ok(ArgminReport {
+        params,
+        objective_function,
+    })
 }

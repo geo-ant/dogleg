@@ -177,8 +177,11 @@ name = "ceres-dogleg"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "approx",
  "ceres-solver",
+ "dogleg-matx",
  "levenberg-marquardt",
+ "levmar-problems",
  "nalgebra",
 ]
 
@@ -193,21 +196,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "ceres-solver-src"
-version = "0.5.0+ceres2.2.0-eigen3.4.0-glog0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd54cc8c146436886deb0dd95ff4245e5666a53123556bfed5ebae65c51840dc"
-dependencies = [
- "cmake",
-]
-
-[[package]]
 name = "ceres-solver-sys"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89df96913edac79abb432904d3264a6a0549c6711c8bf11d1e555bdeee030be8"
 dependencies = [
- "ceres-solver-src",
  "cxx",
  "cxx-build",
  "pkg-config",
@@ -244,15 +237,6 @@ name = "clap_lex"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1d728cc89cf3aee9ff92b05e62b19ee65a02b5702cff7d5a377e32c6ae29d8d"
-
-[[package]]
-name = "cmake"
-version = "0.1.54"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7caa3f9de89ddbe2c607f4101924c5abec803763ae9534e4f4d7d8f84aa81f0"
-dependencies = [
- "cc",
-]
 
 [[package]]
 name = "codespan-reporting"

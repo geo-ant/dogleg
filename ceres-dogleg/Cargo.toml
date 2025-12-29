@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ceres-solver = {version = "0.5", default-features = false, features = ["source"]}
+anyhow = "1.0"
+approx = "0.5"
+ceres-solver = {version = "0.5"}
 nalgebra = "0.34"
 levenberg-marquardt = "0.15"
-anyhow = "1.0"
+levmar-problems = {path = "../levmar-problems"}
+dogleg-matx = {path = "../dogleg-matx"}

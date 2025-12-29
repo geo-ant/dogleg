@@ -1,28 +1,45 @@
-//! this crate needs ceres solver installed, which is very easy to do by
-//! downloading the release package and building and installing it via
-//! cmake.
-
+//! this crate needs ceres solver installed. The installation itself via
+//! building from source should be easy, but I ran into tons of linker problems.
+//! What eventually fixed it was
+//!
+//! ```shell
+//! # apt install libceres-dev
+//! ```
 use anyhow::anyhow;
 use ceres_solver::{CostFunctionType, NllsProblem};
 use core::f64;
 use levenberg_marquardt::LeastSquaresProblem;
-use nalgebra::{DefaultAllocator, Dim, Vector, allocator::Allocator};
+use nalgebra::{DefaultAllocator, Dim, OVector, RealField, Scalar, Vector, allocator::Allocator};
 use std::sync::Mutex;
 
 pub use ceres_solver::SolverOptions;
 extern crate ceres_solver;
 
+struct CeresReport<P, T, M, N>
+where
+    P: LeastSquaresProblem<T, M, N>,
+    DefaultAllocator: Allocator<N>,
+    T: Scalar + Copy + RealField,
+    M: Dim,
+    N: Dim,
+{
+    pub params: Vector<T, N, P::ParameterStorage>,
+}
+
+#[cfg(test)]
+mod tests;
+
 /// use the ceres solver to solve the given least squares problem with the
 /// given options.
-pub fn ceres_solve_with_options<P, M, N>(
+fn ceres_solve_with_options<P, M, N>(
     problem: P,
     options: SolverOptions,
-) -> anyhow::Result<Vector<f64, N, P::ParameterStorage>>
+) -> anyhow::Result<CeresReport<P, f64, M, N>>
 where
     M: Dim,
     N: Dim,
     P: LeastSquaresProblem<f64, M, N>,
-    DefaultAllocator: Allocator<N>,
+    DefaultAllocator: Allocator<N> + Allocator<M>,
 {
     let residual_dim = problem
         .residuals()
@@ -40,11 +57,15 @@ where
 
         // I think this is the correct way to get the jacobian for the one parameter block
         // NOTE(geo-ant): the jacobian is ROW-MAJOR for ceres!
-        let jacobian: Option<&mut [f64]> = match jacobian {
+        let jacobian_rowmajor_array = match jacobian {
             Some(slice) => {
-                assert_eq!(slice.len(), 1);
+                assert_eq!(
+                    slice.len(),
+                    1,
+                    "jacobian must only have one parameter block"
+                );
                 match &mut slice[0] {
-                    Some(opt) => Some(opt[0]),
+                    Some(opt) => Some(opt),
                     None => None,
                 }
             }
@@ -76,19 +97,18 @@ where
         );
         residuals.copy_from_slice(res.as_slice());
 
-        if let Some(jacobian) = jacobian {
+        if let Some(jacobian) = jacobian_rowmajor_array {
             let jac = problem_guard.jacobian().unwrap();
             // the ceres jacobian is in row major order
             // so we write the transposed jacobian to
             // the provided memory
-            assert_eq!(
+            panic!(
+                "my jac dim {}x{}, other jac {}x{}",
+                jac.nrows(),
+                jac.ncols(),
                 jacobian.len(),
-                jac.nrows() * jac.ncols(),
-                "wrong jacobian dimensions, expected {}, got {}",
-                jac.nrows() * jac.ncols(),
-                jacobian.len()
+                jacobian[0].len()
             );
-            jacobian.copy_from_slice(jac.as_slice());
         }
         true
     });
@@ -125,6 +145,9 @@ where
     // This is just an easy way of getting an instance of the correct
     // type of parameter vector.
     initial_params.copy_from_slice(&best_params);
+    let best_params = initial_params;
 
-    Ok(initial_params)
+    Ok(CeresReport {
+        params: best_params.to_owned(),
+    })
 }

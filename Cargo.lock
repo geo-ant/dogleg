@@ -435,9 +435,11 @@ name = "dogleg"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "argmin-dogleg",
  "assert2",
  "dogleg-matx",
  "levenberg-marquardt",
+ "levmar-problems",
  "nalgebra",
  "num-traits",
  "thiserror 2.0.17",
@@ -938,6 +940,17 @@ dependencies = [
  "nalgebra",
  "num-traits",
  "rustc_version",
+]
+
+[[package]]
+name = "levmar-problems"
+version = "0.1.0"
+dependencies = [
+ "approx",
+ "cfg-if",
+ "levenberg-marquardt",
+ "nalgebra",
+ "num-traits",
 ]
 
 [[package]]

@@ -1,0 +1,11 @@
+[package]
+name = "levmar-problems"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+levenberg-marquardt = "0.15"
+nalgebra = { version = "0.34", default-features = false }
+num-traits = { version = "0.2", default-features = false, features = ["libm"] }
+cfg-if = "1.0.1"
+approx = "0.5.1"

@@ -6,7 +6,11 @@
 #![deny(clippy::expect_used)]
 
 #[cfg(test)]
+// TODO document this was taken from levenberg-marquardt crate and add license.
 mod test_examples;
+
+#[cfg(test)]
+mod argmin_tests;
 
 /// solver implementations
 pub mod dogleg;

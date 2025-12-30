@@ -8,6 +8,7 @@
 use anyhow::anyhow;
 use ceres_solver::{CostFunctionType, NllsProblem};
 use core::f64;
+use dogleg_matx::Matx;
 use levenberg_marquardt::LeastSquaresProblem;
 use nalgebra::{DefaultAllocator, Dim, OVector, RealField, Scalar, Vector, allocator::Allocator};
 use std::sync::Mutex;
@@ -39,7 +40,8 @@ where
     M: Dim,
     N: Dim,
     P: LeastSquaresProblem<f64, M, N>,
-    DefaultAllocator: Allocator<N> + Allocator<M>,
+    P::JacobianStorage: Clone,
+    DefaultAllocator: Allocator<N> + Allocator<M> + Allocator<N, M>,
 {
     let residual_dim = problem
         .residuals()
@@ -98,17 +100,21 @@ where
         residuals.copy_from_slice(res.as_slice());
 
         if let Some(jacobian) = jacobian_rowmajor_array {
-            let jac = problem_guard.jacobian().unwrap();
+            let jac_tr = problem_guard.jacobian().unwrap().transpose();
             // the ceres jacobian is in row major order
             // so we write the transposed jacobian to
             // the provided memory
-            panic!(
-                "my jac dim {}x{}, other jac {}x{}",
-                jac.nrows(),
-                jac.ncols(),
-                jacobian.len(),
-                jacobian[0].len()
-            );
+
+            assert_eq!(jacobian.len(), jac_tr.ncols());
+            assert_eq!(jacobian[0].len(), jac_tr.nrows());
+
+            // nalgebra view storages are complete crap, so this won't compile
+            // using iterators. Who knows, maybe I'm doing something wrong...
+            for idc in 0..jac_tr.ncols() {
+                for idr in 0..jac_tr.nrows() {
+                    jacobian[idc][idr] = jac_tr[(idr, idc)];
+                }
+            }
         }
         true
     });

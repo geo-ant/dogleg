@@ -32,5 +32,9 @@
 //!
 //! ------------------------------------------------------------------------------
 
+pub mod assertions;
 pub mod problems;
 pub mod utils;
+
+pub use approx::assert_relative_eq;
+pub use approx::relative_eq;

@@ -6,36 +6,50 @@
 //! # apt install libceres-dev
 //! ```
 use anyhow::anyhow;
-use ceres_solver::{CostFunctionType, NllsProblem};
+use ceres_solver::{CostFunctionType, NllsProblem, solver::MinimizerType};
 use core::f64;
 use dogleg_matx::Matx;
 use levenberg_marquardt::LeastSquaresProblem;
 use nalgebra::{DefaultAllocator, Dim, OVector, RealField, Scalar, Vector, allocator::Allocator};
-use std::sync::Mutex;
+use std::{
+    io::Read,
+    sync::{Arc, Mutex},
+};
 
 pub use ceres_solver::SolverOptions;
 extern crate ceres_solver;
 
-struct CeresReport<P, T, M, N>
-where
-    P: LeastSquaresProblem<T, M, N>,
-    DefaultAllocator: Allocator<N>,
-    T: Scalar + Copy + RealField,
-    M: Dim,
-    N: Dim,
-{
-    pub params: Vector<T, N, P::ParameterStorage>,
+struct CeresReport {
+    pub objective_function: f64,
 }
 
 #[cfg(test)]
 mod tests;
+
+/// given options.
+fn ceres_solve_with_dogleg<P, M, N>(problem: P) -> anyhow::Result<(P, CeresReport)>
+where
+    M: Dim,
+    N: Dim,
+    P: LeastSquaresProblem<f64, M, N>,
+    P::JacobianStorage: Clone,
+    DefaultAllocator: Allocator<N> + Allocator<M> + Allocator<N, M>,
+{
+    let options = SolverOptions::builder()
+        .minimizer_type(MinimizerType::TRUST_REGION)
+        .trust_region_strategy_type(ceres_solver::solver::TrustRegionStrategyType::DOGLEG)
+        .update_state_every_iteration(true)
+        .build()
+        .unwrap();
+    ceres_solve_with_options(problem, options)
+}
 
 /// use the ceres solver to solve the given least squares problem with the
 /// given options.
 fn ceres_solve_with_options<P, M, N>(
     problem: P,
     options: SolverOptions,
-) -> anyhow::Result<CeresReport<P, f64, M, N>>
+) -> anyhow::Result<(P, CeresReport)>
 where
     M: Dim,
     N: Dim,
@@ -50,9 +64,9 @@ where
     let mut initial_params = problem.params();
 
     // hack because the close has type Fn, not FnMut
-    let problem = Mutex::new(problem);
-    // cost function allows us to provide residuals and jacobian to the ceres solver
-    let cost: CostFunctionType = Box::new(move |parameters, residuals, jacobian| {
+    let problem = Arc::new(Mutex::new(problem));
+    let cost: CostFunctionType = Box::new(|parameters, residuals, jacobian| {
+        let problem = &problem;
         // see http://ceres-solver.org/nnls_modeling.html
         assert_eq!(parameters.len(), 1);
         let parameters = parameters[0]; // we expect only a single parameter block
@@ -153,7 +167,15 @@ where
     initial_params.copy_from_slice(&best_params);
     let best_params = initial_params;
 
-    Ok(CeresReport {
-        params: best_params.to_owned(),
-    })
+    // just to make sure that the problem has indeed currently set the best
+    // params.
+    let mut problem = Arc::into_inner(problem).unwrap().into_inner().unwrap();
+    problem.set_params(&best_params);
+
+    Ok((
+        problem,
+        CeresReport {
+            objective_function: solution.summary.final_cost(),
+        },
+    ))
 }

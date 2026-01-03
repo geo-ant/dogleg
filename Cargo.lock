@@ -178,6 +178,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "approx",
+ "assert2",
  "ceres-solver",
  "dogleg-matx",
  "levenberg-marquardt",
@@ -931,6 +932,7 @@ name = "levmar-problems"
 version = "0.1.0"
 dependencies = [
  "approx",
+ "assert2",
  "cfg-if",
  "levenberg-marquardt",
  "nalgebra",

@@ -6,16 +6,6 @@ use levenberg_marquardt::LeastSquaresProblem;
 use nalgebra::*;
 use nalgebra::{allocator::Allocator, storage::Owned};
 
-#[macro_export]
-macro_rules! assert_fp_eq {
-    ($given:expr, $expected:expr) => {
-        assert_relative_eq!($given, $expected, epsilon = 1e-12)
-    };
-    ($given:expr, $expected:expr, $ep:expr) => {
-        assert_relative_eq!($given, $expected, epsilon = $ep)
-    };
-}
-
 /// TOL value used by SciPy
 pub const TOL: f64 = 1.49012e-08;
 
@@ -222,7 +212,7 @@ const TPI: f64 = ::core::f64::consts::PI * 2.;
 
 #[derive(Clone)]
 pub struct HelicalValley {
-    params: OVector<f64, U3>,
+    pub params: OVector<f64, U3>,
 }
 impl LeastSquaresProblem<f64, U3, U3> for HelicalValley {
     type ParameterStorage = Owned<f64, U3>;
@@ -270,7 +260,7 @@ impl LeastSquaresProblem<f64, U3, U3> for HelicalValley {
 
 #[derive(Clone)]
 pub struct PowellSingular {
-    params: OVector<f64, U4>,
+    pub params: OVector<f64, U4>,
 }
 impl LeastSquaresProblem<f64, U4, U4> for PowellSingular {
     type ParameterStorage = Owned<f64, U4>;
@@ -313,7 +303,7 @@ impl LeastSquaresProblem<f64, U4, U4> for PowellSingular {
 
 #[derive(Clone)]
 pub struct FreudensteinRoth {
-    params: OVector<f64, U2>,
+    pub params: OVector<f64, U2>,
 }
 impl LeastSquaresProblem<f64, U2, U2> for FreudensteinRoth {
     type ParameterStorage = Owned<f64, U2>;
@@ -349,7 +339,7 @@ impl LeastSquaresProblem<f64, U2, U2> for FreudensteinRoth {
 
 #[derive(Clone)]
 pub struct Bard {
-    params: OVector<f64, U3>,
+    pub params: OVector<f64, U3>,
 }
 impl LeastSquaresProblem<f64, U15, U3> for Bard {
     type ParameterStorage = Owned<f64, U3>;
@@ -398,7 +388,7 @@ impl LeastSquaresProblem<f64, U15, U3> for Bard {
 
 #[derive(Clone)]
 pub struct KowalikOsborne {
-    params: OVector<f64, U4>,
+    pub params: OVector<f64, U4>,
 }
 const V: [f64; 11] = [
     4., 2., 1., 0.5, 0.25, 0.167, 0.125, 0.1, 0.0833, 0.0714, 0.0625,

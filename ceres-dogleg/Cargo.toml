@@ -11,3 +11,4 @@ nalgebra = "0.34"
 levenberg-marquardt = "0.15"
 levmar-problems = {path = "../levmar-problems"}
 dogleg-matx = {path = "../dogleg-matx"}
+assert2 = "0.3"

@@ -5,7 +5,7 @@
 //! ```shell
 //! # apt install libceres-dev
 //! ```
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 use ceres_solver::{CostFunctionType, NllsProblem, solver::MinimizerType};
 use core::f64;
 use dogleg_matx::Matx;
@@ -171,6 +171,10 @@ where
     // params.
     let mut problem = Arc::into_inner(problem).unwrap().into_inner().unwrap();
     problem.set_params(&best_params);
+
+    if !solution.summary.is_solution_usable() {
+        bail!("CERES solver indicates solution is not usable");
+    }
 
     Ok((
         problem,

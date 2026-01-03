@@ -445,7 +445,7 @@ const Y3: [f64; 16] = [
 ];
 #[derive(Clone)]
 pub struct Meyer {
-    params: OVector<f64, U3>,
+    pub params: OVector<f64, U3>,
 }
 impl LeastSquaresProblem<f64, U16, U3> for Meyer {
     type ParameterStorage = Owned<f64, U3>;
@@ -491,7 +491,7 @@ pub struct Watson<P: DimName>
 where
     DefaultAllocator: Allocator<P>,
 {
-    params: OVector<f64, P>,
+    pub params: OVector<f64, P>,
 }
 
 impl<P: DimName> Watson<P>
@@ -576,7 +576,7 @@ where
 
 #[derive(Clone)]
 pub struct Beale {
-    params: OVector<f64, U2>,
+    pub params: OVector<f64, U2>,
 }
 
 impl LeastSquaresProblem<f64, U1, U2> for Beale {

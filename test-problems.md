@@ -15,7 +15,9 @@ this test suite. The test suite itself is based on the test suite of the
 * The NIST also has a list of problems with certified solutions
   [here](https://www.itl.nist.gov/div898/strd/nls/nls_main.shtml).
   I might use them later as well, but for now I'm going to stick to the problems
-  that the `levenberg-marquardt` crate used as well.
+  that the `levenberg-marquardt` crate used as well. The problems are
+  specifically nonlinear least squares _regression_ problems, but those can
+  easily be casted to nonlinear minimization problems, of course.
 
 > **ATTENTION**: objective function / cost function.
 > The sources above minimize the _sum of squares_, whereas my objective function

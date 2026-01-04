@@ -50,6 +50,11 @@ fn test_linear_full_rank() {
 
     let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
     assert_fp_eq!(
+        report.objective_function,
+        2.5000000000000004,
+        epsilon = 1e-6
+    );
+    assert_fp_eq!(
         problem.params,
         OVector::<f64, U5>::from_column_slice(&[
             -1.,
@@ -68,6 +73,11 @@ fn test_linear_full_rank() {
     problem.set_params(&initial.clone());
     let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
     assert_fp_eq!(
+        report.objective_function,
+        22.500000000000004,
+        epsilon = 1e-6
+    );
+    assert_fp_eq!(
         problem.params,
         OVector::<f64, U5>::from_column_slice(&[
             -0.9999999999999953,
@@ -81,8 +91,60 @@ fn test_linear_full_rank() {
 }
 
 #[test]
+// see MGH paper: https://www.cmor-faculty.rice.edu/~yzhang/caam454/nls/MGH.pdf
+// problem 33
 fn test_linear_rank1() {
-    todo!()
+    let mut problem = LinearRank1::new(OVector::<f64, U5>::zeros(), 10);
+    let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
+
+    // check derivative implementation
+    problem.set_params(&OVector::<f64, U5>::from_column_slice(&[
+        0.6458941130666561,
+        0.4375872112626925,
+        0.8917730007820798,
+        0.9636627605010293,
+        0.3834415188257777,
+    ]));
+    let jac_num = differentiate_numerically(&mut problem).unwrap();
+    let jac_trait = problem.jacobian().unwrap();
+    assert_fp_eq!(jac_num, jac_trait, epsilon = 1e-5);
+
+    problem.set_params(&initial.clone());
+    let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    let m = problem.m as f64;
+    // NOTE: expected minimum as given in the MGH paper must be scaled by 0.5
+    // to compare to our objective function.
+    let fmin_mgh = m * (m - 1.) / (2. * (2. * m + 1.));
+
+    let sum_jxj: f64 = problem
+        .params
+        .iter()
+        .enumerate()
+        .map(|(j, xj)| xj * ((j + 1) as f64))
+        .sum();
+    // every point where \sum_j {j*x_j} = 3/(2m+1) is a valid minimum
+    assert_fp_eq!(sum_jxj, 3. / (2. * m + 1.), epsilon = 1e-6);
+    assert_fp_eq!(report.objective_function, 0.5 * fmin_mgh, epsilon = 1e-6);
+
+    let mut problem = LinearRank1::new(OVector::<f64, U5>::zeros(), 50);
+    let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
+
+    problem.set_params(&initial.clone());
+    let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    let m = problem.m as f64;
+    // NOTE: expected minimum as given in the MGH paper must be scaled by 0.5
+    // to compare to our objective function.
+    let fmin_mgh = m * (m - 1.) / (2. * (2. * m + 1.));
+
+    let sum_jxj: f64 = problem
+        .params
+        .iter()
+        .enumerate()
+        .map(|(j, xj)| xj * ((j + 1) as f64))
+        .sum();
+    // every point where \sum_j {j*x_j} = 3/(2m+1) is a valid minimum
+    assert_fp_eq!(sum_jxj, 3. / (2. * m + 1.), epsilon = 1e-6);
+    assert_fp_eq!(report.objective_function, 0.5 * fmin_mgh, epsilon = 1e-6);
 }
 
 // NOTE(geo-ant) see above
@@ -109,14 +171,15 @@ fn test_rosenbrock() {
 
     problem.set_params(&initial.clone());
     let (mut problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
         problem.params,
         OVector::<f64, U2>::from_column_slice(&[1., 1.]),
         epsilon = 1e-6
     );
-    // assert_fp_eq!(report.objective_function, 0.0);
     problem.set_params(&initial.map(|x| 10. * x));
     let (mut problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
         problem.params,
         OVector::<f64, U2>::from_column_slice(&[1., 1.]),
@@ -124,9 +187,8 @@ fn test_rosenbrock() {
     );
     problem.set_params(&initial.map(|x| x * 100.));
     let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
-    // assert_eq!(report.termination, TerminationReason::ResidualsZero);
-    // assert_eq!(report.number_of_evaluations, 6);
-    // assert_fp_eq!(report.objective_function, 0.0);
+    assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
+    assert_fp_eq!(report.objective_function, 0.0);
     assert_fp_eq!(
         problem.params,
         OVector::<f64, U2>::from_column_slice(&[1., 1.]),
@@ -160,6 +222,7 @@ fn test_helical_valley() {
         OVector::<f64, U3>::from_column_slice(&[1., -6.243301596789443e-18, 0.]),
         epsilon = 1e-6
     );
+    assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
 
     problem.set_params(&initial.map(|x| x * 10.));
     let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
@@ -168,6 +231,7 @@ fn test_helical_valley() {
         OVector::<f64, U3>::from_column_slice(&[1., 6.563910805155555e-21, 0.]),
         epsilon = 1e-6
     );
+    assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
 
     // NOTE(geo-ant) this actually fails
     // problem.set_params(&initial.map(|x| x * 100.));
@@ -199,6 +263,7 @@ fn test_powell_singular() {
 
     problem.set_params(&initial.clone());
     let (mut problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
         problem.params,
         OVector::<f64, U4>::from_column_slice(&[
@@ -209,8 +274,10 @@ fn test_powell_singular() {
         ]),
         epsilon = 1e-3
     );
+
     problem.set_params(&initial.map(|x| x * 10.));
     let (mut problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
         problem.params,
         OVector::<f64, U4>::from_column_slice(&[
@@ -224,6 +291,7 @@ fn test_powell_singular() {
 
     problem.set_params(&initial.map(|x| x * 100.));
     let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
         problem.params,
         OVector::<f64, U4>::from_column_slice(&[
@@ -265,6 +333,9 @@ fn test_freudenstein_roth() {
         OVector::<f64, U2>::from_column_slice(&[11.412484465499368, -0.8968279137315035]),
         epsilon = 1e-3
     );
+    // see the MGH paper: https://www.cmor-faculty.rice.edu/~yzhang/caam454/nls/MGH.pdf
+    // problem (2)
+    assert_fp_eq!(report.objective_function, 0.5 * 48.9842, epsilon = 1e-3);
 
     problem.set_params(&initial.map(|x| x * 10.));
     let (mut problem, report) = ceres_solve_with_dogleg(problem).unwrap();
@@ -273,14 +344,16 @@ fn test_freudenstein_roth() {
         OVector::<f64, U2>::from_column_slice(&[11.413004661474561, -0.8967960386859591]),
         epsilon = 1e-3
     );
+    assert_fp_eq!(report.objective_function, 0.5 * 48.9842, epsilon = 1e-3);
 
     problem.set_params(&initial.map(|x| x * 100.));
-    let (mut problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
     assert_fp_eq!(
         problem.params,
         OVector::<f64, U2>::from_column_slice(&[11.412781785788198, -0.8968051074920677]),
         epsilon = 1e-2
     );
+    assert_fp_eq!(report.objective_function, 0.5 * 48.9842, epsilon = 1e-3);
 }
 
 #[test]
@@ -311,6 +384,10 @@ fn test_bard() {
         ]),
         epsilon = 1e-3
     );
+    // see MGH paper: https://www.cmor-faculty.rice.edu/~yzhang/caam454/nls/MGH.pdf
+    // see problem (8), the first optimum where no position of the minimum is
+    // given, but we'll just take what we had in levenberg-marquardt
+    assert_fp_eq!(report.objective_function, 0.5 * 8.21487e-3, epsilon = 1e-8);
 
     // NOTE(geo-ant) those problems fail with the levmar crate as well.
     // see https://rdrr.io/github/jlmelville/funconstrain/man/bard.html where it says:
@@ -320,7 +397,7 @@ fn test_bard() {
 
     // NOTE(geo-ant) this fails!
     // problem.set_params(&initial.map(|x| x * 10.));
-    // let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    // let (mut problem, report) = ceres_solve_with_dogleg(problem).unwrap();
     // assert_fp_eq!(problem.params[0], 8.40e-01, epsilon = 1e-3);
     // assert2::assert!(problem.params[1] <= -1e+05);
     // assert2::assert!(problem.params[2] <= -1e+04);
@@ -329,7 +406,7 @@ fn test_bard() {
     // is farther away.
     problem.set_params(&initial.map(|x| x * 100.));
     let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
-    // assert_fp_eq!(problem.params[0], 8.4066667381832927e-01);
+    assert_fp_eq!(report.objective_function, 0.5 * 17.4286, epsilon = 1e-4);
     assert_fp_eq!(problem.params[0], 8.40e-01, epsilon = 1e-3);
     assert2::assert!(problem.params[1] <= -1e+05);
     assert2::assert!(problem.params[2] <= -1e+04);
@@ -430,7 +507,7 @@ fn test_meyer() {
     assert_fp_eq!(jac_num, jac_trait, epsilon = 1e-5);
 
     problem.set_params(&initial.clone());
-    let (mut problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
 
     // #[cfg(feature = "minpack-compat")]
     assert_fp_eq!(
@@ -649,7 +726,8 @@ fn test_watson() {
     //     epsilon = 1e-2
     // );
     problem.set_params(&initial.map(|x| x + 10.));
-    let (mut problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    let _ = problem;
     assert_fp_eq!(
         report.objective_function,
         2.361190552167311e-10,

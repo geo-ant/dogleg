@@ -4,7 +4,7 @@
 mod levmar_adapter;
 
 #[cfg(test)]
-mod tests;
+mod test;
 
 pub use levmar_adapter::argmin_solve_with_dogleg;
 pub use levmar_adapter::ArgminLevMarAdapter;

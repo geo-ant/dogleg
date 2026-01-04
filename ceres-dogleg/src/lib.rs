@@ -20,7 +20,7 @@ pub struct CeresReport {
 }
 
 #[cfg(test)]
-mod tests;
+mod test;
 
 /// given options.
 pub fn ceres_solve_with_dogleg<P, M, N>(problem: P) -> anyhow::Result<(P, CeresReport)>

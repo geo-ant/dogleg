@@ -367,11 +367,24 @@ fn max_scaled_div_for_vector() {
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_scaled_div(&svec1, scale, &svec2).unwrap(),
+        MaxScaledDivx::max_abs_scaled_div(&svec1, scale, &svec2).unwrap(),
         (3. / 12.)
     );
     assert_eq!(
-        MaxScaledDivx::max_scaled_div(&dvec1, scale, &dvec2).unwrap(),
+        MaxScaledDivx::max_abs_scaled_div(&dvec1, scale, &dvec2).unwrap(),
+        (3. / 12.)
+    );
+
+    let (svec1, dvec1) = sdvec![2., -3., 4.];
+    let (svec2, dvec2) = sdvec![8., 6., 100.];
+    let scale = 2.;
+
+    assert_eq!(
+        MaxScaledDivx::max_abs_scaled_div(&svec1, scale, &svec2).unwrap(),
+        (3. / 12.)
+    );
+    assert_eq!(
+        MaxScaledDivx::max_abs_scaled_div(&dvec1, scale, &dvec2).unwrap(),
         (3. / 12.)
     );
 }
@@ -397,9 +410,9 @@ fn elementwise_max_for_vector() {
 #[test]
 fn elementwise_replace_if_leq_for_vector() {
     let (svec, dvec) = sdvec![5.2, -100.1, 2., 99.1];
-    let threshold = 5.1;
+    let threshold = 5.2;
     let replacement = 123.;
-    let (sexpected, dexpected) = sdvec![5.2, 123., 123., 99.1];
+    let (sexpected, dexpected) = sdvec![123., 123., 123., 99.1];
 
     assert_eq!(
         ElementwiseReplaceLeqx::replace_if_leq(svec, threshold, replacement),

@@ -1,6 +1,12 @@
-use crate::dogleg::report::TerminationFailure;
+use crate::{dogleg::report::TerminationFailure, MagicConst};
 use dogleg_matx::{Addx, Colx, Dotx, Matx, MaxScaledDivx, OwnedColx, Scalex};
 use num_traits::{ConstOne, Float};
+
+#[cfg(feature = "assert2")]
+use assert2::debug_assert;
+
+#[cfg(test)]
+mod test;
 
 #[derive(Debug, Clone, PartialEq)]
 //@note(geo-ant) why do these generic have those weird names?
@@ -107,7 +113,7 @@ where
         gradient.dim(),
         "jacobian must have same number of columns as gradient"
     );
-    gradient.max_scaled_div(residual_norm, jacobian_norms)
+    gradient.max_abs_scaled_div(residual_norm, jacobian_norms)
 }
 
 /// this calculates the dogleg step from the component vectors p_b, p_u,
@@ -128,7 +134,7 @@ where
 // have to.
 pub fn dogleg_step<T, P>(pu: &P, pb: &P, delta: T) -> Result<P::Owned, TerminationFailure>
 where
-    T: Float + ConstOne,
+    T: Float + MagicConst + std::fmt::Debug,
     P: Colx<T, Owned = P> + Addx<T, P> + Dotx<T, P> + Scalex<T>,
     P::Owned: Scalex<T> + Addx<T, P> + Colx<T>,
 {
@@ -179,8 +185,26 @@ where
             return Ok(pu.clone_owned());
         }
         let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
-        pu.clone_owned()
-            .scaled_add(T::ONE, &pb_pu.scale(tau_minus_one))
-            .ok_or(TerminationFailure::WrongDimensions("dogleg step"))
+        debug_assert!(tau_minus_one >= T::ZERO - T::EPSMCH);
+        debug_assert!(tau_minus_one <= T::ONE + T::EPSMCH);
+
+        // just a sanity check to see that I picked the correct formula for tau-1
+        // (the square root allows for the +/- but my solution should only
+        // be the correct one that is always in [0,1].
+        let tau_minus_one_alt = -b_c - Float::sqrt((d - a) / c + Float::powi(b_c, 2));
+        debug_assert!(tau_minus_one_alt < T::ZERO || tau_minus_one_alt > T::ONE);
+
+        let p = pu
+            .clone_owned()
+            .add(&pb_pu.scale(tau_minus_one))
+            .ok_or(TerminationFailure::WrongDimensions("dogleg step"))?;
+        let p_norm = p.enorm();
+        // some sanity checks with some generous bounds for numerical problems
+        // debug_assert!(Float::powi(p_norm, 2) <= delta * delta + T::EPSMCH * T::ONE_HUNDRED);
+        // debug_assert!(p_norm >= pu_norm - T::EPSMCH * T::TEN);
+        // debug_assert!(p_norm <= pb_norm + T::EPSMCH * T::TEN);
+        // @todo(geo) maybe add more logic to restrict the p step to the feasible
+        // range.
+        Ok(p)
     }
 }

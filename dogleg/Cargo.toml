@@ -14,7 +14,19 @@ thiserror = "2.0"
 levenberg-marquardt = {version = "0.15", optional = true}
 # todo remove
 nalgebra = "0.34"
+assert2 = {version = "0.3", optional = true}
 
 [features]
 # TODO remove this
 default = ["levenberg-marquardt"]
+assert2 = ["dep:assert2","dogleg-matx/assert2"]
+
+[dev-dependencies]
+approx = "0.5"
+# argmin-dogleg = {path = "../argmin-dogleg"}
+# ceres-dogleg = {path = "../ceres-dogleg"}
+# ceres-solver-sys = {version = "0.5", default-features = false, features = ["source"]}
+# ceres-solver = {version = "0.5", default-features = false, features = ["source"]}
+argmin-dogleg = {path = "../argmin-dogleg"}
+levmar-problems = {path = "../levmar-problems"}
+levenberg-marquardt = {version = "0.15"}

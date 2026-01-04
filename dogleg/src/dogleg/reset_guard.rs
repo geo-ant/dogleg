@@ -43,6 +43,11 @@ where
         _ = self.params.take()
     }
 
+    /// return the currently set parameters (which are the new, updated parameters)
+    pub fn params(&self) -> P::Parameters {
+        self.problem.params()
+    }
+
     pub fn residuals(&self) -> Option<P::Residuals> {
         self.problem.residuals()
     }

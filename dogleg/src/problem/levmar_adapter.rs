@@ -13,6 +13,7 @@ use std::marker::PhantomData;
 ///
 /// Simply create an a `LevMarAdapter` from it and throw it to the dogleg
 /// minimizer and you're good to go.
+#[derive(Debug)]
 pub struct LevMarAdapter<P, T, M, N>
 where
     T: Copy + nalgebra::ComplexField,
@@ -20,8 +21,32 @@ where
     N: nalgebra::Dim,
     M: nalgebra::Dim,
 {
-    problem: P,
+    pub inner: P,
     phantom: PhantomData<(T, M, N)>,
+}
+
+impl<P, T, M, N> Clone for LevMarAdapter<P, T, M, N>
+where
+    T: Copy + nalgebra::ComplexField,
+    P: LevMarLeastSquaresProblem<T, M, N> + Clone,
+    N: nalgebra::Dim,
+    M: nalgebra::Dim,
+{
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            phantom: self.phantom.clone(),
+        }
+    }
+}
+
+impl<P, T, M, N> Copy for LevMarAdapter<P, T, M, N>
+where
+    T: Copy + nalgebra::ComplexField,
+    P: LevMarLeastSquaresProblem<T, M, N> + Copy,
+    N: nalgebra::Dim,
+    M: nalgebra::Dim,
+{
 }
 
 impl<P, T, M, N> LevMarAdapter<P, T, M, N>
@@ -49,7 +74,7 @@ where
 {
     fn from(problem: P) -> Self {
         Self {
-            problem,
+            inner: problem,
             phantom: PhantomData,
         }
     }
@@ -74,18 +99,18 @@ where
     type Jacobian = Matrix<T, M, N, Owned<T, M, N>>;
 
     fn set_params(&mut self, x: Self::Parameters) {
-        self.problem.set_params(&x)
+        self.inner.set_params(&x)
     }
 
     fn params(&self) -> Self::Parameters {
-        self.problem.params()
+        self.inner.params()
     }
 
     fn residuals(&self) -> Option<Self::Residuals> {
-        self.problem.residuals()
+        self.inner.residuals()
     }
 
     fn jacobian(&self) -> Option<Self::Jacobian> {
-        self.problem.jacobian().map(|m| m.into_owned())
+        self.inner.jacobian().map(|m| m.into_owned())
     }
 }

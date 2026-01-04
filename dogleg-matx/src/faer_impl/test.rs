@@ -197,13 +197,22 @@ fn diag_left_mul() {
 }
 
 #[test]
-fn max_scaled_div_for_vector() {
+fn max_abs_scaled_div_for_vector() {
     let v1 = faer::col![2., 3., 4.];
     let v2 = faer::col![8., 6., 100.];
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_scaled_div(&v1, scale, &v2).unwrap(),
+        MaxScaledDivx::max_abs_scaled_div(&v1, scale, &v2).unwrap(),
+        (3. / 12.)
+    );
+
+    let v1 = faer::col![2., -3., 4.];
+    let v2 = faer::col![8., 6., 100.];
+    let scale = 2.;
+
+    assert_eq!(
+        MaxScaledDivx::max_abs_scaled_div(&v1, scale, &v2).unwrap(),
         (3. / 12.)
     );
 }
@@ -221,9 +230,9 @@ fn elementwise_max_for_vector() {
 #[test]
 fn elementwise_replace_if_leq_for_vector() {
     let v = faer::col![5.2, -100.1, 2., 99.1];
-    let threshold = 5.1;
+    let threshold = 5.2;
     let replacement = 123.;
-    let expected = faer::col![5.2, 123., 123., 99.1];
+    let expected = faer::col![123., 123., 123., 99.1];
 
     assert_eq!(
         ElementwiseReplaceLeqx::replace_if_leq(v, threshold, replacement),

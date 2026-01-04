@@ -314,32 +314,53 @@ impl<T> Dogleg<T>
 where
     T: std::ops::AddAssign,
 {
-    // // @todo(geo) this works with only nalgebra trait bounds
-    // pub fn min_levmar<P, M, N>(self, p: P)
-    // where
-    //     P: levenberg_marquardt::LeastSquaresProblem<T, M, N>,
-    //     T: nalgebra::Scalar + Copy + RealField + Float + MagicConst,
-    //     T: Scalar + RealField + Float + ClosedAddAssign + Copy + ConstOne,
-    //     M: Dim,
-    //     N: Dim,
-    //     M: DimMin<N, Output = N>,
-    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<M>,
-    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<M, N>,
-    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<M>,
-    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<N>,
-    //     ShapeConstraint: AreMultipliable<N, M, M, U1>,
-    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<M, <M as DimMin<N>>::Output>,
-    //     nalgebra::DefaultAllocator: nalgebra::allocator::Allocator<<M as DimMin<N>>::Output>,
-    //     nalgebra::DefaultAllocator:
-    //         nalgebra::allocator::Allocator<<M as nalgebra::DimMin<N>>::Output, N>,
-    //     <M as DimMin<N>>::Output: DimSub<U1>,
-    //     nalgebra::DefaultAllocator:
-    //         nalgebra::allocator::Allocator<<<M as DimMin<N>>::Output as DimSub<U1>>::Output>,
-    //     N: DimSub<Const<1>>,
-    // {
-    //     let adapter = LevMarAdapter::new(p);
-    //     self.minimize_generic::<SvdStepSolver<_, _, _, _>, _>(adapter);
-    // }
+    pub fn minimize<P>(&self, problem: P) -> Result<(P, MinimizationReport<T>), Error<P>>
+    where
+        T: Float + MagicConst,
+        P: LeastSquaresProblem<T>,
+        P::Residuals: Clone,
+        SvdStepSolver<T, <P as LeastSquaresProblem<T>>::Jacobian, P::Residuals, GradType<T, P>>:
+            DoglegStepSolver<
+                T,
+                Jacobian = P::Jacobian,
+                //@note(geo-ant) maybe restricting this output here is not smart,
+                // but I think in practice it doesn't matter.
+                Gradient = P::Parameters,
+                Residuals = P::Residuals,
+            >,
+
+        // for max func eval calculation
+        // for calculating the gradient g = J^T r
+        // @note(geo-ant) what this means is: (J^T * r).to_owned() has the
+        // same type as P::Parameters::Owned, which should not be a restriction in practice
+        // because the dimensions of J^T r and the parameters must be identical
+        //
+        // @note(geo-ant): maybe restricting the output of
+        P::Jacobian: TrMatVecMulx<T, P::Residuals, Output = P::Parameters> + ColEnormsx<T>,
+        // GradType<T, P::Jacobian, P::Residuals>: Colx<T, Owned = <P::Parameters as Colx<T>>::Owned>,
+        // for the calculation of the gtol criterion
+        // for calculating the diagonal weights and replacing them
+        // @note(geo-ant) this assumes that they are the same as the gradient
+        // type, i.e. the result of J^T *r.
+        DiagonalWeightsType<T, P>:
+            ElementwiseReplaceLeqx<T> + ElementwiseMaxx<DiagonalWeightsType<T, P>>,
+        // for scaling the jacobian
+        P::Jacobian: DiagRightMulx<DiagonalWeightsType<T, P>>,
+        // for scaling the gradient and the parameters
+        StepType<T, P>: DiagLeftMulx<T, DiagonalWeightsType<T, P>>,
+        GradType<T, P>: DiagLeftMulx<T, DiagonalWeightsType<T, P>>,
+        // // for calculating the new params x' = x + p = p + x
+        // P::Parameters: Addx<T, StepType<T, P>>,
+        // for applying the scaling to the parameters
+        P::Parameters: DiagLeftMulx<T, DiagonalWeightsType<T, P>>,
+        // for gtol calculation
+        P::Parameters: MaxScaledDivx<T, DiagonalWeightsType<T, P>>,
+        // so that we can add parameters to the step (step type = gradient)
+        // for calculating the new params x' = x + p = p + x
+        GradType<T, P>: Addx<T, P::Parameters>,
+    {
+        self.minimize_generic::<SvdStepSolver<_, _, _, _>, _>(problem)
+    }
 
     pub fn minimize_generic<S, P>(
         &self,
@@ -437,6 +458,8 @@ where
         );
         nfunc_evals += 1;
         let mut rnorm = residuals.enorm();
+        // f = 1/2 ||r||^2
+        let mut objective_function = T::P5 * rnorm.powi(2);
 
         // outer loop
         loop {
@@ -454,7 +477,7 @@ where
                     MinimizationReport {
                         termination: TerminationReason::ResidualsZero,
                         number_of_evaluations: nfunc_evals,
-                        objective_function: T::P5 * rnorm,
+                        objective_function,
                     },
                 ));
             }
@@ -518,22 +541,11 @@ where
                 return Ok((
                     problem,
                     MinimizationReport {
-                        termination: TerminationReason::Converged {
-                            criterion: report::StoppingCriterion::Gtol,
-                        },
+                        termination: TerminationReason::Converged(report::StoppingCriterion::Gtol),
                         number_of_evaluations: nfunc_evals,
-                        objective_function: T::P5 * rnorm,
+                        objective_function,
                     },
                 ));
-            }
-
-            if gmax <= Float::epsilon() {
-                return Err(Error {
-                    problem,
-                    failure: TerminationFailure::NoImprovementPossible(
-                        report::StoppingCriterion::Gtol,
-                    ),
-                });
             }
 
             // compute new scaling matrix (if scaling is requested) and perform the scaling
@@ -566,6 +578,7 @@ where
                     problem = problem
                 );
                 gradient = scaled_grad;
+
                 diagonal_weights = Some(diag);
             }
 
@@ -577,6 +590,7 @@ where
                 problem = problem
             );
 
+            // inner loop
             loop {
                 // again, note that the step is p' = Dp, i.e. the possibly scaled step
                 let (dogleg_step, solver) =
@@ -631,7 +645,7 @@ where
                     // the problem parameters could be intermediate values that we discarded!!
                     // !!!!!!!!!!!!
                     // !!!!!!!!!!!!!!!!
-                    step.add(&params),
+                    step.scaled_add(T::ONE, &params),
                     on_none = TerminationFailure::WrongDimensions(
                         "parameters and step have incompatible dimensions"
                     ),
@@ -639,8 +653,7 @@ where
                 );
 
                 {
-                    let mut problem_guard =
-                        reset_guard::update_params(&mut problem, new_params.clone_owned());
+                    let mut problem_guard = reset_guard::update_params(&mut problem, new_params);
                     nfunc_evals += 1;
 
                     //@todo(geo) this is not correct, just making sure this works
@@ -667,7 +680,7 @@ where
                     };
 
                     // adjust the trust region
-                    if ratio < T::P25 {
+                    if ratio <= T::P25 {
                         // this is identical to minpack with one exception. MINPACK
                         // considers the directional derivative to adjust the trust
                         // region radius in the case actred < 0 to potentially
@@ -684,15 +697,21 @@ where
                         }
                         delta = temp * T::min(delta, T::TEN * step_enorm);
                     } else if ratio >= T::P75 {
-                        delta = T::TWO * step_enorm
+                        //  !!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        delta = T::TWO * p_scaled_norm //@todo(geo) should this be the scaled step norm??
                     }
 
                     let accept_update = ratio >= T::P0001;
 
                     if accept_update {
                         rnorm = new_rnorm;
+                        objective_function = T::P5 * rnorm.powi(2);
                         residuals = new_residuals;
-                        params = new_params;
+                        params = problem_guard.params();
+                        // defusing this is important here because otherwise
+                        // the guard will reset the parameters on drop, which
+                        // is only the correct thing to do if the parameters
+                        // are not accepted.
                         problem_guard.defuse();
                         is_first_iteration = false;
                     }
@@ -712,11 +731,11 @@ where
                         return Ok((
                             problem,
                             MinimizationReport {
-                                termination: TerminationReason::Converged {
-                                    criterion: report::StoppingCriterion::Ftol,
-                                },
+                                termination: TerminationReason::Converged(
+                                    report::StoppingCriterion::Ftol,
+                                ),
                                 number_of_evaluations: nfunc_evals,
-                                objective_function: T::P5 * rnorm,
+                                objective_function,
                             },
                         ));
                     }
@@ -743,11 +762,11 @@ where
                         return Ok((
                             problem,
                             MinimizationReport {
-                                termination: TerminationReason::Converged {
-                                    criterion: report::StoppingCriterion::Xtol,
-                                },
+                                termination: TerminationReason::Converged(
+                                    report::StoppingCriterion::Xtol,
+                                ),
                                 number_of_evaluations: nfunc_evals,
-                                objective_function: T::P5 * rnorm,
+                                objective_function,
                             },
                         ));
                     }
@@ -763,6 +782,16 @@ where
                     // repeat the tests for the convergence criteria with the machine
                     // epsilon. If those conditions are hit, it means no improvements
                     // are possible and the tolerances must be made bigger.
+                    if gmax <= T::EPSMCH {
+                        drop(problem_guard);
+                        return Err(Error {
+                            problem,
+                            failure: TerminationFailure::NoImprovementPossible(
+                                report::StoppingCriterion::Gtol,
+                            ),
+                        });
+                    }
+
                     if (FtolCheck {
                         predicted_reduction,
                         actual_reduction,

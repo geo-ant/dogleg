@@ -5,12 +5,17 @@
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 
+#[cfg(test)]
+// TODO document this was taken from levenberg-marquardt crate and add license.
+mod test_examples;
+
+#[cfg(test)]
+mod argmin_tests;
+
 /// solver implementations
 pub mod dogleg;
 /// error types
 mod error;
-/// utility
-mod magic_const;
 /// least squares problem abstractions and levmar compatibility
 mod problem;
 
@@ -20,8 +25,8 @@ pub use dogleg::Dogleg;
 pub use problem::LeastSquaresProblem;
 
 pub use dogleg_matx as matx;
+pub use dogleg_matx::magic_const::MagicConst;
 pub use error::Error;
-pub use magic_const::MagicConst;
 
 /// re-export the levenberg-marquardt crate
 #[cfg(feature = "levenberg-marquardt")]

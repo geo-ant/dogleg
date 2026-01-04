@@ -18,6 +18,8 @@ use num_traits::ConstOne;
 use std::ops::AddAssign;
 
 mod faer_impl;
+/// utility module for floating point constants
+pub mod magic_const;
 mod nalgebra_impl;
 mod utility;
 
@@ -133,6 +135,8 @@ pub trait Svdx<T, V> {
     /// Solve ||A x - v||^2 -> min for x. This solves the system
     /// A x = v in a least squares sense. Return `None` on error.
     fn solve_lsqr(&self, v: &V) -> Option<Self::Output>;
+
+    fn rank(&self) -> usize;
 }
 
 /// calculate the column norms of a matrix and put them into a vector
@@ -201,7 +205,7 @@ pub trait MaxScaledDivx<T, V> {
     /// calculation as described above where None means the vectors
     /// had no elements. The implementation is free to assume that the
     /// vectors have same length.
-    fn max_scaled_div(&self, s: T, v: &V) -> Option<T>;
+    fn max_abs_scaled_div(&self, s: T, v: &V) -> Option<T>;
 }
 
 /// a very dogleg specific trait that is used when assigning the diagonal

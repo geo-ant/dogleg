@@ -55,7 +55,7 @@ pub enum TerminationReason {
     /// mean that this is the _only_ criterion that would be hit in
     /// the last iteration, it just means the others weren't evaluated
     /// anymore.
-    Converged { criterion: StoppingCriterion },
+    Converged(StoppingCriterion),
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]

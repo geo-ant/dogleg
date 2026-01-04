@@ -136,7 +136,7 @@ fn test_linear_rank1() {
 }
 
 #[test]
-#[ignore = "ceres fails here, but so does levmar"]
+// #[ignore = "ceres fails here, but so does levmar"]
 // see MGH paper: https://www.cmor-faculty.rice.edu/~yzhang/caam454/nls/MGH.pdf
 // problem (34)
 fn test_linear_rank1_zero_columns() {
@@ -786,7 +786,7 @@ fn test_watson() {
 }
 
 #[test]
-#[ignore = "ceres dogleg fails here, but performs better than levmar"]
+// #[ignore = "ceres dogleg fails here, but performs better than levmar"]
 // see https://rdrr.io/github/jlmelville/funconstrain/man/beale.html
 fn test_beale() {
     let mut problem = Beale {

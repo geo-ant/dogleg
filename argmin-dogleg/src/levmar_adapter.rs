@@ -109,7 +109,7 @@ pub struct ArgminReport<T> {
 
 /// run the dogleg minimizer in argmin on a `levenberg-marquardt::LeastSquaresProblem`
 /// instance.
-pub fn run_argmin_dogleg<P, T, M, N>(
+pub fn argmin_solve_with_dogleg<P, T, M, N>(
     problem: P,
 ) -> Result<(P, ArgminReport<T>), argmin::core::Error>
 where
@@ -126,6 +126,17 @@ where
     let initial = problem.params().to_owned();
     let subproblem = Dogleg::<T>::new();
     let trustregion = TrustRegion::new(subproblem);
+    // TODO / NOTE (geo-ant)
+    // the solver performance is very bad. By playing with the intial parameters here,
+    // like trust region radius, we can make one additional problem work
+    // (linear full rank) in all starting conditions. A cursory glance reveals
+    // that the standard starting conditions seem to pass for several problems,
+    // but the harder starting conditions don't. That makes me think that
+    // the general implementation is correct, but the argmin solver itself
+    // is less robust. The latter would make sense since argmin is not least
+    // squares specific (by design! it's not intended to be) and does some
+    // things (like solving the normal expressions rather than take advantage
+    // of matrix decompositions).
     let exec = Executor::new(ArgminLevMarAdapter::new(problem), trustregion)
         .configure(|state| state.param(initial).max_iters(1000));
     let res = exec.run()?;

@@ -836,7 +836,7 @@ fn test_watson() {
 }
 
 #[test]
-#[ignore = "ceres dogleg fails here"]
+#[ignore = "ceres dogleg fails here, but performs better than levmar"]
 // see https://rdrr.io/github/jlmelville/funconstrain/man/beale.html
 fn test_beale() {
     let mut problem = Beale {
@@ -855,14 +855,11 @@ fn test_beale() {
 
     problem.set_params(&initial.clone());
     let (mut problem, report) = ceres_solve_with_dogleg(problem).unwrap();
-    assert_fp_eq!(
-        report.objective_function,
-        6.982085570779134e-07,
-        epsilon = 1e-4
-    );
+    assert_fp_eq!(report.objective_function, 0., epsilon = 1e-5);
     assert_fp_eq!(
         problem.params,
-        OVector::<f64, U2>::from_column_slice(&[2.8252463853580405, 0.4595596246635109])
+        OVector::<f64, U2>::from_column_slice(&[3., 0.5]),
+        epsilon = 1e-3
     );
     problem.set_params(&initial.map(|x| x - 0.5));
     let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
@@ -873,6 +870,7 @@ fn test_beale() {
     );
     assert_fp_eq!(
         problem.params,
-        OVector::<f64, U2>::from_column_slice(&[2.9989956785046323, 0.4997826037201959])
+        OVector::<f64, U2>::from_column_slice(&[3., 0.5]),
+        epsilon = 1e-3
     );
 }

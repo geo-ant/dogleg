@@ -147,10 +147,64 @@ fn test_linear_rank1() {
     assert_fp_eq!(report.objective_function, 0.5 * fmin_mgh, epsilon = 1e-6);
 }
 
-// NOTE(geo-ant) see above
 #[test]
+#[ignore = "ceres fails here, but so does levmar"]
+// see MGH paper: https://www.cmor-faculty.rice.edu/~yzhang/caam454/nls/MGH.pdf
+// problem (34)
 fn test_linear_rank1_zero_columns() {
-    todo!()
+    let mut problem = LinearRank1ZeroColumns::new(OVector::<f64, U5>::zeros(), 10);
+    let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
+
+    // check derivative implementation
+    problem.set_params(&OVector::<f64, U5>::from_column_slice(&[
+        0.7917250380826646,
+        0.5288949197529045,
+        0.5680445610939323,
+        0.925596638292661,
+        0.07103605819788694,
+    ]));
+    let jac_num = differentiate_numerically(&mut problem).unwrap();
+    let jac_trait = problem.jacobian().unwrap();
+    assert_fp_eq!(jac_num, jac_trait, epsilon = 1e-5);
+
+    problem.set_params(&initial.clone());
+    let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    let m = problem.m as f64;
+    let fmin_mgh = (m * m + 3. * m - 6.) / (4. * m - 6.);
+    // the minimum according to mgh paper
+    assert_fp_eq!(report.objective_function, 0.5 * fmin_mgh, epsilon = 1e-8);
+    // according to mgh paper, every location with
+    // Sum_j{j * x_j} = 3 / (2m-3)
+    // is a valid minimum
+    let sum_jxj: f64 = problem
+        .params
+        .iter()
+        .enumerate()
+        .map(|(j, xj)| xj * ((j + 1) as f64))
+        .sum();
+    // every point where \sum_j {j*x_j} = 3/(2m+1) is a valid minimum
+    assert_fp_eq!(sum_jxj, 3. / (2. * m - 3.), epsilon = 1e-6);
+
+    let mut problem = LinearRank1ZeroColumns::new(OVector::<f64, U5>::zeros(), 50);
+    let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
+
+    problem.set_params(&initial.clone());
+    let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
+    let m = problem.m as f64;
+    let fmin_mgh = (m * m + 3. * m - 6.) / (4. * m - 6.);
+    // the minimum according to mgh paper
+    assert_fp_eq!(report.objective_function, 0.5 * fmin_mgh, epsilon = 1e-8);
+    // according to mgh paper, every location with
+    // Sum_j{j * x_j} = 3 / (2m-3)
+    // is a valid minimum
+    let sum_jxj: f64 = problem
+        .params
+        .iter()
+        .enumerate()
+        .map(|(j, xj)| xj * ((j + 1) as f64))
+        .sum();
+    // every point where \sum_j {j*x_j} = 3/(2m+1) is a valid minimum
+    assert_fp_eq!(sum_jxj, 3. / (2. * m - 3.), epsilon = 1e-6);
 }
 
 #[test]

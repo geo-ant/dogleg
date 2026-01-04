@@ -115,8 +115,8 @@ impl LeastSquaresProblem<f64, Dyn, U5> for LinearRank1 {
 
 #[derive(Clone)]
 pub struct LinearRank1ZeroColumns {
-    params: OVector<f64, U5>,
-    m: usize,
+    pub params: OVector<f64, U5>,
+    pub m: usize,
 }
 
 impl LinearRank1ZeroColumns {

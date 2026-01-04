@@ -18,11 +18,14 @@ assert2 = {version = "0.3", optional = true}
 
 [features]
 # TODO remove this
-default = ["levenberg-marquardt"]
+# default = ["levenberg-marquardt"]
+default = []
 assert2 = ["dep:assert2","dogleg-matx/assert2"]
 
 [dev-dependencies]
 approx = "0.5"
+# this is wild, but it works! Enable features of my own crate for testing purposes
+dogleg = {path = ".", features = ["levenberg-marquardt"]}
 # argmin-dogleg = {path = "../argmin-dogleg"}
 # ceres-dogleg = {path = "../ceres-dogleg"}
 # ceres-solver-sys = {version = "0.5", default-features = false, features = ["source"]}

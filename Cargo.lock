@@ -423,6 +423,7 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "assert2",
+ "dogleg",
  "dogleg-matx",
  "levenberg-marquardt",
  "levmar-problems",

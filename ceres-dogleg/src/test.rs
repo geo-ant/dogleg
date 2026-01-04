@@ -526,7 +526,6 @@ fn test_meyer() {
     problem.set_params(&initial.clone());
     let (problem, report) = ceres_solve_with_dogleg(problem).unwrap();
 
-    // #[cfg(feature = "minpack-compat")]
     assert_fp_eq!(report.objective_function, 0.5 * 87.9458, epsilon = 1e-4);
     assert_fp_eq!(
         problem.params,

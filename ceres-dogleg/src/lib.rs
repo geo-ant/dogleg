@@ -8,18 +8,14 @@
 use anyhow::{anyhow, bail};
 use ceres_solver::{CostFunctionType, NllsProblem, solver::MinimizerType};
 use core::f64;
-use dogleg_matx::Matx;
 use levenberg_marquardt::LeastSquaresProblem;
-use nalgebra::{DefaultAllocator, Dim, OVector, RealField, Scalar, Vector, allocator::Allocator};
-use std::{
-    io::Read,
-    sync::{Arc, Mutex},
-};
+use nalgebra::{DefaultAllocator, Dim, allocator::Allocator};
+use std::sync::{Arc, Mutex};
 
 pub use ceres_solver::SolverOptions;
 extern crate ceres_solver;
 
-struct CeresReport {
+pub struct CeresReport {
     pub objective_function: f64,
 }
 
@@ -27,7 +23,7 @@ struct CeresReport {
 mod tests;
 
 /// given options.
-fn ceres_solve_with_dogleg<P, M, N>(problem: P) -> anyhow::Result<(P, CeresReport)>
+pub fn ceres_solve_with_dogleg<P, M, N>(problem: P) -> anyhow::Result<(P, CeresReport)>
 where
     M: Dim,
     N: Dim,

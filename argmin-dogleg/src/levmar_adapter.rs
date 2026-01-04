@@ -1,11 +1,10 @@
 use argmin::{
-    argmin_error,
     core::{ArgminFloat, CostFunction, Executor, Gradient, Hessian, State},
     solver::trustregion::{Dogleg, TrustRegion},
 };
 use argmin_math::ArgminInv;
 use dogleg_matx::{magic_const::MagicConst, Colx};
-use nalgebra::{allocator::Allocator, DefaultAllocator, Dim, OMatrix, OVector, RealField, Vector};
+use nalgebra::{DefaultAllocator, Dim, OMatrix, OVector, RealField, Vector};
 use num_traits::{Float, FloatConst};
 use std::{marker::PhantomData, sync::Mutex};
 
@@ -112,7 +111,6 @@ pub struct ArgminReport<T> {
 /// instance.
 pub fn run_argmin_dogleg<P, T, M, N>(
     problem: P,
-    initial: OVector<T, N>,
 ) -> Result<(P, ArgminReport<T>), argmin::core::Error>
 where
     M: Dim,
@@ -125,11 +123,14 @@ where
     DefaultAllocator: nalgebra::allocator::Allocator<N, N>,
     OMatrix<T, N, N>: ArgminInv<OMatrix<T, N, N>>,
 {
+    let initial = problem.params().to_owned();
     let subproblem = Dogleg::<T>::new();
     let trustregion = TrustRegion::new(subproblem);
     let exec = Executor::new(ArgminLevMarAdapter::new(problem), trustregion)
-        .configure(|state| state.param(initial.clone()).max_iters(1000));
+        .configure(|state| state.param(initial).max_iters(1000));
     let res = exec.run()?;
+
+    //TODO(geo-ant) maybe check for success here??
 
     let params = res
         .state()
@@ -143,5 +144,6 @@ where
     let mut prob = res.problem.problem.unwrap().inner.into_inner().unwrap();
     // just to make sure the optimal params are set
     prob.set_params(&params);
+
     Ok((prob, ArgminReport { objective_function }))
 }

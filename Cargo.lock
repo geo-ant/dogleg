@@ -420,7 +420,6 @@ name = "dogleg"
 version = "0.1.0"
 dependencies = [
  "approx",
- "argmin-dogleg",
  "assert2",
  "dogleg-matx",
  "levenberg-marquardt",

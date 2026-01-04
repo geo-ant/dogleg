@@ -104,13 +104,7 @@ where
     }
 }
 
-pub struct ArgminReport<T, N>
-where
-    T: nalgebra::Scalar,
-    N: Dim,
-    DefaultAllocator: Allocator<N>,
-{
-    pub params: OVector<T, N>,
+pub struct ArgminReport<T> {
     pub objective_function: T,
 }
 
@@ -119,7 +113,7 @@ where
 pub fn run_argmin_dogleg<P, T, M, N>(
     problem: P,
     initial: OVector<T, N>,
-) -> Result<ArgminReport<T, N>, argmin::core::Error>
+) -> Result<(P, ArgminReport<T>), argmin::core::Error>
 where
     M: Dim,
     N: Dim,
@@ -144,8 +138,10 @@ where
         .ok_or(argmin::core::Error::msg("no best params"))?;
 
     let objective_function = res.state().get_best_cost();
-    Ok(ArgminReport {
-        params,
-        objective_function,
-    })
+
+    // extract the problem back out in an ugly, but safe fashion
+    let mut prob = res.problem.problem.unwrap().inner.into_inner().unwrap();
+    // just to make sure the optimal params are set
+    prob.set_params(&params);
+    Ok((prob, ArgminReport { objective_function }))
 }

@@ -629,7 +629,7 @@ fn test_watson() {
     );
     problem.set_params(&initial.map(|x| x + 100.));
     let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
-    let mut problem = problem.inner;
+    let problem = problem.inner;
     assert_fp_eq!(
         report.objective_function,
         0.0011438350268716062,

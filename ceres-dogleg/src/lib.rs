@@ -172,6 +172,9 @@ where
         bail!("CERES solver indicates solution is not usable");
     }
 
+    // just check that no inner iteration steps are performed
+    assert_eq!(solution.summary.num_inner_iteration_steps(), -1);
+
     Ok((
         problem,
         CeresReport {

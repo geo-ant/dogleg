@@ -5,9 +5,11 @@
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 
+// #[cfg(test)]
+// // TODO document this was taken from levenberg-marquardt crate and add license.
+// mod test_examples;
 #[cfg(test)]
-// TODO document this was taken from levenberg-marquardt crate and add license.
-mod test_examples;
+mod test;
 
 /// solver implementations
 pub mod dogleg;

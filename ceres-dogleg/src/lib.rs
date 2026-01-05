@@ -6,11 +6,14 @@
 //! # apt install libceres-dev
 //! ```
 use anyhow::{anyhow, bail};
-use ceres_solver::{CostFunctionType, NllsProblem, solver::MinimizerType};
+use ceres_solver::{
+    CostFunctionType, NllsProblem,
+    solver::{LoggingType, MinimizerType},
+};
 use core::f64;
 use levenberg_marquardt::LeastSquaresProblem;
 use nalgebra::{DefaultAllocator, Dim, allocator::Allocator};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Once};
 
 pub use ceres_solver::SolverOptions;
 extern crate ceres_solver;
@@ -22,6 +25,13 @@ pub struct CeresReport {
 #[cfg(test)]
 mod test;
 
+// binding for cpp/glogging.cpp
+unsafe extern "C" {
+    fn init_glog_for_ceres(verbosity: i32);
+}
+
+static GLOGGING_INIT: Once = Once::new();
+
 /// given options.
 pub fn ceres_solve_with_dogleg<P, M, N>(problem: P) -> anyhow::Result<(P, CeresReport)>
 where
@@ -31,10 +41,15 @@ where
     P::JacobianStorage: Clone,
     DefaultAllocator: Allocator<N> + Allocator<M> + Allocator<N, M>,
 {
+    GLOGGING_INIT.call_once(|| unsafe { init_glog_for_ceres(3) });
     let options = SolverOptions::builder()
         .minimizer_type(MinimizerType::TRUST_REGION)
         .trust_region_strategy_type(ceres_solver::solver::TrustRegionStrategyType::DOGLEG)
-        .update_state_every_iteration(true)
+        // NOTE: could be helpful for some high level logging, but does NOT
+        // give us the VLOG(n) output.
+        // .update_state_every_iteration(true)
+        // .minimizer_progress_to_stdout(true)
+        // .logging_type(LoggingType::PER_MINIMIZER_ITERATION)
         .build()
         .unwrap();
     ceres_solve_with_options(problem, options)

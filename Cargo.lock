@@ -181,6 +181,7 @@ dependencies = [
  "anyhow",
  "approx",
  "assert2",
+ "cc",
  "ceres-solver",
  "dogleg-matx",
  "levenberg-marquardt",

@@ -197,7 +197,7 @@ fn test_linear_rank1_zero_columns() {
 
 #[test]
 fn test_rosenbrock() {
-    let mut problem = Rosenbruck {
+    let mut problem = Rosenbrock {
         params: OVector::<f64, U2>::zeros(),
     };
     let initial = OVector::<f64, U2>::from_column_slice(&[-1.2, 1.]);

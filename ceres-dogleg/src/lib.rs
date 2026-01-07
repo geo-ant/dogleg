@@ -8,7 +8,7 @@
 use anyhow::{anyhow, bail};
 use ceres_solver::{
     CostFunctionType, NllsProblem,
-    solver::{LoggingType, MinimizerType},
+    solver::{LinearSolverType, LoggingType, MinimizerType},
 };
 use core::f64;
 use levenberg_marquardt::LeastSquaresProblem;
@@ -41,15 +41,16 @@ where
     P::JacobianStorage: Clone,
     DefaultAllocator: Allocator<N> + Allocator<M> + Allocator<N, M>,
 {
-    GLOGGING_INIT.call_once(|| unsafe { init_glog_for_ceres(3) });
+    GLOGGING_INIT.call_once(|| unsafe { init_glog_for_ceres(2) });
     let options = SolverOptions::builder()
         .minimizer_type(MinimizerType::TRUST_REGION)
         .trust_region_strategy_type(ceres_solver::solver::TrustRegionStrategyType::DOGLEG)
+        .linear_solver_type(LinearSolverType::DENSE_QR)
         // NOTE: could be helpful for some high level logging, but does NOT
         // give us the VLOG(n) output.
-        // .update_state_every_iteration(true)
+        .update_state_every_iteration(true)
         // .minimizer_progress_to_stdout(true)
-        // .logging_type(LoggingType::PER_MINIMIZER_ITERATION)
+        .logging_type(LoggingType::PER_MINIMIZER_ITERATION)
         .build()
         .unwrap();
     ceres_solve_with_options(problem, options)

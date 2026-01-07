@@ -180,10 +180,10 @@ impl LeastSquaresProblem<f64, Dyn, U5> for LinearRank1ZeroColumns {
 }
 
 #[derive(Clone)]
-pub struct Rosenbruck {
+pub struct Rosenbrock {
     pub params: OVector<f64, U2>,
 }
-impl LeastSquaresProblem<f64, U2, U2> for Rosenbruck {
+impl LeastSquaresProblem<f64, U2, U2> for Rosenbrock {
     type ParameterStorage = Owned<f64, U2>;
     type ResidualStorage = Owned<f64, U2>;
     type JacobianStorage = Owned<f64, U2, U2>;

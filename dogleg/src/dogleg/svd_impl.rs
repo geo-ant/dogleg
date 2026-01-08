@@ -72,6 +72,7 @@ where
     }
 
     fn update_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), TerminationFailure> {
+        let mu = T::EMINUS8;
         // if we haven't already cached the calculations, do them now
         let cached = match self {
             Self::Init {
@@ -108,8 +109,10 @@ where
                 // in other calculations later. But this is closer to the original
                 // text, so I won't stray from this for now.
                 let minus_r = residuals.scale(-T::ONE);
+
                 let pb = svd
-                    .solve_lsqr(&minus_r)
+                    // .solve_lsqr(&minus_r)
+                    .solve_lsqr_regularized(&minus_r, mu)
                     .ok_or(TerminationFailure::Numerical("lsqr solve"))?;
                 let pb_norm = pb.enorm();
                 let u = -Float::powi(g_norm, 2) / Float::powi(jg_norm, 2);
@@ -133,6 +136,7 @@ where
         // providing the already calculated norms
         let pu = cached.g.clone_owned().scale(cached.u);
         let p = dogleg_step(&pu, &cached.pb, delta)?;
+        let p_norm = p.enorm();
 
         // predicted reduction is
         // m(0) - m(p) = -g^T p - 1/2 ||J p||^2
@@ -151,7 +155,8 @@ where
                         .mulv_enorm(&p)
                         .ok_or(TerminationFailure::WrongDimensions("jacobian and step"))?,
                     2,
-                );
+                )
+            - T::P5 * mu * Float::powi(p_norm, 2);
 
         // @note(geo-ant) mathematically, the predicted reduction is always >= zero,
         // but due to numerical reasons, this can have very small values.
@@ -163,7 +168,6 @@ where
         );
         let predicted_reduction = predicted_reduction.abs();
 
-        let p_norm = p.enorm();
         let step = DoglegStep {
             p,
             p_norm,

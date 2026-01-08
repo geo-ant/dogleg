@@ -3,6 +3,8 @@
 pub trait MagicConst: num_traits::ConstOne + num_traits::ConstZero {
     /// the value 2
     const TWO: Self;
+    /// the value 3
+    const THREE: Self;
     /// the value 10
     const TEN: Self;
     /// the value 30
@@ -18,10 +20,12 @@ pub trait MagicConst: num_traits::ConstOne + num_traits::ConstZero {
     const P25: Self;
     /// "point 1" = 0.1
     const P1: Self;
-    /// "point 0001" = 0.0001
+    /// "point 0001" = 0.
     const P0001: Self;
     /// machine epsilon
     const EPSMCH: Self;
+    ///@todo(HACK) remove
+    const EMINUS8: Self;
 }
 
 /// just a macro here to minimize the chance of typos
@@ -29,6 +33,7 @@ macro_rules! impl_magic_const {
     ($type:ty) => {
         impl MagicConst for $type {
             const TWO: Self = 2.;
+            const THREE: Self = 3.;
             const TEN: Self = 10.;
             const THIRTY: Self = 30.;
             const ONE_HUNDRED: Self = 100.;
@@ -38,6 +43,7 @@ macro_rules! impl_magic_const {
             const P1: Self = 0.1;
             const P0001: Self = 1e-4;
             const EPSMCH: Self = Self::EPSILON;
+            const EMINUS8: Self = 1e-8;
         }
     };
 }

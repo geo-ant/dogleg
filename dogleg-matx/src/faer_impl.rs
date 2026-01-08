@@ -413,6 +413,10 @@ where
     fn rank(&self) -> usize {
         todo!("remove this function")
     }
+
+    fn solve_lsqr_regularized(&self, v: &V, mu: T) -> Option<Self::Output> {
+        todo!()
+    }
 }
 
 impl<T, R, C, M> ColEnormsx<T> for M

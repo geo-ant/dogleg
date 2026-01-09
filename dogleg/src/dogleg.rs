@@ -669,18 +669,15 @@ where
                     let new_rnorm = new_residuals.enorm();
 
                     // this is the same as in the minpack implementation
-                    let actual_reduction = if T::P1 * new_rnorm < rnorm {
+                    let actual_reduction = 
                         // this is WRONG because I'm not using the relative predicted
                         // T::ONE - Float::powi(new_rnorm / rnorm, 2)
-                        T::P5 * (Float::powi(rnorm, 2) - Float::powi(new_rnorm, 2))
-                    } else {
-                        -T::ONE
-                    };
+                        T::P5 * (Float::powi(rnorm, 2) - Float::powi(new_rnorm, 2));
 
                     // this is also the same as in MINPACK
                     let ratio = if predicted_reduction != T::ZERO {
                         // actual_reduction / predicted_reduction
-                        (actual_reduction / predicted_reduction)
+                        actual_reduction / predicted_reduction
                     } else {
                         T::ZERO
                     };

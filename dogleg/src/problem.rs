@@ -7,13 +7,13 @@ pub mod levmar_adapter;
 //TODO document
 pub trait LeastSquaresProblem<T> {
     /// column vector of size M for the residuals
-    type Residuals: Colx<T>;
+    type Residuals: Colx<T> + std::fmt::Debug;
     /// column vector of size N for the parameters.
     /// We require the parameter vector to be an owned vector which is slightly
     /// more restrictive than the `levenberg-marquardt` crate
-    type Parameters: OwnedColx<T> + Clone;
+    type Parameters: OwnedColx<T> + Clone + std::fmt::Debug;
     /// matrix of size M x N for the Jacobian of the residuals
-    type Jacobian: Matx<T>;
+    type Jacobian: Matx<T> + std::fmt::Debug;
 
     /// Set the stored parameters `$\vec{x}$`.
     fn set_params(&mut self, x: Self::Parameters);

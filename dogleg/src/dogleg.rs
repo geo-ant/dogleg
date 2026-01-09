@@ -316,7 +316,7 @@ where
 {
     pub fn minimize<P>(&self, problem: P) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
-        T: Float + MagicConst,
+        T: Float + MagicConst + std::fmt::Debug,
         P: LeastSquaresProblem<T>,
         P::Residuals: Clone,
         SvdStepSolver<T, <P as LeastSquaresProblem<T>>::Jacobian, P::Residuals, GradType<T, P>>:
@@ -367,7 +367,7 @@ where
         mut problem: P,
     ) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
-        T: Float + MagicConst,
+        T: Float + MagicConst + std::fmt::Debug,
         P: LeastSquaresProblem<T>,
         P::Residuals: Clone,
         // see below, we require the gradient, i.e. the of J^T r to be the owned type of P.
@@ -596,6 +596,9 @@ where
                 let (dogleg_step, solver) =
                     try2!(step_solver.update_step(delta), problem = problem);
                 step_solver = solver;
+                // Convergence checks
+                println!("*** Step ***");
+                println!("step: {:?}", dogleg_step);
 
                 // this is (like in MINPACK) the possibly scaled norm of p
                 let DoglegStep {
@@ -667,17 +670,21 @@ where
 
                     // this is the same as in the minpack implementation
                     let actual_reduction = if T::P1 * new_rnorm < rnorm {
-                        T::ONE - Float::powi(new_rnorm / rnorm, 2)
+                        // this is WRONG because I'm not using the relative predicted
+                        // T::ONE - Float::powi(new_rnorm / rnorm, 2)
+                        T::P5 * (Float::powi(rnorm, 2) - Float::powi(new_rnorm, 2))
                     } else {
                         -T::ONE
                     };
 
                     // this is also the same as in MINPACK
                     let ratio = if predicted_reduction != T::ZERO {
-                        actual_reduction / predicted_reduction
+                        // actual_reduction / predicted_reduction
+                        (actual_reduction / predicted_reduction)
                     } else {
                         T::ZERO
                     };
+                    println!("ratio: {:?}", ratio);
 
                     // adjust the trust region
                     if ratio <= T::P25 {
@@ -705,6 +712,7 @@ where
 
                     let accept_update = ratio >= T::P0001;
 
+                    println!("objective fn: {:?}", objective_function);
                     if accept_update {
                         rnorm = new_rnorm;
                         objective_function = T::P5 * rnorm.powi(2);
@@ -717,8 +725,6 @@ where
                         problem_guard.defuse();
                         is_first_iteration = false;
                     }
-
-                    // Convergence checks
 
                     // F-convergence check, see MINPACK user guide p. 22-24
                     if (FtolCheck {

@@ -86,7 +86,7 @@ where
     N: Dim,
     M: Dim,
     P: LevMarLeastSquaresProblem<T, M, N, ParameterStorage = Owned<T, N>>,
-    P::ResidualStorage: RawStorageMut<T, M> + Storage<T, M> + IsContiguous,
+    P::ResidualStorage: RawStorageMut<T, M> + Storage<T, M> + IsContiguous + std::fmt::Debug,
     P::JacobianStorage: RawStorageMut<T, M, N> + Storage<T, M, N> + IsContiguous,
     DefaultAllocator: Allocator<N>,
     DefaultAllocator: Allocator<M>,

@@ -72,6 +72,7 @@ where
     }
 
     fn update_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), TerminationFailure> {
+        //TODO(geo) HACK: hacky regularization parameter. Todo: remove
         let mu = T::EMINUS8;
         // if we haven't already cached the calculations, do them now
         let cached = match self {
@@ -115,7 +116,8 @@ where
                     .solve_lsqr_regularized(&minus_r, mu)
                     .ok_or(TerminationFailure::Numerical("lsqr solve"))?;
                 let pb_norm = pb.enorm();
-                let u = -Float::powi(g_norm, 2) / Float::powi(jg_norm, 2);
+                let u = -Float::powi(g_norm, 2)
+                    / (Float::powi(jg_norm, 2) + mu * Float::powi(g_norm, 2));
                 let rank = svd.rank();
                 SvdSolverCache {
                     u,

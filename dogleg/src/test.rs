@@ -434,23 +434,24 @@ fn test_bard() {
     //  > Solvers terminate with f near 17 for parameter 1 in 0.84 to 0.89
     //  > approximately and large negative values of the other two parameters.
 
-    // NOTE(geo-ant) this fails! in ceres
-    problem.set_params(&initial.map(|x| x * 10.));
-    let (mut problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
-    let problem = problem.inner;
-    assert_fp_eq!(problem.params[0], 8.40e-01, epsilon = 1e-2);
-    assert2::assert!(problem.params[1] <= -1e+02);
-    assert2::assert!(problem.params[2] <= -1e+02);
-
-    // // NOTE(geo-ant) interestingly, this passes although the starting point
-    // // is farther away.
-    // problem.set_params(&initial.map(|x| x * 100.));
+    // NOTE(geo-ant) this fails in ceres
+    // problem.set_params(&initial.map(|x| x * 10.));
     // let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
-    // let problem = problem.inner;
-    // assert_fp_eq!(report.objective_function, 0.5 * 17.4286, epsilon = 1e-4);
-    // assert_fp_eq!(problem.params[0], 8.40e-01, epsilon = 1e-3);
-    // assert2::assert!(problem.params[1] <= -1e+05);
-    // assert2::assert!(problem.params[2] <= -1e+04);
+    // let mut problem = problem.inner;
+    // assert_fp_eq!(problem.params[0], 8.40e-01, epsilon = 1e-2);
+    // assert2::assert!(problem.params[1] <= -1e+02);
+    // assert2::assert!(problem.params[2] <= -1e+02);
+
+    // NOTE(geo-ant) interestingly, this passes in ceres although the starting point
+    // is farther away.
+    problem.set_params(&initial.map(|x| x * 100.));
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let problem = problem.inner;
+    // panic!("rep: {:?}", report);
+    assert_fp_eq!(report.objective_function, 0.5 * 17.4286, epsilon = 1e-4);
+    assert_fp_eq!(problem.params[0], 8.40e-01, epsilon = 1e-3);
+    assert2::assert!(problem.params[1] <= -1e+05);
+    assert2::assert!(problem.params[2] <= -1e+04);
 }
 
 #[test]

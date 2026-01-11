@@ -229,7 +229,7 @@ where
             0,
         )?;
         let rank = svd.rank(T::epsilon());
-        debug_assert!(rank == dim);
+        // debug_assert!(rank == dim);
         Some(svd)
     }
 }

@@ -435,12 +435,12 @@ fn test_bard() {
     //  > approximately and large negative values of the other two parameters.
 
     // NOTE(geo-ant) this fails in ceres
-    // problem.set_params(&initial.map(|x| x * 10.));
-    // let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
-    // let mut problem = problem.inner;
-    // assert_fp_eq!(problem.params[0], 8.40e-01, epsilon = 1e-2);
-    // assert2::assert!(problem.params[1] <= -1e+02);
-    // assert2::assert!(problem.params[2] <= -1e+02);
+    problem.set_params(&initial.map(|x| x * 10.));
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let mut problem = problem.inner;
+    assert_fp_eq!(problem.params[0], 8.40e-01, epsilon = 1e-2);
+    assert2::assert!(problem.params[1] <= -1e+02);
+    assert2::assert!(problem.params[2] <= -1e+02);
 
     // NOTE(geo-ant) interestingly, this passes in ceres although the starting point
     // is farther away.

@@ -597,8 +597,8 @@ where
                     try2!(step_solver.update_step(delta), problem = problem);
                 step_solver = solver;
                 // Convergence checks
-                println!("*** Step ***");
-                println!("step: {:?}", dogleg_step);
+                // println!("*** Step ***");
+                // println!("step: {:?}", dogleg_step);
 
                 // this is (like in MINPACK) the possibly scaled norm of p
                 let DoglegStep {
@@ -681,7 +681,7 @@ where
                     } else {
                         T::ZERO
                     };
-                    println!("ratio: {:?}", ratio);
+                    // println!("ratio: {:?}", ratio);
 
                     // adjust the trust region
                     if ratio <= T::P25 {
@@ -709,7 +709,7 @@ where
 
                     let accept_update = ratio >= T::P0001;
 
-                    println!("objective fn: {:?}", objective_function);
+                    // println!("objective fn: {:?}", objective_function);
                     if accept_update {
                         rnorm = new_rnorm;
                         objective_function = T::P5 * rnorm.powi(2);

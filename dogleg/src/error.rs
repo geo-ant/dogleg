@@ -1,4 +1,4 @@
-use crate::dogleg::report::TerminationFailure;
+use crate::{dogleg::report::TerminationFailure, LeastSquaresProblem};
 
 /// error type for this crate
 #[derive(thiserror::Error)]
@@ -15,3 +15,5 @@ impl<P> std::fmt::Debug for Error<P> {
             .finish_non_exhaustive()
     }
 }
+
+// impl<P, T> Error<P> where P: LeastSquaresProblem<T> {}

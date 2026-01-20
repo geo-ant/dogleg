@@ -536,7 +536,7 @@ where
                     TerminationFailure::WrongDimensions("zero dimension for residuals or jacobian"),
                 problem = problem
             );
-            println!("gmax = {:?}", gmax);
+            // println!("gmax = {:?}", gmax);
 
             if gmax <= self.gtol {
                 return Ok((
@@ -586,7 +586,7 @@ where
             // initialize the step solver with the given (unscaled) residuals, and the
             // (possibly scaled) gradient and (possibly scaled) jacobian.
             // Note that the returned step is thus p' = Dp.
-            print!("gradient: {:?}",gradient);
+            // print!("gradient: {:?}",gradient);
             let mut step_solver = try2!(
                 S::init(jacobian, residuals.clone(), gradient),
                 problem = problem
@@ -600,7 +600,7 @@ where
                 step_solver = solver;
                 // Convergence checks
                 // println!("*** Step ***");
-                println!("step: {:?}", dogleg_step);
+                // println!("step: {:?}", dogleg_step);
 
                 // this is (like in MINPACK) the possibly scaled norm of p
                 let DoglegStep {
@@ -683,11 +683,11 @@ where
                     } else {
                         T::ZERO
                     };
-                    println!("ratio: {:?}", ratio);
-                    println!("predred: {:?}", predicted_reduction);
-                    println!("actred: {:?}", actual_reduction);
-                    println!("delta: {:?}",delta);
-                    println!("params: {:?}", params);
+                    // println!("ratio: {:?}", ratio);
+                    // println!("predred: {:?}", predicted_reduction);
+                    // println!("actred: {:?}", actual_reduction);
+                    // println!("delta: {:?}",delta);
+                    // println!("params: {:?}", params);
 
                     // adjust the trust region
                     if ratio <= T::P25 {
@@ -717,7 +717,7 @@ where
 
                     // println!("objective fn: {:?}", objective_function);
                     if accept_update {
-                        println!("update accepted");
+                        // println!("update accepted");
                         rnorm = new_rnorm;
                         objective_function = T::P5 * rnorm.powi(2);
                         residuals = new_residuals;
@@ -729,9 +729,8 @@ where
                         problem_guard.defuse();
                         is_first_iteration = false;
                     } else {
-                        
-                        println!("update rejected");
-                        }
+                        // println!("update rejected");
+                    }
 
                     // F-convergence check, see MINPACK user guide p. 22-24
                     if (FtolCheck {

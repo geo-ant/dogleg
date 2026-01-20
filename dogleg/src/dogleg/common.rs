@@ -143,18 +143,18 @@ where
 
     // we have to treat 3 cases differently:
     if pb_norm <= delta {
-        println!("Dogleg: choosing GN step.");
+        // println!("Dogleg: choosing GN step.");
         // 1) in this case the entire dogleg lies inside the trust region radius
         // and we can just return the value for tau = 2, which is p_b
         Ok(pb.clone_owned())
     } else if pu_norm >= delta {
-        println!("Dogleg: choosing Cauchy step.");
+        // println!("Dogleg: choosing Cauchy step.");
         // 2) in this case the first part of the dogleg path lies inside
         // the trust region, so we can just find the tau in [0,1] for
         // which ||p|| = delta, which is just tau = delta/pu_norm.
         Ok(pu.clone_owned().scale(delta / pu_norm))
     } else {
-        println!("Dogleg: choosing interpolated step.");
+        // println!("Dogleg: choosing interpolated step.");
         // 3) in this case the rust region intersects somewhere inside the
         // second part of the dogleg and we have to do some algebra
         // to find the correct tau in [1,2].

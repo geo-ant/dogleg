@@ -22,6 +22,7 @@ impl<T> From<MinimizationReport<T>> for DebugReport<T> {
 
 /// useful for debugging to have a unified interface
 pub trait IntoDebugReport<P, T> {
+    #[deprecated = "todo: remove this eventually!"]
     fn into_debug_report(self) -> (P, DebugReport<T>);
 }
 

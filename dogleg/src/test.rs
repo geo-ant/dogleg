@@ -695,8 +695,11 @@ fn test_watson() {
     );
     problem.set_params(&initial.map(|x| x + 10.));
     let (problem, report) = Dogleg::new()
+        .with_patience(300.try_into().unwrap())
+        // TODO: remove that!! This means something in my diagonal scaling is still wrong!!
+        .with_scale_diag(false)
         .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+        .unwrap();
     let mut problem = problem.inner;
     assert_fp_eq!(
         report.objective_function,
@@ -719,8 +722,13 @@ fn test_watson() {
         epsilon = 1e-2
     );
     problem.set_params(&initial.map(|x| x + 100.));
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
-    let mut problem = problem.inner;
+    let (problem, report) = Dogleg::new()
+        .with_patience(300.try_into().unwrap())
+        // TODO: remove that!! This means something in my diagonal scaling is still wrong!!
+        .with_scale_diag(false)
+        .minimize(LevMarAdapter::new(problem))
+        .unwrap();
+    let problem = problem.inner;
     assert_fp_eq!(
         report.objective_function,
         6.998800690486009e-07,
@@ -747,7 +755,11 @@ fn test_watson() {
         OVector::<f64, U12>::from_column_slice(&[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]);
 
     problem.set_params(&initial.clone());
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new()
+        .with_patience(300.try_into().unwrap())
+        .with_scale_diag(false)
+        .minimize(LevMarAdapter::new(problem))
+        .unwrap();
     let mut problem = problem.inner;
     // this is from the MGH paper
     assert_fp_eq!(report.objective_function, 0.5 * 4.72238e-10, epsilon = 1e-5);

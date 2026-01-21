@@ -521,6 +521,7 @@ where
                 if delta.is_zero() {
                     delta = self.factor;
                 }
+                debug_assert!(!delta.is_zero());
             }
 
             let mut gradient = try_opt!(
@@ -705,7 +706,7 @@ where
                         if T::P1 * new_rnorm >= rnorm || temp < T::P1 {
                             temp = T::P1;
                         }
-                        delta = temp * T::min(delta, T::TEN * step_enorm);
+                        delta = temp * T::min(delta, T::TEN * p_scaled_norm);
                         // delta = T::P5 * delta;
                     } else if ratio >= T::P75 {
                         //  !!!!!!!!!!!!!!!!!!!!!!!!!!!

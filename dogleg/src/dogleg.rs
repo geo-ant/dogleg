@@ -706,12 +706,14 @@ where
                         if T::P1 * new_rnorm >= rnorm || temp < T::P1 {
                             temp = T::P1;
                         }
-                        delta = temp * T::min(delta, T::TEN * p_scaled_norm);
+                        // delta = temp * T::min(delta, T::TEN * p_scaled_norm);
+                        delta = delta* T::P5;
                         // delta = T::P5 * delta;
                     } else if ratio >= T::P75 {
                         //  !!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        delta = T::TWO * p_scaled_norm //@todo(geo) should this be the scaled step norm??
-                                                       // delta = T::max(delta, T::THREE * p_scaled_norm);
+                        // delta = T::TWO * p_scaled_norm //@todo(geo) should this be the scaled step norm??
+                                                       // delta = T::max(delta, T::THREE * p_scaled_norm
+                        delta = delta.max(T::THREE* p_scaled_norm);
                     }
 
                     let accept_update = ratio >= T::P0001;

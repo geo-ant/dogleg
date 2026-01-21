@@ -757,7 +757,7 @@ fn test_watson() {
     problem.set_params(&initial.clone());
     let (problem, report) = Dogleg::new()
         .with_patience(300.try_into().unwrap())
-        .with_scale_diag(false)
+        // .with_scale_diag(false)
         .minimize(LevMarAdapter::new(problem))
         .unwrap();
     let mut problem = problem.inner;

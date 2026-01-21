@@ -185,7 +185,7 @@ where
         // mathematically, but numerically c can be small. The case c-> 0 implies
         // b/c -> inf, such that tau-1 = 0.
         if !b_c.is_finite() || b_c >= Float::sqrt(<T as Float>::max_value()) {
-            return Ok(pu.clone_owned());
+            return Ok(pu.clone_owned().scale(delta / pu_norm));
         }
         let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
         debug_assert!(tau_minus_one >= T::ZERO - T::EPSMCH);
@@ -202,12 +202,19 @@ where
             .add(&pb_pu.scale(tau_minus_one))
             .ok_or(TerminationFailure::WrongDimensions("dogleg step"))?;
         let p_norm = p.enorm();
+
+        if p_norm > delta {
+            Ok(p.scale(delta / p_norm))
+        } else {
+            Ok(p)
+        }
+
         // some sanity checks with some generous bounds for numerical problems
         // debug_assert!(Float::powi(p_norm, 2) <= delta * delta + T::EPSMCH * T::ONE_HUNDRED);
         // debug_assert!(p_norm >= pu_norm - T::EPSMCH * T::TEN);
         // debug_assert!(p_norm <= pb_norm + T::EPSMCH * T::TEN);
         // @todo(geo) maybe add more logic to restrict the p step to the feasible
         // range.
-        Ok(p)
+        // Ok(p)
     }
 }

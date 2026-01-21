@@ -8,7 +8,7 @@
 use anyhow::{anyhow, bail};
 use ceres_solver::{
     CostFunctionType, NllsProblem,
-    solver::{LinearSolverType, LoggingType, MinimizerType},
+    solver::{DoglegType, LinearSolverType, LoggingType, MinimizerType},
 };
 use core::f64;
 use levenberg_marquardt::LeastSquaresProblem;
@@ -45,6 +45,7 @@ where
     let options = SolverOptions::builder()
         .minimizer_type(MinimizerType::TRUST_REGION)
         .trust_region_strategy_type(ceres_solver::solver::TrustRegionStrategyType::DOGLEG)
+        .dogleg_type(DoglegType::TRADITIONAL_DOGLEG)
         .linear_solver_type(LinearSolverType::DENSE_QR)
         // NOTE: could be helpful for some high level logging, but does NOT
         // give us the VLOG(n) output.

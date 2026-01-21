@@ -49,6 +49,7 @@ where
         // NOTE: could be helpful for some high level logging, but does NOT
         // give us the VLOG(n) output.
         .update_state_every_iteration(true)
+        .use_nonmonotonic_steps(false)
         // .minimizer_progress_to_stdout(true)
         .logging_type(LoggingType::PER_MINIMIZER_ITERATION)
         .build()

@@ -524,32 +524,6 @@ where
                 debug_assert!(!delta.is_zero());
             }
 
-            let mut gradient = try_opt!(
-                jacobian.tr_mulv(&residuals),
-                on_none = TerminationFailure::WrongDimensions("J^T r"),
-                problem = problem
-            );
-
-            // gtol check
-            let gmax = try_opt!(
-                gtol_calc(&jacobian_col_norms, &gradient, rnorm),
-                on_none =
-                    TerminationFailure::WrongDimensions("zero dimension for residuals or jacobian"),
-                problem = problem
-            );
-            // println!("gmax = {:?}", gmax);
-
-            if gmax <= self.gtol {
-                return Ok((
-                    problem,
-                    MinimizationReport {
-                        termination: TerminationReason::Converged(report::StoppingCriterion::Gtol),
-                        number_of_evaluations: nfunc_evals,
-                        objective_function,
-                    },
-                ));
-            }
-
             // compute new scaling matrix (if scaling is requested) and perform the scaling
             // note: if scaling is requested, the diagonal weights will be Some(...)
             if let Some(diag) = diagonal_weights.take() {
@@ -571,18 +545,47 @@ where
                 );
                 jacobian = scaled_jac;
 
-                // scaled gradient is g' = D^-1 g
-                let scaled_grad = try_opt!(
-                    gradient.diag_mul_left(&diag, Invert::Yes),
-                    on_none = TerminationFailure::WrongDimensions(
-                        "gradient and weights have incompatible dimensions"
-                    ),
-                    problem = problem
-                );
-                gradient = scaled_grad;
+                // we're doing the gradient calculation afterwards with the
+                // scaled or unscaled jacobian, which should give the correct
+                // results
+                // // scaled gradient is g' = D^-1 g
+                // let scaled_grad = try_opt!(
+                //     gradient.diag_mul_left(&diag, Invert::Yes),
+                //     on_none = TerminationFailure::WrongDimensions(
+                //         "gradient and weights have incompatible dimensions"
+                //     ),
+                //     problem = problem
+                // );
+                // gradient = scaled_grad;
 
                 diagonal_weights = Some(diag);
             }
+
+            let gradient = try_opt!(
+                jacobian.tr_mulv(&residuals),
+                on_none = TerminationFailure::WrongDimensions("J^T r"),
+                problem = problem
+            );
+            // gtol check
+            let gmax = try_opt!(
+                gtol_calc(&jacobian_col_norms, &gradient, rnorm),
+                on_none =
+                    TerminationFailure::WrongDimensions("zero dimension for residuals or jacobian"),
+                problem = problem
+            );
+            // println!("gmax = {:?}", gmax);
+
+            if gmax <= self.gtol {
+                return Ok((
+                    problem,
+                    MinimizationReport {
+                        termination: TerminationReason::Converged(report::StoppingCriterion::Gtol),
+                        number_of_evaluations: nfunc_evals,
+                        objective_function,
+                    },
+                ));
+            }
+
 
             // initialize the step solver with the given (unscaled) residuals, and the
             // (possibly scaled) gradient and (possibly scaled) jacobian.

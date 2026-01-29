@@ -111,13 +111,15 @@ where
                 // text, so I won't stray from this for now.
                 let minus_r = residuals.scale(-T::ONE);
 
+                // Gauss-Newton step
                 let pb = svd
                     // .solve_lsqr(&minus_r)
                     .solve_lsqr_regularized(&minus_r, mu)
                     .ok_or(TerminationFailure::Numerical("lsqr solve"))?;
                 let pb_norm = pb.enorm();
-                let u = -Float::powi(g_norm, 2)
-                    / (Float::powi(jg_norm, 2) + mu * Float::powi(g_norm, 2));
+
+                // multiplicator for the cauchy step. pu = u*g
+                let u = -Float::powi(g_norm, 2) / Float::powi(jg_norm, 2);
                 let rank = svd.rank();
                 SvdSolverCache {
                     u,
@@ -144,7 +146,6 @@ where
         // m(0) - m(p) = -g^T p - 1/2 ||J p||^2
         // (mathematically, this must always be a positive number, so that should
         // be a good sanity check)
-        // But we don't save g here, but we know
 
         let predicted_reduction = -cached
             .g

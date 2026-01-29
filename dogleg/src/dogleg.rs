@@ -133,7 +133,7 @@ pub struct Dogleg<T> {
     factor: T,
     /// Whether to apply diagonal scaling internally. For this, see
     /// Nocedal & Wright, p 95-97
-    scale_diag: bool,
+    use_elliptical_parameter_scaling: bool,
     /// Used to calculate the maximum number of function evals (a stopping
     /// criterion) based on the problem
     patience: u64,
@@ -162,7 +162,7 @@ where
             xtol: user_tol,
             gtol: user_tol,
             factor: T::ONE_HUNDRED,
-            scale_diag: true,
+            use_elliptical_parameter_scaling: true,
             patience: 100,
         }
     }
@@ -279,7 +279,7 @@ where
     /// Whether to apply diagonal rescaling of variables, see e.g.
     /// Nocedal & Wright p 95-97
     pub fn with_scale_diag(self, scale_diag: bool) -> Self {
-        Self { scale_diag, ..self }
+        Self { use_elliptical_parameter_scaling: scale_diag, ..self }
     }
 }
 
@@ -462,7 +462,7 @@ where
         let mut objective_function = T::P5 * rnorm.powi(2);
 
         // outer loop
-        loop {
+        'outer: loop {
             // calculate residuals and jacobian
             if nfunc_evals >= max_func_evals {
                 return Err(Error {
@@ -491,7 +491,7 @@ where
 
             // some special sauce (see the iter == 1 / iter .EQ. 1 blocks in MINPACK)
             if is_first_iteration {
-                if self.scale_diag {
+                if self.use_elliptical_parameter_scaling {
                     // see the MINPACK User guide, chapter 2.5 on scaling. In the
                     // text they mention that they arbitrarily replace a zero
                     // weighting by 1.
@@ -545,6 +545,7 @@ where
                 );
                 jacobian = scaled_jac;
 
+                //TODO WARN: is that true ??? FIX??? No I think it's true
                 // we're doing the gradient calculation afterwards with the
                 // scaled or unscaled jacobian, which should give the correct
                 // results
@@ -597,7 +598,7 @@ where
             );
 
             // inner loop
-            loop {
+            'inner: loop {
                 // again, note that the step is p' = Dp, i.e. the possibly scaled step
                 let (dogleg_step, solver) =
                     try2!(step_solver.update_step(delta), problem = problem);
@@ -645,7 +646,6 @@ where
                     step_scaled
                 };
 
-                let step_enorm = step.enorm();
 
                 // candidate for the new parameters
                 // x_new = x + p
@@ -665,7 +665,6 @@ where
                     let mut problem_guard = reset_guard::update_params(&mut problem, new_params);
                     nfunc_evals += 1;
 
-                    //@todo(geo) this is not correct, just making sure this works
                     let new_residuals = try_opt!(
                         problem_guard.residuals(),
                         on_none = TerminationFailure::ResidualEval,
@@ -693,36 +692,13 @@ where
                     // println!("delta: {:?}",delta);
                     // println!("params: {:?}", params);
 
-                    // adjust the trust region
-                    if ratio <= T::P25 {
-                        // this is identical to minpack with one exception. MINPACK
-                        // considers the directional derivative to adjust the trust
-                        // region radius in the case actred < 0 to potentially
-                        // "soften the blow". I'm just taking the worst case,
-                        // because I'm not sure how to use this in my case.
-
-                        let mut temp = if actual_reduction >= T::ZERO {
-                            T::P5
-                        } else {
-                            T::P1
-                        };
-                        if T::P1 * new_rnorm >= rnorm || temp < T::P1 {
-                            temp = T::P1;
-                        }
-                        // delta = temp * T::min(delta, T::TEN * p_scaled_norm);
-                        delta = delta* T::P5;
-                        // delta = T::P5 * delta;
-                    } else if ratio >= T::P75 {
-                        //  !!!!!!!!!!!!!!!!!!!!!!!!!!!
-                        // delta = T::TWO * p_scaled_norm //@todo(geo) should this be the scaled step norm??
-                                                       // delta = T::max(delta, T::THREE * p_scaled_norm
-                        delta = delta.max(T::THREE* p_scaled_norm);
-                    }
-
                     let accept_update = ratio >= T::P0001;
 
                     // println!("objective fn: {:?}", objective_function);
                     if accept_update {
+
+
+                        
                         // println!("update accepted");
                         rnorm = new_rnorm;
                         objective_function = T::P5 * rnorm.powi(2);
@@ -734,8 +710,20 @@ where
                         // are not accepted.
                         problem_guard.defuse();
                         is_first_iteration = false;
+                    } 
+
+                    // step expansion or shrinking logic. This is how the
+                    // CERES solver does it in its dogleg implementation.
+                    if accept_update {
+                        if ratio <= T::P25 {
+                            delta = delta * T::P5;
+                        }
+
+                        if ratio >= T::P75 {
+                            delta = Float::max(delta, T::THREE* p_scaled_norm);
+                        }
                     } else {
-                        // println!("update rejected");
+                        delta = delta*T::P5;
                     }
 
                     // F-convergence check, see MINPACK user guide p. 22-24
@@ -840,7 +828,7 @@ where
                         });
                     }
                     if accept_update {
-                        break; // inner loop
+                        break 'inner; // inner loop
                     }
                 } // scope for setting new step and checking return conditions
             } //inner loop

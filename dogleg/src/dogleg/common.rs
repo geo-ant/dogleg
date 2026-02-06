@@ -132,7 +132,11 @@ where
 // we have to use into_ownedx() for the return types and Option<PU::Ownedx> and
 // constrain the PU : Colx<T, Ownedx= PB::Ownedx>. But I won't do it unless I
 // have to.
-pub fn dogleg_step<T, P>(pu: &P, pb: &P, delta: T) -> Result<P::Owned, TerminationFailure>
+pub fn traditional_dogleg_step<T, P>(
+    pu: &P,
+    pb: &P,
+    delta: T,
+) -> Result<P::Owned, TerminationFailure>
 where
     T: Float + MagicConst + std::fmt::Debug,
     P: Colx<T, Owned = P> + Addx<T, P> + Dotx<T, P> + Scalex<T>,

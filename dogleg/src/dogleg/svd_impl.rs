@@ -1,7 +1,7 @@
 use super::common::DoglegStep;
 use crate::{
     dogleg::{
-        common::{dogleg_step, DoglegStepSolver},
+        common::{traditional_dogleg_step, DoglegStepSolver},
         report::TerminationFailure,
     },
     MagicConst,
@@ -139,7 +139,7 @@ where
         // @todo(geo-ant) this method can be made more efficient by also
         // providing the already calculated norms
         let pu = cached.g.clone_owned().scale(cached.u);
-        let p = dogleg_step(&pu, &cached.pb, delta)?;
+        let p = traditional_dogleg_step(&pu, &cached.pb, delta)?;
         let p_norm = p.enorm();
 
         // predicted reduction is

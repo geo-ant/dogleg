@@ -510,9 +510,7 @@ fn test_kowalik_osborne() {
     );
 
     problem.set_params(&initial.map(|x| x * 10.));
-    let (problem, report) = Dogleg::new()
-        .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
     let mut problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.5 * 1.02734e-3, epsilon = 1e-6);
     // this is actually not a very good solution, but this is the best that
@@ -695,11 +693,8 @@ fn test_watson() {
     );
     problem.set_params(&initial.map(|x| x + 10.));
     let (problem, report) = Dogleg::new()
-        .with_patience(300.try_into().unwrap())
-        // TODO: remove that!! This means something in my diagonal scaling is still wrong!!
-        .with_scale_diag(false)
         .minimize(LevMarAdapter::new(problem))
-        .unwrap();
+        .into_debug_report();
     let mut problem = problem.inner;
     assert_fp_eq!(
         report.objective_function,

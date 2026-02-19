@@ -13,6 +13,7 @@ use dogleg_matx::Invert;
 use dogleg_matx::MaxScaledDivx;
 use dogleg_matx::{Colx, TrMatVecMulx};
 use num_traits::Float;
+use num_traits::FromPrimitive;
 use std::num::NonZero;
 
 mod common;
@@ -316,7 +317,9 @@ where
 {
     pub fn minimize<P>(&self, problem: P) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
-        T: Float + MagicConst + std::fmt::Debug,
+        T: Float + MagicConst + std::fmt::Debug+
+        //DEBUG(geo)
+        FromPrimitive,
         P: LeastSquaresProblem<T>,
         P::Residuals: Clone,
         SvdStepSolver<T, <P as LeastSquaresProblem<T>>::Jacobian, P::Residuals, GradType<T, P>>:
@@ -367,7 +370,9 @@ where
         mut problem: P,
     ) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
-        T: Float + MagicConst + std::fmt::Debug,
+        T: Float + MagicConst + std::fmt::Debug 
+        //DEBUG(geo)
+        + FromPrimitive,
         P: LeastSquaresProblem<T>,
         P::Residuals: Clone,
         // see below, we require the gradient, i.e. the of J^T r to be the owned type of P.
@@ -489,18 +494,19 @@ where
 
             let jacobian_col_norms = jacobian.column_enorms();
 
+            if self.use_elliptical_parameter_scaling {
+                // see the MINPACK User guide, chapter 2.5 on scaling. In the
+                // text they mention that they arbitrarily replace a zero
+                // weighting by 1.
+                diagonal_weights = Some(
+                    jacobian_col_norms
+                        .clone_owned()
+                        .replace_if_leq(T::ZERO, T::ONE),
+                );
+            }
+
             // some special sauce (see the iter == 1 / iter .EQ. 1 blocks in MINPACK)
             if is_first_iteration {
-                if self.use_elliptical_parameter_scaling {
-                    // see the MINPACK User guide, chapter 2.5 on scaling. In the
-                    // text they mention that they arbitrarily replace a zero
-                    // weighting by 1.
-                    diagonal_weights = Some(
-                        jacobian_col_norms
-                            .clone_owned()
-                            .replace_if_leq(T::ZERO, T::ONE),
-                    );
-                }
 
                 // the norm of the (possibly scaled) parameters
                 let param_norm = {
@@ -521,6 +527,7 @@ where
                 if delta.is_zero() {
                     delta = self.factor;
                 }
+                delta = FromPrimitive::from_u16(10000).unwrap();
                 debug_assert!(!delta.is_zero());
             }
 
@@ -558,7 +565,6 @@ where
                 //     problem = problem
                 // );
                 // gradient = scaled_grad;
-
                 diagonal_weights = Some(diag);
             }
 
@@ -624,12 +630,13 @@ where
                     predicted_reduction,
                 } = dogleg_step;
 
-                // adjust the initial step bound on first iteration
-                if is_first_iteration {
-                    // it's correct to use the scaled norm here
-                    // cf. the MINPACK implementation of lmder
-                    delta = delta.min(p_scaled_norm);
-                }
+                // TODO(geo-ant): re-enable this???
+                // // adjust the initial step bound on first iteration
+                // if is_first_iteration {
+                //     // it's correct to use the scaled norm here
+                //     // cf. the MINPACK implementation of lmder
+                //     delta = delta.min(p_scaled_norm);
+                // }
 
                 // get the new step candidate depending on whether we use scaling
                 // or not. If we use scaling, we have to convert the step to unscaled
@@ -684,7 +691,7 @@ where
                         // actual_reduction / predicted_reduction
                         actual_reduction / predicted_reduction
                     } else {
-                        T::ZERO
+                        -T::max_value()
                     };
                     // println!("ratio: {:?}", ratio);
                     // println!("predred: {:?}", predicted_reduction);
@@ -709,7 +716,6 @@ where
                         // is only the correct thing to do if the parameters
                         // are not accepted.
                         problem_guard.defuse();
-                        is_first_iteration = false;
                     } 
 
                     // step expansion or shrinking logic. This is how the
@@ -725,6 +731,8 @@ where
                     } else {
                         delta = delta*T::P5;
                     }
+
+                    is_first_iteration = false;
 
                     // F-convergence check, see MINPACK user guide p. 22-24
                     if (FtolCheck {

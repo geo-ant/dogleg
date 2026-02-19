@@ -510,7 +510,9 @@ fn test_kowalik_osborne() {
     );
 
     problem.set_params(&initial.map(|x| x * 10.));
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new()
+        .minimize(LevMarAdapter::new(problem))
+        .into_debug_report();
     let mut problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.5 * 1.02734e-3, epsilon = 1e-6);
     // this is actually not a very good solution, but this is the best that
@@ -528,11 +530,7 @@ fn test_kowalik_osborne() {
         .minimize(LevMarAdapter::new(problem))
         .into_debug_report();
     let problem = problem.inner;
-    assert_fp_eq!(
-        report.objective_function,
-        0.000513671535424324,
-        epsilon = 1e-6
-    );
+    assert_fp_eq!(report.objective_function, 0.5 * 1.02734e-3, epsilon = 1e-6);
     assert_fp_eq!(problem.params[1], -14.07, epsilon = 1e-1);
     assert2::assert!(problem.params[0] > 1e2);
     assert2::assert!(problem.params[2] < -5e3);

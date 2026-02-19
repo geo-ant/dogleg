@@ -494,6 +494,7 @@ where
 
             let jacobian_col_norms = jacobian.column_enorms();
 
+
             if self.use_elliptical_parameter_scaling {
                 // see the MINPACK User guide, chapter 2.5 on scaling. In the
                 // text they mention that they arbitrarily replace a zero

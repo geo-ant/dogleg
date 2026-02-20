@@ -704,9 +704,6 @@ where
 
                     // println!("objective fn: {:?}", objective_function);
                     if accept_update {
-
-
-                        
                         // println!("update accepted");
                         rnorm = new_rnorm;
                         objective_function = T::P5 * rnorm.powi(2);

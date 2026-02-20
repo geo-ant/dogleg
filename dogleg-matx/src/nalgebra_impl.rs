@@ -462,7 +462,7 @@ where
 
 impl<T, R, S> ElementwiseReplaceLeqx<T> for Vector<T, R, S>
 where
-    T: Scalar + Copy + TotalOrder,
+    T: Float + Scalar + Copy + TotalOrder,
     R: Dim,
     S: Storage<T, R> + RawStorageMut<T, R>,
 {
@@ -474,4 +474,12 @@ where
         });
         self
     }
+
+    fn clamp(mut self, min: T, max: T) -> Self {
+        self.iter_mut().for_each(|elem| {
+            * elem = Float::clamp(*elem, min, max);
+        });
+        self
+    }
+
 }

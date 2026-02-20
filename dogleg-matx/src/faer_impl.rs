@@ -589,7 +589,7 @@ where
 
 impl<T, R, V> ElementwiseReplaceLeqx<T> for V
 where
-    T: RealField + Copy + TotalOrder,
+    T: Float + RealField + Copy + TotalOrder,
     R: Shape,
     V: FaerType + AsColMut<T = T, Rows = R>,
 {
@@ -601,4 +601,12 @@ where
         });
         self
     }
+
+    fn clamp(mut self, min: T, max: T) -> Self {
+        self.as_col_mut().iter_mut().for_each(|elem| {
+            * elem = Float::clamp(*elem, min, max);
+        });
+        self
+    }
+
 }

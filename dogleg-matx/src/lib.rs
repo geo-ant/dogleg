@@ -256,4 +256,7 @@ pub trait ElementwiseReplaceLeqx<T> {
     /// replace all elements less or equal to `threshold` with `replacement`
     /// and return self again.
     fn replace_if_leq(self, threshold: T, replacement: T) -> Self;
+    /// clamp all the elements in the vector to be between `min` and `max` 
+    /// and return self again.
+    fn clamp(self, min: T, max: T) -> Self;
 }

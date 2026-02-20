@@ -11,6 +11,8 @@ pub trait MagicConst: num_traits::ConstOne + num_traits::ConstZero {
     const THIRTY: Self;
     /// the value 100
     const ONE_HUNDRED: Self;
+    /// the value 1E16
+    const ONE_E16: Self;
     /// (those weird P<...> are from MINPACK)
     /// "point 75" = 0.75 = 3/4
     const P75: Self;
@@ -39,6 +41,7 @@ macro_rules! impl_magic_const {
             const TEN: Self = 10.;
             const THIRTY: Self = 30.;
             const ONE_HUNDRED: Self = 100.;
+            const ONE_E16: Self = 1e16;
             const P75: Self = 0.75;
             const P5: Self = 0.5;
             const P25: Self = 0.25;

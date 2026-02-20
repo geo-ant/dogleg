@@ -422,4 +422,5 @@ fn elementwise_replace_if_leq_for_vector() {
         ElementwiseReplaceLeqx::replace_if_leq(dvec, threshold, replacement),
         dexpected
     );
+    todo!("also test the clamp function");
 }

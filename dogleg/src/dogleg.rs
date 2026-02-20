@@ -138,6 +138,12 @@ pub struct Dogleg<T> {
     /// Used to calculate the maximum number of function evals (a stopping
     /// criterion) based on the problem
     patience: u64,
+    /// minimum value for the diagonal scaling matrix. If used, the diagonal
+    /// values will be clamped to the min and maximum values.
+    min_diagonal : T,
+    /// maximum value for the diagonal scaling matrix. If used, the diagonal
+    /// values will be clamped to the min and maximum values.
+    max_diagonal : T
 }
 
 impl<T> Default for Dogleg<T>
@@ -162,6 +168,12 @@ where
             ftol: user_tol,
             xtol: user_tol,
             gtol: user_tol,
+            // the min and max diagonal default values are taken from
+            // CERES solver, see: https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_strategy.h#L67
+            // but note that the values in the ceres score are applied to the
+            // squared norms for clipping, so we have to take the square roots.
+            min_diagonal : MagicConst::P001,
+            max_diagonal : MagicConst::ONE_E16,
             factor: T::ONE_HUNDRED,
             use_elliptical_parameter_scaling: true,
             patience: 100,
@@ -502,7 +514,8 @@ where
                 diagonal_weights = Some(
                     jacobian_col_norms
                         .clone_owned()
-                        .replace_if_leq(T::ZERO, T::ONE),
+                        // .replace_if_leq(T::ZERO, T::ONE),
+                        .clamp(self.min_diagonal, self.max_diagonal)
                 );
             }
 

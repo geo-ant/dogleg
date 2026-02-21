@@ -319,19 +319,27 @@ where
 
     #[must_use]
     /// the minimum value to which the diagonal scaling values will be clamped,
-    /// which must be nonnegative. Only has an effect if diagonal scaling is
+    /// which must be positive. Only has an effect if diagonal scaling is
     /// used.
+    ///
+    /// # Panics
+    /// 
+    /// Panics if the given value is not positive.
     pub fn with_min_diag(self, min: T) -> Self {
-        debug_assert!(min.is_sign_positive() && !min.is_zero());
+        assert!(min.is_finite() && min > T::zero());
         Self {min_diagonal : min, ..self}
     }
 
     #[must_use]
     /// the maximum value to which the diagonal scaling values will be clamped,
-    /// which must be nonnegative. Only has an effect if diagonal scaling is
+    /// which must be positive. Only has an effect if diagonal scaling is
     /// used.
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the given value is not positive.
     pub fn with_max_diag(self, max: T) -> Self {
-        debug_assert!(max.is_sign_positive() && !max.is_zero());
+        assert!(max.is_finite() && max > T::zero());
         Self {max_diagonal: max, ..self}
     }
 

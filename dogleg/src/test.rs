@@ -716,11 +716,9 @@ fn test_watson() {
     );
     problem.set_params(&initial.map(|x| x + 100.));
     let (problem, report) = Dogleg::new()
-        .with_patience(300.try_into().unwrap())
         // TODO: remove that!! This means something in my diagonal scaling is still wrong!!
-        .with_scale_diag(false)
         .minimize(LevMarAdapter::new(problem))
-        .unwrap();
+        .into_debug_report();
     let problem = problem.inner;
     assert_fp_eq!(
         report.objective_function,
@@ -749,10 +747,9 @@ fn test_watson() {
 
     problem.set_params(&initial.clone());
     let (problem, report) = Dogleg::new()
-        .with_patience(300.try_into().unwrap())
         // .with_scale_diag(false)
         .minimize(LevMarAdapter::new(problem))
-        .unwrap();
+        .into_debug_report();
     let mut problem = problem.inner;
     // this is from the MGH paper
     assert_fp_eq!(report.objective_function, 0.5 * 4.72238e-10, epsilon = 1e-5);
@@ -783,7 +780,9 @@ fn test_watson() {
     //     epsilon = 1e-2
     // );
     problem.set_params(&initial.map(|x| x + 10.));
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new()
+        .minimize(LevMarAdapter::new(problem))
+        .into_debug_report();
     let problem = problem.inner;
     let _ = problem;
     assert_fp_eq!(

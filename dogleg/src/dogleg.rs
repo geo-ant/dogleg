@@ -839,7 +839,7 @@ where
                     if (FtolCheck {
                         predicted_reduction,
                         actual_reduction,
-                        ratio,
+                        objective_function,
                         tol: self.ftol,
                     })
                     .check()
@@ -912,7 +912,7 @@ where
                     if (FtolCheck {
                         predicted_reduction,
                         actual_reduction,
-                        ratio,
+                        objective_function,
                         tol: T::EPSMCH,
                     })
                     .check()
@@ -951,15 +951,14 @@ where
 struct FtolCheck<T> {
     pub predicted_reduction: T,
     pub actual_reduction: T,
-    pub ratio: T,
+    pub objective_function: T,
     pub tol: T,
 }
 
 impl<T: Float + MagicConst> FtolCheck<T> {
     fn check(self) -> bool {
-        debug_assert_eq2!(self.ratio, self.actual_reduction / self.predicted_reduction);
-        self.predicted_reduction <= self.tol
-            && Float::abs(self.actual_reduction) <= self.tol
-            && self.ratio <= MagicConst::TWO
+        self.predicted_reduction <= self.tol * self.objective_function
+            && Float::abs(self.actual_reduction) <= self.tol * self.objective_function
+            && self.actual_reduction <= T::TWO * self.predicted_reduction
     }
 }

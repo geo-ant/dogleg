@@ -29,22 +29,22 @@ pub use report::MinimizationReport;
 pub use report::TerminationReason;
 pub use svd_impl::SvdStepSolver;
 
-/// like debug_assert_eq, but doesn't require lhs, rhs to implement the Debug
-/// trait.
-macro_rules! debug_assert_eq2 {
-    ($lhs:expr, $rhs:expr $(,)?) => {
-        #[cfg(debug_assertions)]
-        {
-            if $lhs != $rhs {
-                panic!(
-                    "Debug assertion failed: {}=={}",
-                    stringify!($lhs),
-                    stringify!($rhs)
-                )
-            }
-        }
-    };
-}
+// /// like debug_assert_eq, but doesn't require lhs, rhs to implement the Debug
+// /// trait.
+// macro_rules! debug_assert_eq2 {
+//     ($lhs:expr, $rhs:expr $(,)?) => {
+//         #[cfg(debug_assertions)]
+//         {
+//             if $lhs != $rhs {
+//                 panic!(
+//                     "Debug assertion failed: {}=={}",
+//                     stringify!($lhs),
+//                     stringify!($rhs)
+//                 )
+//             }
+//         }
+//     };
+// }
 
 /// utility macro that helps us return our error inline when the
 /// returned type of an expression is an optional. The challenge is
@@ -537,6 +537,7 @@ where
         let mut jacobi_scaling = None;
 
         // outer loop
+        #[allow(unused_labels)]
         'outer: loop {
             // calculate residuals and jacobian
             if nfunc_evals >= max_func_evals {

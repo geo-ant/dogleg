@@ -1,11 +1,11 @@
 use crate::{dogleg::MinimizationReport, LeastSquaresProblem};
 use dogleg_matx::{magic_const::MagicConst, Colx};
-use nalgebra::RealField;
 use num_traits::Float;
 
 use crate::Error;
 
 /// report that captures the most important info from both error and success reports
+#[allow(dead_code)]
 pub struct DebugReport<T> {
     pub objective_function: T,
     pub success: bool,

@@ -1,4 +1,4 @@
-use crate::{dogleg::report::TerminationFailure, LeastSquaresProblem};
+use crate::dogleg::report::TerminationFailure;
 
 /// error type for this crate
 #[derive(thiserror::Error)]

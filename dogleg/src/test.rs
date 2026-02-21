@@ -33,8 +33,7 @@
 // NOTE(geo-ant) see the test-problems.md readme file for additional
 // helpful references to the problems.
 
-use crate::{Dogleg, LeastSquaresProblem, LevMarAdapter};
-use dogleg_matx::Colx;
+use crate::{Dogleg, LevMarAdapter};
 use levenberg_marquardt::LeastSquaresProblem as LevmarProblem;
 use levmar_problems::{assert_fp_eq, problems::*, utils::differentiate_numerically};
 use nalgebra::*;

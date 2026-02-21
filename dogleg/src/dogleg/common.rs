@@ -1,6 +1,6 @@
 use crate::{dogleg::report::TerminationFailure, MagicConst};
 use dogleg_matx::{Addx, Colx, Dotx, Matx, MaxScaledDivx, OwnedColx, Scalex};
-use num_traits::{ConstOne, Float};
+use num_traits::Float;
 
 #[cfg(feature = "assert2")]
 use assert2::debug_assert;

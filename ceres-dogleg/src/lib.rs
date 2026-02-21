@@ -47,6 +47,7 @@ where
         .trust_region_strategy_type(ceres_solver::solver::TrustRegionStrategyType::DOGLEG)
         .dogleg_type(DoglegType::TRADITIONAL_DOGLEG)
         .linear_solver_type(LinearSolverType::DENSE_QR)
+        .max_num_iterations(100)
         // NOTE: could be helpful for some high level logging, but does NOT
         // give us the VLOG(n) output.
         .update_state_every_iteration(true)

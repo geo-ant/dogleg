@@ -219,7 +219,6 @@ where
     type Svd = SVD<T, R, C>;
 
     fn calc_svd(self) -> Option<Self::Svd> {
-        let dim = self.nrows().min(self.ncols());
         let svd = SVD::try_new_unordered(
             self,
             true,
@@ -228,8 +227,6 @@ where
             <T as Float>::epsilon() * nalgebra::convert(5.0),
             0,
         )?;
-        let rank = svd.rank(T::epsilon());
-        // debug_assert!(rank == dim);
         Some(svd)
     }
 }

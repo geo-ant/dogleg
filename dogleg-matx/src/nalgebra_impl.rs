@@ -315,7 +315,7 @@ where
 
 impl<T, R, C, S> ColEnormsx<T> for Matrix<T, R, C, S>
 where
-    T: Scalar + RealField + Float + Copy,
+    T: Scalar + RealField + Float + Copy + ConstOne,
     C: Dim,
     R: Dim,
     DefaultAllocator: Allocator<C>,
@@ -330,6 +330,18 @@ where
             U1,
             self.column_iter()
                 .map(|col| crate::utility::enorm(col.iter().copied())),
+        )
+    }
+
+    fn damped_inverse_column_enorms(&self) -> Self::Output {
+        let (_, c) = self.shape_generic();
+        OVector::<T, C>::from_iterator_generic(
+            c,
+            U1,
+            self.column_iter().map(|col| {
+                let col_norm = crate::utility::enorm(col.iter().copied());
+                T::ONE / (T::ONE + col_norm)
+            }),
         )
     }
 }
@@ -477,9 +489,8 @@ where
 
     fn clamp(mut self, min: T, max: T) -> Self {
         self.iter_mut().for_each(|elem| {
-            * elem = Float::clamp(*elem, min, max);
+            *elem = Float::clamp(*elem, min, max);
         });
         self
     }
-
 }

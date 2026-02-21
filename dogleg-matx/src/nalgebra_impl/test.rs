@@ -249,6 +249,7 @@ fn matrix_col_enorms() {
 
     assert_relative_eq!(ColEnormsx::column_enorms(&smat), sexpected);
     assert_relative_eq!(ColEnormsx::column_enorms(&dmat), dexpected);
+    todo!("test damped inverse col enorms")
 }
 
 #[test]

@@ -175,6 +175,16 @@ pub trait ColEnormsx<T> {
     type Output: OwnedColx<T>;
     /// the calculated column norms placed into avector
     fn column_enorms(&self) -> Self::Output;
+    /// this is a very dogleg-specific funtion, which calculates a "damped"
+    /// elementwise inverse of the column norms. Specifically it gives
+    /// us a vector
+    /// ```math
+    /// v_j = 1/(|a_j|+1)
+    /// ```
+    /// where `|a_j|` is the norm of the j-th column of the matrix.
+    /// The `+1` in the denominator acts as a damping so we don't divide
+    /// by zero
+    fn damped_inverse_column_enorms(&self) -> Self::Output;
 }
 
 /// used to indicate whether to invert the diagonal matrix for
@@ -256,7 +266,7 @@ pub trait ElementwiseReplaceLeqx<T> {
     /// replace all elements less or equal to `threshold` with `replacement`
     /// and return self again.
     fn replace_if_leq(self, threshold: T, replacement: T) -> Self;
-    /// clamp all the elements in the vector to be between `min` and `max` 
+    /// clamp all the elements in the vector to be between `min` and `max`
     /// and return self again.
     fn clamp(self, min: T, max: T) -> Self;
 }

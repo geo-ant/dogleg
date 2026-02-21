@@ -3,6 +3,7 @@ use crate::Error;
 use crate::LeastSquaresProblem;
 use crate::MagicConst;
 use crate::TerminationFailure;
+// use assert2::debug_assert;
 use dogleg_matx::Addx;
 use dogleg_matx::ColEnormsx;
 use dogleg_matx::DiagLeftMulx;
@@ -133,8 +134,17 @@ pub struct Dogleg<T> {
     /// >> interval (.1,100.).100. is a generally recommended value
     factor: T,
     /// Whether to apply diagonal scaling internally. For this, see
-    /// Nocedal & Wright, p 95-97
+    /// Nocedal & Wright, p 95-97.
     use_elliptical_parameter_scaling: bool,
+    /// whether to apply Jacobi-scaling, which is different from the elliptical
+    /// parameter scaling. This is something that CERES solver does,
+    /// see e.g.: https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_minimizer.cc#L263.
+    /// This is also a type of diagonal scaling, but it's calculated differently
+    /// from the elliptical parameter scaling. This is only calculated once,
+    /// based on the initial jacobian and acts as a "pre-conditioner" on the
+    /// jacobian using, where scaling = diag( (J^T J)^-1). Of course, it
+    /// must always be accounted when calculating the unscaled parameters.
+    use_jacobi_scaling: bool, 
     /// Used to calculate the maximum number of function evals (a stopping
     /// criterion) based on the problem
     patience: u64,
@@ -177,6 +187,7 @@ where
             factor: T::ONE_HUNDRED,
             use_elliptical_parameter_scaling: true,
             patience: 100,
+            use_jacobi_scaling: true,
         }
     }
 
@@ -289,10 +300,46 @@ where
     }
 
     #[must_use]
+    #[deprecated = "use with_diagional_scaling(...)"]
+    /// Whether to apply diagonal rescaling of variables, see e.g.
+    /// Nocedal & Wright p 95-97.
+    ///
+    /// **Deprectated**, but for better drop-in compatibility
+    /// with the `levenberg_marquardt` crate.
+    pub fn with_scale_diag(self, use_scaling: bool) -> Self {
+        Self { use_elliptical_parameter_scaling: use_scaling, ..self }
+    }
+
+    #[must_use]
     /// Whether to apply diagonal rescaling of variables, see e.g.
     /// Nocedal & Wright p 95-97
-    pub fn with_scale_diag(self, scale_diag: bool) -> Self {
+    pub fn with_diagonal_scaling(self, scale_diag: bool) -> Self {
         Self { use_elliptical_parameter_scaling: scale_diag, ..self }
+    }
+
+    #[must_use]
+    /// the minimum value to which the diagonal scaling values will be clamped,
+    /// which must be nonnegative. Only has an effect if diagonal scaling is
+    /// used.
+    pub fn with_min_diag(self, min: T) -> Self {
+        debug_assert!(min.is_sign_positive() && !min.is_zero());
+        Self {min_diagonal : min, ..self}
+    }
+
+    #[must_use]
+    /// the maximum value to which the diagonal scaling values will be clamped,
+    /// which must be nonnegative. Only has an effect if diagonal scaling is
+    /// used.
+    pub fn with_max_diag(self, max: T) -> Self {
+        debug_assert!(max.is_sign_positive() && !max.is_zero());
+        Self {max_diagonal: max, ..self}
+    }
+
+    /// whether to use jacobian scaling to try and improve the conditioning
+    /// of the Jacobian. While this also acts as a form of diagonal scaling,
+    /// this is different from the elliptical parameter scaling.
+    pub fn with_jacobi_scaling(self, use_scaling: bool) -> Self {
+        Self {use_jacobi_scaling : use_scaling, ..self}
     }
 }
 
@@ -478,6 +525,8 @@ where
         // f = 1/2 ||r||^2
         let mut objective_function = T::P5 * rnorm.powi(2);
 
+        let mut jacobi_scaling = None;
+
         // outer loop
         'outer: loop {
             // calculate residuals and jacobian
@@ -504,6 +553,30 @@ where
                 on_none = TerminationFailure::JacobianEval
             );
 
+            if is_first_iteration && self.use_jacobi_scaling {
+                // this takes jacobi scaling from ceres. This is only calculated
+                // ONCE from the initial jacobian to try to make it better
+                // conditioned. If jacobi_scaling is used, then this is
+                // always applied as an extra diagonal scaling
+                // see e.g.: https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_minimizer.cc#L263.
+                jacobi_scaling = Some(jacobian.damped_inverse_column_enorms());
+            }
+
+            // apply jacobi scaling preconditioning. All the downstream operations
+            // (even the diagonal/elliptical scaling) see the thusly scaled
+            // jacobian. Only at the very end to unscale the parameters, we
+            // reverse the scaling. To reverse that scaling, we multiply
+            // with the same factor without inversion!
+            // to the jacobian
+            if let Some(jacobi_scaling) = jacobi_scaling.as_ref() {
+                jacobian = try_opt!(jacobian.mul_diag_right(jacobi_scaling, Invert::No),
+                            on_none = TerminationFailure::WrongDimensions(
+                               "jacobi scaling and jacobian are incompatible (jacobian likely changed dimensions between iterations)"
+                           ),
+                            problem = problem
+                    );
+            }
+            
             let jacobian_col_norms = jacobian.column_enorms();
 
 
@@ -521,7 +594,6 @@ where
 
             // some special sauce (see the iter == 1 / iter .EQ. 1 blocks in MINPACK)
             if is_first_iteration {
-
                 // the norm of the (possibly scaled) parameters
                 let param_norm = {
                     if let Some(diag) = diagonal_weights.as_ref() {
@@ -541,6 +613,7 @@ where
                 if delta.is_zero() {
                     delta = self.factor;
                 }
+                // DEBUG(georgios)
                 delta = FromPrimitive::from_u16(10000).unwrap();
                 debug_assert!(!delta.is_zero());
             }
@@ -667,6 +740,15 @@ where
                     step_scaled
                 };
 
+                // inverse the jacobi scaling here, if it was applied
+                let step =  
+                if let Some(jacobi_scaling) = jacobi_scaling.as_ref() {
+                    try_opt!(step.diag_mul_left(jacobi_scaling, Invert::No),
+                        on_none = TerminationFailure::WrongDimensions("jacobi scaling and parameters have incompatible dimensions"),
+                        problem = problem)
+                } else {
+                    step
+                };
 
                 // candidate for the new parameters
                 // x_new = x + p

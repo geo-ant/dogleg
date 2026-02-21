@@ -421,7 +421,7 @@ where
 
 impl<T, R, C, M> ColEnormsx<T> for M
 where
-    T: RealField + Copy + Float + AddAssign,
+    T: RealField + Copy + Float + AddAssign + ConstOne,
     M: AsMatRef<T = T, Rows = R, Cols = C> + FaerType,
     C: Shape,
     R: Shape,
@@ -432,6 +432,11 @@ where
     fn column_enorms(&self) -> Self::Output {
         let this = self.as_mat_ref();
         Col::from_iter(this.col_iter().map(|col| col.enorm()))
+    }
+
+    fn damped_inverse_column_enorms(&self) -> Self::Output {
+        let this = self.as_mat_ref();
+        Col::from_iter(this.col_iter().map(|col| T::ONE / (T::ONE + col.enorm())))
     }
 }
 
@@ -604,9 +609,8 @@ where
 
     fn clamp(mut self, min: T, max: T) -> Self {
         self.as_col_mut().iter_mut().for_each(|elem| {
-            * elem = Float::clamp(*elem, min, max);
+            *elem = Float::clamp(*elem, min, max);
         });
         self
     }
-
 }

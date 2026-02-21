@@ -32,6 +32,8 @@ pub trait MagicConst: num_traits::ConstOne + num_traits::ConstZero {
     const ONE_E_MINUS4: Self;
     /// 1e-6
     const ONE_E_MINUS6: Self;
+    /// 1e-7
+    const ONE_E_MINUS7: Self;
     /// 1e-8
     const ONE_E_MINUS8: Self;
     /// machine epsilon
@@ -59,6 +61,7 @@ macro_rules! impl_magic_const {
             const ONE_E_MINUS3: Self = 1e-3;
             const ONE_E_MINUS4: Self = 1e-4;
             const ONE_E_MINUS6: Self = 1e-6;
+            const ONE_E_MINUS7: Self = 1e-7;
             const ONE_E_MINUS8: Self = 1e-8;
             const EPSMCH: Self = Self::EPSILON;
             const EMINUS8: Self = 1e-8;

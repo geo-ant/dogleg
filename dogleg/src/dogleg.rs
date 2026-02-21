@@ -115,8 +115,9 @@ pub enum InitialTrusRegionRadius<T> {
         /// >> interval (.1,100.).100. is a generally recommended value
         factor: T,
     },
-    /// This strategy uses calculates the minpack trust region, but
-    /// if that value is smaller than `minimum`, then `minimum` is used.
+    /// **Default** Use the larger value between the MINPACK initial trust region
+    /// calculation or the given `minimum`.
+    /// 
     /// This is the default strategy, with factor 100 (from MINPACK)
     /// and a minimum of 10000, which is the default trust region radius
     /// in Ceres Solver.
@@ -152,8 +153,6 @@ impl<T:Float> InitialTrusRegionRadius<T> {
         }
 
     }
-
-
 }
 
 /// Powell's Dogleg minimization algorithm. The behaviour of the algorithm
@@ -224,10 +223,10 @@ where
     pub fn new() -> Self {
         let ftol = T::ONE_E_MINUS6;
         Self {
-            // for the default tolerances see
+            // for the default tolerances in CERES see
             // https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/include/ceres/solver.h#L304
             ftol,
-            gtol: T::ONE_E_MINUS4*ftol,
+            gtol: T::ONE_E_MINUS7,
             xtol: T::ONE_E_MINUS8,
             // the min and max diagonal default values are taken from
             // CERES solver, see: https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_strategy.h#L67
@@ -326,9 +325,12 @@ where
     #[must_use]
     /// This sets the maximum number of function evaluations to
     /// `patience * (n+1)`, where n is the number of parameters.
-    pub fn with_patience(self, patience: NonZero<u64>) -> Self {
+    ///
+    /// # Panics if patients is zero
+    pub fn with_patience(self, patience: u64) -> Self {
+        assert_ne!(patience,0);
         Self {
-            patience: patience.get(),
+            patience,
             ..self
         }
     }

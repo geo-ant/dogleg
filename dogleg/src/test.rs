@@ -440,7 +440,7 @@ fn test_bard() {
     // given, but we'll just take what we had in levenberg-marquardt
     assert_fp_eq!(report.objective_function, 0.5 * 8.21487e-3, epsilon = 1e-8);
 
-    // NOTE(geo-ant) those problems fail with the levmar crate as well.
+    // NOTE(geo-ant) those next problems fail with the levmar crate as well.
     // see https://rdrr.io/github/jlmelville/funconstrain/man/bard.html where it says:
     //  > Minima: f = 8.214877e-3 at c(0.08241056, 1.133036, 2.343695)
     //  > Solvers terminate with f near 17 for parameter 1 in 0.84 to 0.89
@@ -460,9 +460,7 @@ fn test_bard() {
     // NOTE(geo-ant) interestingly, this passes in ceres although the starting point
     // is farther away.
     problem.set_params(&initial.map(|x| x * 100.));
-    let (problem, report) = Dogleg::new()
-        .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
     let problem = problem.inner;
     // panic!("rep: {:?}", report);
     assert_fp_eq!(report.objective_function, 0.5 * 17.4286, epsilon = 1e-4);

@@ -101,6 +101,61 @@ macro_rules! try2 {
     };
 }
 
+/// Describes different ways of selecting for an initial trust region radius
+#[derive(Debug,Clone,PartialEq)]
+pub enum InitialTrusRegionRadius<T> {
+    /// This strategy uses the minpack approach. The default value for
+    /// factor in MINPACK is 100.
+    Minpack {
+        /// see `lmder` function in the minpack code (https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90)
+        /// >> a positive input variable used in determining the
+        /// >> initial step bound. this bound is set to the product of
+        /// >> factor and the euclidean norm of diag*x if nonzero, or else
+        /// >> to factor itself. in most cases factor should lie in the
+        /// >> interval (.1,100.).100. is a generally recommended value
+        factor: T,
+    },
+    /// This strategy uses calculates the minpack trust region, but
+    /// if that value is smaller than `minimum`, then `minimum` is used.
+    /// This is the default strategy, with factor 100 (from MINPACK)
+    /// and a minimum of 10000, which is the default trust region radius
+    /// in Ceres Solver.
+    MinpackAtLeast {
+        factor: T,
+        minimum: T,
+    },
+    /// Use this exact value for the initial trust region radius
+    Exact(T),
+}
+
+impl<T:MagicConst> Default for InitialTrusRegionRadius<T> {
+    fn default() -> Self {
+        Self::MinpackAtLeast { factor: T::ONE_E2, minimum:T::ONE_E4}
+    }
+}
+
+impl<T:Float> InitialTrusRegionRadius<T> {
+    fn calculate(&self, initial_param_norm: T) -> T{
+        match *self {
+            InitialTrusRegionRadius::Minpack { factor } => {
+                let radius = initial_param_norm*factor;
+                if radius.is_zero() {
+                    factor
+                } else {
+                    radius
+                }
+            },
+            InitialTrusRegionRadius::MinpackAtLeast { factor, minimum } => {
+                Self::Minpack { factor }.calculate(initial_param_norm).max(minimum)
+            },
+            InitialTrusRegionRadius::Exact(radius) => radius,
+        }
+
+    }
+
+
+}
+
 /// Powell's Dogleg minimization algorithm. The behaviour of the algorithm
 /// can be controlled by setting various parameters.
 ///
@@ -126,13 +181,8 @@ pub struct Dogleg<T> {
     /// of the problem is zero.
     /// See section 2.3 in the MINPACK user guide: https://cds.cern.ch/record/126569/files/CM-P00068642.pdf
     gtol: T,
-    /// see `lmder` function in the minpack code (https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90)
-    /// >> a positive input variable used in determining the
-    /// >> initial step bound. this bound is set to the product of
-    /// >> factor and the euclidean norm of diag*x if nonzero, or else
-    /// >> to factor itself. in most cases factor should lie in the
-    /// >> interval (.1,100.).100. is a generally recommended value
-    factor: T,
+    /// initial trust region radius
+    initial_delta: InitialTrusRegionRadius<T>,
     /// Whether to apply diagonal scaling internally. For this, see
     /// Nocedal & Wright, p 95-97.
     use_elliptical_parameter_scaling: bool,
@@ -185,10 +235,10 @@ where
             // squared norms for clipping, so we have to take the square roots.
             min_diagonal : MagicConst::ONE_E_MINUS3,
             max_diagonal : MagicConst::ONE_E16,
-            factor: T::ONE_HUNDRED,
             use_elliptical_parameter_scaling: true,
             patience: 100,
             use_jacobi_scaling: true,
+            initial_delta: InitialTrusRegionRadius::default()
         }
     }
 
@@ -265,27 +315,10 @@ where
     }
 
     #[must_use]
-    /// Used to set the initial radius of the trust region, according to this
-    /// logic from the MINPACK implementation:
-    ///
-    /// > a positive input variable used in determining the
-    /// > initial step bound. this bound is set to the product of
-    /// > factor and the euclidean norm of diag*x if nonzero, or else
-    /// > to factor itself. in most cases factor should lie in the
-    /// > interval (.1, 100). 100 is a generally recommended value.
-    ///
-    /// Cf. function `lmder` in the [MINPACK implementation](https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90).
-    ///
-    /// # Panics
-    ///
-    /// If stepbound is negative
-    pub fn with_stepbound(self, stepbound: T) -> Self {
-        assert!(
-            stepbound.is_finite() && stepbound > T::ZERO,
-            "step bound < 0 not allowed"
-        );
+    /// Used to set the initial radius of the trust region
+    pub fn with_stepbound(self, stepbound: InitialTrusRegionRadius<T>) -> Self {
         Self {
-            factor: stepbound,
+            initial_delta: stepbound,
             ..self
         }
     }
@@ -619,12 +652,11 @@ where
                         params.enorm()
                     }
                 };
-                delta = param_norm * self.factor;
-                if delta.is_zero() {
-                    delta = self.factor;
-                }
+                // this is a hybrid of the 
+                delta = self.initial_delta.calculate(param_norm);
                 // DEBUG(georgios)
-                delta = FromPrimitive::from_u16(10000).unwrap();
+                // delta = FromPrimitive::from_u16(10000).unwrap();
+                println!("delta = {:?}",delta);
                 debug_assert!(!delta.is_zero());
             }
 

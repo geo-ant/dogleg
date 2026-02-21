@@ -9,8 +9,12 @@ pub trait MagicConst: num_traits::ConstOne + num_traits::ConstZero {
     const TEN: Self;
     /// the value 30
     const THIRTY: Self;
-    /// the value 100
-    const ONE_HUNDRED: Self;
+    /// the value 100 = 1e2
+    const ONE_E2: Self;
+    /// the value 1e4 = 10000
+    const ONE_E4: Self;
+    /// the value 1e6
+    const ONE_E6: Self;
     /// the value 1E16
     const ONE_E16: Self;
     /// (those weird P<...> are from MINPACK)
@@ -44,7 +48,9 @@ macro_rules! impl_magic_const {
             const THREE: Self = 3.;
             const TEN: Self = 10.;
             const THIRTY: Self = 30.;
-            const ONE_HUNDRED: Self = 100.;
+            const ONE_E2: Self = 1e2;
+            const ONE_E4: Self = 1e4;
+            const ONE_E6: Self = 1e6;
             const ONE_E16: Self = 1e16;
             const P75: Self = 0.75;
             const P5: Self = 0.5;

@@ -658,7 +658,6 @@ where
                 delta = self.initial_delta.calculate(param_norm);
                 // DEBUG(georgios)
                 // delta = FromPrimitive::from_u16(10000).unwrap();
-                println!("delta = {:?}",delta);
                 debug_assert!(!delta.is_zero());
             }
 

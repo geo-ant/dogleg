@@ -172,17 +172,18 @@ where
     /// Create a solver with reasonable default parameters. Consider changing
     /// the parameters if optimization results are unsatisfying.
     pub fn new() -> Self {
-        // this logic is taken from the brilliant `levenberg-marquardt` crate
-        let user_tol = T::epsilon() * T::THIRTY;
+        let ftol = T::ONE_E_MINUS6;
         Self {
-            ftol: user_tol,
-            xtol: user_tol,
-            gtol: user_tol,
+            // for the default tolerances see
+            // https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/include/ceres/solver.h#L304
+            ftol,
+            gtol: T::ONE_E_MINUS4*ftol,
+            xtol: T::ONE_E_MINUS8,
             // the min and max diagonal default values are taken from
             // CERES solver, see: https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_strategy.h#L67
             // but note that the values in the ceres score are applied to the
             // squared norms for clipping, so we have to take the square roots.
-            min_diagonal : MagicConst::P001,
+            min_diagonal : MagicConst::ONE_E_MINUS3,
             max_diagonal : MagicConst::ONE_E16,
             factor: T::ONE_HUNDRED,
             use_elliptical_parameter_scaling: true,
@@ -803,7 +804,7 @@ where
                     // println!("delta: {:?}",delta);
                     // println!("params: {:?}", params);
 
-                    let accept_update = ratio >= T::P0001;
+                    let accept_update = ratio >= T::ONE_E_MINUS4;
 
                     // println!("objective fn: {:?}", objective_function);
                     if accept_update {

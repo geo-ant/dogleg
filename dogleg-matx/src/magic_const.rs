@@ -23,9 +23,13 @@ pub trait MagicConst: num_traits::ConstOne + num_traits::ConstZero {
     /// "point 1" = 0.1
     const P1: Self;
     /// "point 001 = 1e-3"
-    const P001: Self;
+    const ONE_E_MINUS3: Self;
     /// "point 0001" = 0.
-    const P0001: Self;
+    const ONE_E_MINUS4: Self;
+    /// 1e-6
+    const ONE_E_MINUS6: Self;
+    /// 1e-8
+    const ONE_E_MINUS8: Self;
     /// machine epsilon
     const EPSMCH: Self;
     ///@todo(HACK) remove
@@ -46,8 +50,10 @@ macro_rules! impl_magic_const {
             const P5: Self = 0.5;
             const P25: Self = 0.25;
             const P1: Self = 0.1;
-            const P001: Self = 1e-3;
-            const P0001: Self = 1e-4;
+            const ONE_E_MINUS3: Self = 1e-3;
+            const ONE_E_MINUS4: Self = 1e-4;
+            const ONE_E_MINUS6: Self = 1e-6;
+            const ONE_E_MINUS8: Self = 1e-8;
             const EPSMCH: Self = Self::EPSILON;
             const EMINUS8: Self = 1e-8;
         }

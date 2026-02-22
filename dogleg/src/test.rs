@@ -39,7 +39,6 @@ use levmar_problems::{assert_fp_eq, problems::*, utils::differentiate_numericall
 use nalgebra::*;
 
 mod debugging;
-use debugging::IntoDebugReport;
 
 #[test]
 fn test_linear_full_rank() {
@@ -316,9 +315,7 @@ fn test_powell_singular() {
     assert_fp_eq!(jac_num, jac_trait, epsilon = 1e-5);
 
     problem.set_params(&initial.clone());
-    let (problem, report) = Dogleg::new()
-        .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
     let mut problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
@@ -328,9 +325,7 @@ fn test_powell_singular() {
     );
 
     problem.set_params(&initial.map(|x| x * 10.));
-    let (problem, report) = Dogleg::new()
-        .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
     let mut problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
@@ -342,9 +337,7 @@ fn test_powell_singular() {
     // this is to allow a failed solver here. The solver won't converge, but still
     // the objective function is good enough
     problem.set_params(&initial.map(|x| x * 100.));
-    let (problem, report) = Dogleg::new()
-        .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
     let problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
@@ -507,9 +500,7 @@ fn test_kowalik_osborne() {
     );
 
     problem.set_params(&initial.map(|x| x * 10.));
-    let (problem, report) = Dogleg::new()
-        .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
     let mut problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.5 * 1.02734e-3, epsilon = 1e-6);
     // this is actually not a very good solution, but this is the best that
@@ -523,9 +514,7 @@ fn test_kowalik_osborne() {
     // but a valid local minimum nonetheless. Finds the same minimum as with
     // the starting point above
     problem.set_params(&initial.map(|x| x * 100.));
-    let (problem, report) = Dogleg::new()
-        .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
     let problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.5 * 1.02734e-3, epsilon = 1e-6);
     assert_fp_eq!(problem.params[1], -14.07, epsilon = 1e-1);
@@ -687,9 +676,7 @@ fn test_watson() {
         epsilon = 1e-2
     );
     problem.set_params(&initial.map(|x| x + 10.));
-    let (problem, report) = Dogleg::new()
-        .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
     let mut problem = problem.inner;
     assert_fp_eq!(
         report.objective_function,
@@ -712,10 +699,7 @@ fn test_watson() {
         epsilon = 1e-2
     );
     problem.set_params(&initial.map(|x| x + 100.));
-    let (problem, report) = Dogleg::new()
-        // TODO: remove that!! This means something in my diagonal scaling is still wrong!!
-        .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
     let problem = problem.inner;
     assert_fp_eq!(
         report.objective_function,
@@ -743,10 +727,7 @@ fn test_watson() {
         OVector::<f64, U12>::from_column_slice(&[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.]);
 
     problem.set_params(&initial.clone());
-    let (problem, report) = Dogleg::new()
-        // .with_scale_diag(false)
-        .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
     let mut problem = problem.inner;
     // this is from the MGH paper
     assert_fp_eq!(report.objective_function, 0.5 * 4.72238e-10, epsilon = 1e-5);
@@ -778,8 +759,9 @@ fn test_watson() {
     // );
     problem.set_params(&initial.map(|x| x + 10.));
     let (problem, report) = Dogleg::new()
+        .with_patience(200)
         .minimize(LevMarAdapter::new(problem))
-        .into_debug_report();
+        .unwrap();
     let problem = problem.inner;
     let _ = problem;
     assert_fp_eq!(

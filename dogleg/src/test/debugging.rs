@@ -1,3 +1,7 @@
+/// handy little helper that we can use unstead of unwrap() for debugging purposes
+/// when calling the minimize function on a dogleg instance. Helpful to
+/// check if we're just running out of interations, but the solution might
+/// still be acceptable.
 use crate::{dogleg::MinimizationReport, LeastSquaresProblem};
 use dogleg_matx::{magic_const::MagicConst, Colx};
 use num_traits::Float;
@@ -21,6 +25,7 @@ impl<T> From<MinimizationReport<T>> for DebugReport<T> {
 }
 
 /// useful for debugging to have a unified interface
+#[allow(dead_code)]
 pub trait IntoDebugReport<P, T> {
     #[deprecated = "todo: remove this eventually!"]
     fn into_debug_report(self) -> (P, DebugReport<T>);

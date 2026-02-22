@@ -1,7 +1,6 @@
 use crate::{
     Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
-    ElementwiseReplaceLeqx, Matx, MaxScaledDivx, Scalex, Svdx, ToSvdx, TrMatVecMulx,
-    TransformedVecNorm,
+    ElementwiseReplaceLeqx, Matx, MaxAbsx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
 use nalgebra::{DMatrix, SMatrix, Vector};
@@ -368,11 +367,11 @@ fn max_scaled_div_for_vector() {
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&svec1, scale, &svec2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&svec1, scale, &svec2).unwrap(),
         (3. / 12.)
     );
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&dvec1, scale, &dvec2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&dvec1, scale, &dvec2).unwrap(),
         (3. / 12.)
     );
 
@@ -381,13 +380,14 @@ fn max_scaled_div_for_vector() {
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&svec1, scale, &svec2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&svec1, scale, &svec2).unwrap(),
         (3. / 12.)
     );
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&dvec1, scale, &dvec2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&dvec1, scale, &dvec2).unwrap(),
         (3. / 12.)
     );
+    todo!("test max elem")
 }
 
 #[test]

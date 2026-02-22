@@ -221,30 +221,31 @@ pub trait DiagLeftMulx<T, V>: Sized {
 }
 
 /// a calculation that is pretty specific to the trust region problem.
-/// This is used in the gtol-criterion, which is described elsewhere in
-/// this codebase.
-///
-/// What this calculation does is this:
-/// We have two VECTORS (of same lenth) `self` and `v`, and a scalar `s`.
-/// What we now calculate is:
-///
-/// ```math
-///            self_i
-/// max_i  ------------
-///           s * v_i
-/// ```
-///
-/// This seems a bit weird, but it's only used when `self` is the gradient
-/// of the problem self = J^T r (such that `self_i` = `g_i` = `j_i^T r`),
-/// and `v` = the column norms of `J`, and `s = ||r||` (the residual norm).
-/// This is how this gets used for the gtol criterion, see also
-/// MINPACK user guide p.22. We can assume `s!=0`, because we'll have checked
-/// earlier if the residuals vanished (in which case iteration is successful).
-pub trait MaxScaledDivx<T, V> {
-    /// calculation as described above where None means the vectors
-    /// had no elements. The implementation is free to assume that the
-    /// vectors have same length.
-    fn max_abs_scaled_div(&self, s: T, v: &V) -> Option<T>;
+/// This exposes two functionalities that could be used in the gtol-criterion,
+/// which is described elsewhere in this codebase.
+pub trait MaxAbsx<T, V> {
+    /// This is just the ||v||_inf -norm of the vector v, meaning
+    /// the maximum of the absolute values of the elements.
+    /// Returns None, if there are no elements in the vector.
+    fn max_abs_elem(&self) -> Option<T>;
+
+    /// What this calculation does is this:
+    /// We have two VECTORS (of same lenth) `self` and `v`, and a scalar `s`.
+    /// What we now calculate is:
+    ///
+    /// ```math
+    ///            self_i
+    /// max_i  ------------
+    ///           s * v_i
+    /// ```
+    ///
+    /// This seems a bit weird, but it's only used when `self` is the gradient
+    /// of the problem self = J^T r (such that `self_i` = `g_i` = `j_i^T r`),
+    /// and `v` = the column norms of `J`, and `s = ||r||` (the residual norm).
+    /// This is how this gets used for the gtol criterion, see also
+    /// MINPACK user guide p.22. We can assume `s!=0`, because we'll have checked
+    /// earlier if the residuals vanished (in which case iteration is successful).
+    fn max_abs_scaled_div_elem(&self, s: T, v: &V) -> Option<T>;
 }
 
 /// a very dogleg specific trait that is used when assigning the diagonal

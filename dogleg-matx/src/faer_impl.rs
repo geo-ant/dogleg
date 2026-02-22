@@ -1,8 +1,8 @@
 use crate::utility::enorm;
 use crate::{
     Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
-    ElementwiseReplaceLeqx, Invert, Matx, MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx,
-    TrMatVecMulx, TransformedVecNorm,
+    ElementwiseReplaceLeqx, Invert, Matx, MaxAbsx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx,
+    TransformedVecNorm,
 };
 use faer::col::AsColMut;
 use faer::linalg::solvers::Svd;
@@ -549,20 +549,28 @@ where
     }
 }
 
-impl<T, R, V1, V2> MaxScaledDivx<T, V2> for V1
+impl<T, R, V1, V2> MaxAbsx<T, V2> for V1
 where
-    T: Float + RealField + Copy,
+    T: Float + RealField + Copy + TotalOrder,
     R: Shape,
     V1: FaerType + AsColRef<T = T, Rows = R>,
     V2: FaerType + AsColRef<T = T, Rows = R>,
 {
-    fn max_abs_scaled_div(&self, s: T, v: &V2) -> Option<T> {
+    fn max_abs_scaled_div_elem(&self, s: T, v: &V2) -> Option<T> {
         let this = self.as_col_ref();
         let v = v.as_col_ref();
         faer::zip!(this, v)
             .map(|faer::unzip!(this, rhs)| this.abs() / *rhs)
             .max()
             .map(|val| val / s)
+    }
+
+    fn max_abs_elem(&self) -> Option<T> {
+        let this = self.as_col_ref();
+        this.iter()
+            .copied()
+            .map(Float::abs)
+            .max_by(TotalOrder::total_cmp)
     }
 }
 

@@ -1,7 +1,7 @@
 use crate::{
     col_assert_relative_eq, mat_assert_relative_eq, Addx, ColEnormsx, Colx, DiagLeftMulx,
-    DiagRightMulx, Dotx, ElementwiseMaxx, ElementwiseReplaceLeqx, Matx, MaxScaledDivx, Scalex,
-    Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    DiagRightMulx, Dotx, ElementwiseMaxx, ElementwiseReplaceLeqx, Matx, MaxAbsx, Scalex, Svdx,
+    ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
 use faer::{mat::AsMatRef, prelude::SolveLstsq};
@@ -204,7 +204,7 @@ fn max_abs_scaled_div_for_vector() {
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&v1, scale, &v2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&v1, scale, &v2).unwrap(),
         (3. / 12.)
     );
 
@@ -213,9 +213,11 @@ fn max_abs_scaled_div_for_vector() {
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&v1, scale, &v2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&v1, scale, &v2).unwrap(),
         (3. / 12.)
     );
+
+    todo!("test max elem")
 }
 
 #[test]

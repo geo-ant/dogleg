@@ -1,12 +1,9 @@
 use crate::{dogleg::report::TerminationFailure, MagicConst};
-use dogleg_matx::{Addx, Colx, Dotx, Matx, MaxScaledDivx, OwnedColx, Scalex};
+use dogleg_matx::{Addx, Colx, Dotx, Matx, MaxAbsx, OwnedColx, Scalex};
 use num_traits::Float;
 
 #[cfg(feature = "assert2")]
 use assert2::debug_assert;
-
-#[cfg(test)]
-mod test;
 
 #[derive(Debug, Clone, PartialEq)]
 //@note(geo-ant) why do these generic have those weird names?
@@ -103,17 +100,21 @@ pub trait DoglegStepSolver<T>: Sized {
 /// where j_i (vec) is the i-th column of the jacobian and r (vec) is the
 /// residual vector. g_i (scalar) is the i-th element of the gradient,
 /// since g = J^T r.
-pub fn gtol_calc<T, VN1, VN2>(jacobian_norms: &VN1, gradient: &VN2, residual_norm: T) -> Option<T>
+pub(crate) fn minpack_gmax_calc<T, VN1, VN2>(
+    jacobian_norms: &VN1,
+    gradient: &VN2,
+    residual_norm: T,
+) -> Option<T>
 where
     VN1: Colx<T>,
-    VN2: MaxScaledDivx<T, VN1> + Colx<T>,
+    VN2: MaxAbsx<T, VN1> + Colx<T>,
 {
     assert_eq!(
         jacobian_norms.dim(),
         gradient.dim(),
         "jacobian must have same number of columns as gradient"
     );
-    gradient.max_abs_scaled_div(residual_norm, jacobian_norms)
+    gradient.max_abs_scaled_div_elem(residual_norm, jacobian_norms)
 }
 
 /// this calculates the dogleg step from the component vectors p_b, p_u,

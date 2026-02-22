@@ -1,4 +1,4 @@
-use crate::dogleg::common::gtol_calc;
+use crate::dogleg::common::minpack_gmax_calc;
 use crate::Error;
 use crate::LeastSquaresProblem;
 use crate::MagicConst;
@@ -11,11 +11,10 @@ use dogleg_matx::DiagRightMulx;
 use dogleg_matx::ElementwiseMaxx;
 use dogleg_matx::ElementwiseReplaceLeqx;
 use dogleg_matx::Invert;
-use dogleg_matx::MaxScaledDivx;
+use dogleg_matx::MaxAbsx;
 use dogleg_matx::{Colx, TrMatVecMulx};
 use num_traits::Float;
 use num_traits::FromPrimitive;
-use std::num::NonZero;
 
 mod common;
 mod qr_impl;
@@ -101,6 +100,72 @@ macro_rules! try2 {
     };
 }
 
+
+/// Describes different ways of selecting different gradient tolerance
+/// calculation strategies.
+#[derive(Debug,Copy,Clone,PartialEq)]
+pub enum GradientTolerance<T> {
+    /// Use the max absolute value `gmax` of the gradient for calculation
+    /// and compare it against `gtol`. If it's smaller or equal, consider
+    /// the algorithm terminated successfully.
+    ///
+    Ceres {
+        gtol: T,
+    },
+    /// minpack style calculation of `gmax`, see section 2.3 of the
+    /// MINPACK User Guide.
+    /// 
+    /// > termination occurs when the cosine of the angle between
+    /// > \[the residuals\] and any column of the jacobian is at most `gtol` in absolute
+    /// > value. therefore, gtol measures the orthogonality
+    /// > desired between the \[residual\] vector and the columns
+    /// > of the jacobian.
+    ///
+    /// Cf. function `lmder` in the [MINPACK implementation](https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90).
+    ///
+    /// In theory, this is a pretty elegant and scale invariant way of using the
+    /// gradient to check termination. In practice, it doesn't perform
+    /// as well as CERES' simpler absolute value check, at least on the
+    /// MGH set of test problems. As in the `Ceres` variant, the calculated
+    /// `gmax` is compared against `gtol` to check for termination.
+    Minpack {
+        gtol: T,
+    },
+}
+
+/// the CERES style of gradient tolerance calculation with the default
+/// threshold for gradient tolerance from ceres, see the
+/// [Cere source here](https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/include/ceres/solver.h#L315).
+impl<T: MagicConst>  Default for GradientTolerance<T> {
+    fn default() -> Self {
+        Self::Ceres { gtol: MagicConst::ONE_E_MINUS10 }
+    }
+}
+
+impl<T:Copy> GradientTolerance<T> {
+    /// the gmax value is calculate depending on the strategy.
+    pub(crate) fn calc_gmax<VN1,VN2>(&self, jacobian_norms: &VN1, gradient: &VN2, residual_norm: T) -> Option<T>
+    where
+        VN1: Colx<T>,
+        VN2: MaxAbsx<T, VN1> + Colx<T>,
+        T: Copy  {
+        match self {
+            GradientTolerance::Ceres {..} => gradient.max_abs_elem(),
+            GradientTolerance::Minpack {..} => minpack_gmax_calc(jacobian_norms, gradient, residual_norm),
+        }
+
+    }
+
+    /// the tolerance value gtol
+    pub(crate) fn gtol(&self) -> T {
+        match self {
+            GradientTolerance::Ceres { gtol } => *gtol,
+            GradientTolerance::Minpack { gtol } => *gtol,
+        }
+    }
+
+}
+
 /// Describes different ways of selecting for an initial trust region radius
 #[derive(Debug,Clone,PartialEq)]
 pub enum InitialTrusRegionRadius<T> {
@@ -175,11 +240,9 @@ pub struct Dogleg<T> {
     /// estimating the distance of the true and current x by
     /// See section 2.3 in the MINPACK user guide: https://cds.cern.ch/record/126569/files/CM-P00068642.pdf
     xtol: T,
-    /// Value for checking the orthogonality between residuals and Jacobian.
-    /// It's a more clever (scale-invariant) way of checking whether the gradient
-    /// of the problem is zero.
-    /// See section 2.3 in the MINPACK user guide: https://cds.cern.ch/record/126569/files/CM-P00068642.pdf
-    gtol: T,
+    /// gradient tolerance criterion, which allows CERES style and MINPACK
+    /// style tests.
+    gradient_tolerance: GradientTolerance<T>,
     /// initial trust region radius
     initial_delta: InitialTrusRegionRadius<T>,
     /// Whether to apply diagonal scaling internally. For this, see
@@ -226,7 +289,7 @@ where
             // for the default tolerances in CERES see
             // https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/include/ceres/solver.h#L304
             ftol,
-            gtol: T::ONE_E_MINUS7,
+            gradient_tolerance: Default::default(),
             xtol: T::ONE_E_MINUS8,
             // the min and max diagonal default values are taken from
             // CERES solver, see: https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_strategy.h#L67
@@ -281,36 +344,14 @@ where
     /// Set `gtol` for the termination criterion the gradient
     /// according to this logic from the MINPACK implementation:
     ///
-    /// > termination occurs when the cosine of the angle between
-    /// > \[the residuals\] and any column of the jacobian is at most `gtol` in absolute
-    /// > value. therefore, gtol measures the orthogonality
-    /// > desired between the \[residual\] vector and the columns
-    /// > of the jacobian.
     ///
-    /// Cf. function `lmder` in the [MINPACK implementation](https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90).
     /// # Panics
-    ///
+    /// 
     /// If `gtol` is negative.
-    pub fn with_gtol(self, gtol: T) -> Self {
+    pub fn with_gtol(self, gradient_tolerance: GradientTolerance<T>) -> Self {
+        let gtol= gradient_tolerance.gtol();
         assert!(gtol.is_finite() && gtol >= T::ZERO, "gtol < 0 not allowed");
-        Self { gtol, ..self }
-    }
-
-    #[must_use]
-    /// Shortcut to set `ftol = xtol = tol` and `gtol = 0`, which is what the
-    /// high level driver function `lmder1` in MINPACK does.
-    ///
-    /// Cf. function `lmder` in the [MINPACK implementation](https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90).
-    ///
-    ///
-    pub fn with_tol(self, tol: T) -> Self {
-        assert!(tol.is_finite() && tol > T::ZERO, "tol < 0 not allowed");
-        Self {
-            ftol: tol,
-            xtol: tol,
-            gtol: T::ZERO,
-            ..self
-        }
+        Self { gradient_tolerance, ..self }
     }
 
     #[must_use]
@@ -326,7 +367,7 @@ where
     /// This sets the maximum number of function evaluations to
     /// `patience * (n+1)`, where n is the number of parameters.
     ///
-    /// # Panics if patients is zero
+    /// # Panics if patience is zero
     pub fn with_patience(self, patience: u64) -> Self {
         assert_ne!(patience,0);
         Self {
@@ -460,7 +501,7 @@ where
         // for applying the scaling to the parameters
         P::Parameters: DiagLeftMulx<T, DiagonalWeightsType<T, P>>,
         // for gtol calculation
-        P::Parameters: MaxScaledDivx<T, DiagonalWeightsType<T, P>>,
+        P::Parameters: MaxAbsx<T, DiagonalWeightsType<T, P>>,
         // so that we can add parameters to the step (step type = gradient)
         // for calculating the new params x' = x + p = p + x
         GradType<T, P>: Addx<T, P::Parameters>,
@@ -513,7 +554,7 @@ where
         // for applying the scaling to the parameters
         P::Parameters: DiagLeftMulx<T, DiagonalWeightsType<T, P>>,
         // for gtol calculation
-        P::Parameters: MaxScaledDivx<T, DiagonalWeightsType<T, P>>,
+        P::Parameters: MaxAbsx<T, DiagonalWeightsType<T, P>>,
         // so that we can add parameters to the step (step type = gradient)
         // for calculating the new params x' = x + p = p + x
         GradType<T, P>: Addx<T, P::Parameters>,
@@ -703,16 +744,17 @@ where
                 on_none = TerminationFailure::WrongDimensions("J^T r"),
                 problem = problem
             );
-            // gtol check
-            let gmax = try_opt!(
-                gtol_calc(&jacobian_col_norms, &gradient, rnorm),
+
+            let gmax = {
+                let calc = self.gradient_tolerance.calc_gmax(&jacobian_col_norms, &gradient, rnorm);
+                try_opt!(
+                calc,
                 on_none =
                     TerminationFailure::WrongDimensions("zero dimension for residuals or jacobian"),
                 problem = problem
-            );
-            // println!("gmax = {:?}", gmax);
+            )};
 
-            if gmax <= self.gtol {
+            if gmax <= self.gradient_tolerance.gtol() {
                 return Ok((
                     problem,
                     MinimizationReport {
@@ -893,7 +935,7 @@ where
                     }
 
                     // X-convergence check (for parameters), MINPACK user guide p. 23
-                    let xnorm = match diagonal_weights.as_ref() {
+                    let scaled_xnorm = match diagonal_weights.as_ref() {
                         Some(weights) => {
                             try_opt!(
                                 params.diag_mul_left_enorm(weights),
@@ -907,7 +949,42 @@ where
                         // params.diag_mul_left_enorm(weights).unwrap(),
                         None => params.enorm(),
                     };
-                    let xtol_check = delta <= self.xtol * xnorm;
+
+                    // # Xtol Criterion
+                    // 
+                    // This deserves some elaboration because there are significant
+                    // differences between both the MINPACK implementation, the
+                    // Madsen, Tingleff et al paper and the actual CERES implementation.
+                    // 
+                    // The minpack xtol check is 
+                    // 
+                    // ```
+                    // let xtol_check = delta <= self.xtol * xnorm;
+                    // ```
+                    // see: https://github.com/fortran-lang/minpack/blob/c0b5aea9fcd2b83865af921a7a7e881904f8d3c2/src/minpack.f90#L1810
+                    // 
+                    // However, this gives us bad stopping criteria for Dogleg,
+                    // since there might very well be cases where the trust
+                    // region is still very large although the steps are very
+                    // small. 
+                    // 
+                    // Instead we use a criterion that is inspired by CERES, see
+                    // https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_minimizer.cc#L726,
+                    // which again is somewhat similar to the Madsen et al
+                    // paper: https://www2.imm.dtu.dk/pubdb/edoc/imm3215.pdf
+                    // in Algorithm 3.21. However, that paper also restricts
+                    // the trust region radius (very similar to what MINPACK
+                    // does), but instead it checks that the step size is:
+                    //
+                    // step_size <= xtol*(xnorm + xtol)
+                    //
+                    // In this case, I'm consistently using the scaled parameters
+                    // and step size, if scaling is enabled, while CERES
+                    // does not (I think). I say "I think" because it's hard
+                    // to trace which scaling CERES gets applied when and what
+                    // the state actually contains.
+
+                    let xtol_check = p_scaled_norm <= self.xtol * (scaled_xnorm+self.xtol);
 
                     if xtol_check {
                         drop(problem_guard);
@@ -962,7 +1039,7 @@ where
                     }
 
                     // this is for xtol
-                    if delta <= T::EPSMCH {
+                    if p_scaled_norm <= T::EPSMCH {
                         drop(problem_guard);
                         return Err(Error {
                             problem,
@@ -992,8 +1069,11 @@ struct FtolCheck<T> {
 
 impl<T: Float + MagicConst> FtolCheck<T> {
     fn check(self) -> bool {
-        self.predicted_reduction <= self.tol * self.objective_function
-            && Float::abs(self.actual_reduction) <= self.tol * self.objective_function
-            && self.actual_reduction <= T::TWO * self.predicted_reduction
+        self.predicted_reduction <= self.tol * self.objective_function &&
+            Float::abs(self.actual_reduction) <= self.tol * self.objective_function
+        // NOTE(geo-ant): this is part of the original MINPACK check, but
+        // seems overly strict to me.
+        // TODO(geo-ant): decide whether to keep this...
+        // && self.actual_reduction <= T::TWO * self.predicted_reduction
     }
 }

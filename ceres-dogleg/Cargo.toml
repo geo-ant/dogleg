@@ -12,3 +12,6 @@ levenberg-marquardt = "0.15"
 levmar-problems = {path = "../levmar-problems"}
 dogleg-matx = {path = "../dogleg-matx"}
 assert2 = "0.3"
+
+[build-dependencies]
+cc = "1.2"

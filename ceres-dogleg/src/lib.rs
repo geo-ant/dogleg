@@ -6,28 +6,34 @@
 //! # apt install libceres-dev
 //! ```
 use anyhow::{anyhow, bail};
-use ceres_solver::{CostFunctionType, NllsProblem, solver::MinimizerType};
-use core::f64;
-use dogleg_matx::Matx;
-use levenberg_marquardt::LeastSquaresProblem;
-use nalgebra::{DefaultAllocator, Dim, OVector, RealField, Scalar, Vector, allocator::Allocator};
-use std::{
-    io::Read,
-    sync::{Arc, Mutex},
+use ceres_solver::{
+    CostFunctionType, NllsProblem,
+    solver::{DoglegType, LinearSolverType, LoggingType, MinimizerType},
 };
+use core::f64;
+use levenberg_marquardt::LeastSquaresProblem;
+use nalgebra::{DefaultAllocator, Dim, allocator::Allocator};
+use std::sync::{Arc, Mutex, Once};
 
 pub use ceres_solver::SolverOptions;
 extern crate ceres_solver;
 
-struct CeresReport {
+pub struct CeresReport {
     pub objective_function: f64,
 }
 
 #[cfg(test)]
-mod tests;
+mod test;
+
+// binding for cpp/glogging.cpp
+unsafe extern "C" {
+    fn init_glog_for_ceres(verbosity: i32);
+}
+
+static GLOGGING_INIT: Once = Once::new();
 
 /// given options.
-fn ceres_solve_with_dogleg<P, M, N>(problem: P) -> anyhow::Result<(P, CeresReport)>
+pub fn ceres_solve_with_dogleg<P, M, N>(problem: P) -> anyhow::Result<(P, CeresReport)>
 where
     M: Dim,
     N: Dim,
@@ -35,10 +41,19 @@ where
     P::JacobianStorage: Clone,
     DefaultAllocator: Allocator<N> + Allocator<M> + Allocator<N, M>,
 {
+    GLOGGING_INIT.call_once(|| unsafe { init_glog_for_ceres(2) });
     let options = SolverOptions::builder()
         .minimizer_type(MinimizerType::TRUST_REGION)
         .trust_region_strategy_type(ceres_solver::solver::TrustRegionStrategyType::DOGLEG)
+        .dogleg_type(DoglegType::TRADITIONAL_DOGLEG)
+        .linear_solver_type(LinearSolverType::DENSE_QR)
+        .max_num_iterations(100)
+        // NOTE: could be helpful for some high level logging, but does NOT
+        // give us the VLOG(n) output.
         .update_state_every_iteration(true)
+        .use_nonmonotonic_steps(false)
+        // .minimizer_progress_to_stdout(true)
+        .logging_type(LoggingType::PER_MINIMIZER_ITERATION)
         .build()
         .unwrap();
     ceres_solve_with_options(problem, options)
@@ -175,6 +190,9 @@ where
     if !solution.summary.is_solution_usable() {
         bail!("CERES solver indicates solution is not usable");
     }
+
+    // just check that no inner iteration steps are performed
+    assert_eq!(solution.summary.num_inner_iteration_steps(), -1);
 
     Ok((
         problem,

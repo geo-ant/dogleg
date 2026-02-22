@@ -1,6 +1,6 @@
 use crate::{dogleg::report::TerminationFailure, MagicConst};
 use dogleg_matx::{Addx, Colx, Dotx, Matx, MaxScaledDivx, OwnedColx, Scalex};
-use num_traits::{ConstOne, Float};
+use num_traits::Float;
 
 #[cfg(feature = "assert2")]
 use assert2::debug_assert;
@@ -132,7 +132,11 @@ where
 // we have to use into_ownedx() for the return types and Option<PU::Ownedx> and
 // constrain the PU : Colx<T, Ownedx= PB::Ownedx>. But I won't do it unless I
 // have to.
-pub fn dogleg_step<T, P>(pu: &P, pb: &P, delta: T) -> Result<P::Owned, TerminationFailure>
+pub fn traditional_dogleg_step<T, P>(
+    pu: &P,
+    pb: &P,
+    delta: T,
+) -> Result<P::Owned, TerminationFailure>
 where
     T: Float + MagicConst + std::fmt::Debug,
     P: Colx<T, Owned = P> + Addx<T, P> + Dotx<T, P> + Scalex<T>,
@@ -143,15 +147,18 @@ where
 
     // we have to treat 3 cases differently:
     if pb_norm <= delta {
+        // println!("Dogleg: choosing GN step.");
         // 1) in this case the entire dogleg lies inside the trust region radius
         // and we can just return the value for tau = 2, which is p_b
         Ok(pb.clone_owned())
     } else if pu_norm >= delta {
+        // println!("Dogleg: choosing Cauchy step.");
         // 2) in this case the first part of the dogleg path lies inside
         // the trust region, so we can just find the tau in [0,1] for
         // which ||p|| = delta, which is just tau = delta/pu_norm.
         Ok(pu.clone_owned().scale(delta / pu_norm))
     } else {
+        // println!("Dogleg: choosing interpolated step.");
         // 3) in this case the rust region intersects somewhere inside the
         // second part of the dogleg and we have to do some algebra
         // to find the correct tau in [1,2].
@@ -182,7 +189,7 @@ where
         // mathematically, but numerically c can be small. The case c-> 0 implies
         // b/c -> inf, such that tau-1 = 0.
         if !b_c.is_finite() || b_c >= Float::sqrt(<T as Float>::max_value()) {
-            return Ok(pu.clone_owned());
+            return Ok(pu.clone_owned().scale(delta / pu_norm));
         }
         let tau_minus_one = -b_c + Float::sqrt((d - a) / c + Float::powi(b_c, 2));
         debug_assert!(tau_minus_one >= T::ZERO - T::EPSMCH);
@@ -199,12 +206,19 @@ where
             .add(&pb_pu.scale(tau_minus_one))
             .ok_or(TerminationFailure::WrongDimensions("dogleg step"))?;
         let p_norm = p.enorm();
+
+        if p_norm > delta {
+            Ok(p.scale(delta / p_norm))
+        } else {
+            Ok(p)
+        }
+
         // some sanity checks with some generous bounds for numerical problems
         // debug_assert!(Float::powi(p_norm, 2) <= delta * delta + T::EPSMCH * T::ONE_HUNDRED);
         // debug_assert!(p_norm >= pu_norm - T::EPSMCH * T::TEN);
         // debug_assert!(p_norm <= pb_norm + T::EPSMCH * T::TEN);
         // @todo(geo) maybe add more logic to restrict the p step to the feasible
         // range.
-        Ok(p)
+        // Ok(p)
     }
 }

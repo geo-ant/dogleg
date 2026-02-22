@@ -1,6 +1,6 @@
 //! Test crate that provides the test problems from the levenberg-marquardt
 //! crate to the rest of the crates in this test suite. All files in this
-//! crate were copied (and lightly edited in parts) from the `levenberg-marquardt` crate.
+//! crate were copied (and edited in parts to varying degrees) from the `levenberg-marquardt` crate.
 //! See https://github.com/rust-cv/levenberg-marquardt
 //! and https://crates.io/crates/levenberg-marquardt/
 //!

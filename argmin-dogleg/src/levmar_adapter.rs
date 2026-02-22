@@ -1,11 +1,10 @@
 use argmin::{
-    argmin_error,
     core::{ArgminFloat, CostFunction, Executor, Gradient, Hessian, State},
     solver::trustregion::{Dogleg, TrustRegion},
 };
 use argmin_math::ArgminInv;
 use dogleg_matx::{magic_const::MagicConst, Colx};
-use nalgebra::{allocator::Allocator, DefaultAllocator, Dim, OMatrix, OVector, RealField, Vector};
+use nalgebra::{DefaultAllocator, Dim, OMatrix, OVector, RealField, Vector};
 use num_traits::{Float, FloatConst};
 use std::{marker::PhantomData, sync::Mutex};
 
@@ -104,22 +103,15 @@ where
     }
 }
 
-pub struct ArgminReport<T, N>
-where
-    T: nalgebra::Scalar,
-    N: Dim,
-    DefaultAllocator: Allocator<N>,
-{
-    pub params: OVector<T, N>,
+pub struct ArgminReport<T> {
     pub objective_function: T,
 }
 
 /// run the dogleg minimizer in argmin on a `levenberg-marquardt::LeastSquaresProblem`
 /// instance.
-pub fn run_argmin_dogleg<P, T, M, N>(
+pub fn argmin_solve_with_dogleg<P, T, M, N>(
     problem: P,
-    initial: OVector<T, N>,
-) -> Result<ArgminReport<T, N>, argmin::core::Error>
+) -> Result<(P, ArgminReport<T>), argmin::core::Error>
 where
     M: Dim,
     N: Dim,
@@ -131,11 +123,25 @@ where
     DefaultAllocator: nalgebra::allocator::Allocator<N, N>,
     OMatrix<T, N, N>: ArgminInv<OMatrix<T, N, N>>,
 {
+    let initial = problem.params().to_owned();
     let subproblem = Dogleg::<T>::new();
     let trustregion = TrustRegion::new(subproblem);
+    // TODO / NOTE (geo-ant)
+    // the solver performance is very bad. By playing with the intial parameters here,
+    // like trust region radius, we can make one additional problem work
+    // (linear full rank) in all starting conditions. A cursory glance reveals
+    // that the standard starting conditions seem to pass for several problems,
+    // but the harder starting conditions don't. That makes me think that
+    // the general implementation is correct, but the argmin solver itself
+    // is less robust. The latter would make sense since argmin is not least
+    // squares specific (by design! it's not intended to be) and does some
+    // things (like solving the normal expressions rather than take advantage
+    // of matrix decompositions).
     let exec = Executor::new(ArgminLevMarAdapter::new(problem), trustregion)
-        .configure(|state| state.param(initial.clone()).max_iters(1000));
+        .configure(|state| state.param(initial).max_iters(1000));
     let res = exec.run()?;
+
+    //TODO(geo-ant) maybe check for success here??
 
     let params = res
         .state()
@@ -144,8 +150,11 @@ where
         .ok_or(argmin::core::Error::msg("no best params"))?;
 
     let objective_function = res.state().get_best_cost();
-    Ok(ArgminReport {
-        params,
-        objective_function,
-    })
+
+    // extract the problem back out in an ugly, but safe fashion
+    let mut prob = res.problem.problem.unwrap().inner.into_inner().unwrap();
+    // just to make sure the optimal params are set
+    prob.set_params(&params);
+
+    Ok((prob, ArgminReport { objective_function }))
 }

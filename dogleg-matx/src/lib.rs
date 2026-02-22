@@ -132,9 +132,38 @@ pub trait ToSvdx<T> {
 /// Abstracts over the singular value decomposition of a matrix `A`
 pub trait Svdx<T, V> {
     type Output: Colx<T>;
-    /// Solve ||A x - v||^2 -> min for x. This solves the system
-    /// A x = v in a least squares sense. Return `None` on error.
-    fn solve_lsqr(&self, v: &V) -> Option<Self::Output>;
+    /// Solve
+    /// ```math
+    /// ||A x - b||^2 -> min for x
+    /// ```
+    ///
+    /// wich solves the system
+    ///
+    /// ```math
+    /// A x = b
+    /// ```
+    /// in a least squares sense. Return `None` on error.
+    ///
+    /// This is mathematically equivalent to solving the normal equations
+    /// `A^T A x = A^T b`, but numerically much more stable.
+    fn solve_lsqr(&self, b: &V) -> Option<Self::Output>;
+
+    /// solve the regularized least squares problem
+    ///
+    /// ```math
+    /// min ||A x - b||^2 + mu*||x||^2 -> min for x
+    /// ```
+    ///
+    /// which is mathematically equivalent to, but numerically more efficient than
+    /// solving the regularized normal equations
+    ///
+    /// ```math
+    /// (A^T A + mu*Id) x = A^T b
+    /// ```
+    ///
+    /// where the advantage is that `A^T A + mu* Id` is nonsingular for mu>0.
+    /// For numerical reasons, mu might need to be adjusted.
+    fn solve_lsqr_regularized(&self, b: &V, mu: T) -> Option<Self::Output>;
 
     fn rank(&self) -> usize;
 }
@@ -146,6 +175,16 @@ pub trait ColEnormsx<T> {
     type Output: OwnedColx<T>;
     /// the calculated column norms placed into avector
     fn column_enorms(&self) -> Self::Output;
+    /// this is a very dogleg-specific funtion, which calculates a "damped"
+    /// elementwise inverse of the column norms. Specifically it gives
+    /// us a vector
+    /// ```math
+    /// v_j = 1/(|a_j|+1)
+    /// ```
+    /// where `|a_j|` is the norm of the j-th column of the matrix.
+    /// The `+1` in the denominator acts as a damping so we don't divide
+    /// by zero
+    fn damped_inverse_column_enorms(&self) -> Self::Output;
 }
 
 /// used to indicate whether to invert the diagonal matrix for
@@ -227,4 +266,7 @@ pub trait ElementwiseReplaceLeqx<T> {
     /// replace all elements less or equal to `threshold` with `replacement`
     /// and return self again.
     fn replace_if_leq(self, threshold: T, replacement: T) -> Self;
+    /// clamp all the elements in the vector to be between `min` and `max`
+    /// and return self again.
+    fn clamp(self, min: T, max: T) -> Self;
 }

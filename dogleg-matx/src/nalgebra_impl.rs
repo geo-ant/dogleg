@@ -219,7 +219,6 @@ where
     type Svd = SVD<T, R, C>;
 
     fn calc_svd(self) -> Option<Self::Svd> {
-        let dim = self.nrows().min(self.ncols());
         let svd = SVD::try_new_unordered(
             self,
             true,
@@ -228,8 +227,6 @@ where
             <T as Float>::epsilon() * nalgebra::convert(5.0),
             0,
         )?;
-        let rank = svd.rank(T::epsilon());
-        debug_assert!(rank == dim);
         Some(svd)
     }
 }
@@ -251,21 +248,71 @@ where
 {
     type Output = OVector<T, C>;
 
-    fn solve_lsqr(&self, v: &Vector<T, R, SV>) -> Option<Self::Output> {
+    fn solve_lsqr(&self, b: &Vector<T, R, SV>) -> Option<Self::Output> {
         // since we expect non-singular matrices, this is okay. Otherwise
         // we could also be smarter and use a fraction of the largest eigenvalue,
         // like we do in nalgebra-lapack (for the QR decomposition).
-        self.solve(v, Float::sqrt(Float::epsilon())).ok()
+        self.solve(b, Float::sqrt(Float::epsilon())).ok()
     }
 
     fn rank(&self) -> usize {
         self.rank(Float::epsilon())
     }
+
+    fn solve_lsqr_regularized(&self, b: &Vector<T, R, SV>, mu: T) -> Option<Self::Output> {
+        let v_t = self.v_t.as_ref()?;
+        let u = self.u.as_ref()?;
+
+        debug_assert!(
+            mu.is_positive(),
+            "regularization parameter must be positive"
+        );
+
+        // NOTE(geo-ant) the theory
+        //
+        // we want to solve the regularized normal equations
+        // (A^T A + mu I) x = A^T b
+        //
+        // The compact SVD is A = U S V^T
+        //
+        // where U^T U = I
+        // and V^T V = V V^T = I
+        // (but U U^T is not unitary)
+        //
+        // Plugging the SVD into the normal equations gives
+        // (after some manipulation)
+        //
+        // => (V S^2 V^T + mu I) x = V S U^T b  | multiply V^T from the right and do some more manipulation
+        // => (S^2 + mu I) V^T x = S U^T b
+        //
+        // setting y = V^T x  (unknown)
+        // and z = U^T b (known)
+        //
+        // (S^2 + mu I) y = S z
+        //
+        // this is a diagonal equation for y and z, so that we can set
+        //
+        // y_j = sigma_j / (sigma_j^2 + mu) * z_j
+        //
+        // which gives us y. And to get x from y, we calculate
+        //
+        // x = V y
+
+        // the vector of sigma_j / (sigma_j^2 + mu)
+        let smu = self
+            .singular_values
+            .map(|sigma| sigma / (Float::powi(sigma, 2) + mu));
+
+        let z = u.tr_mul(b);
+        let y = z.component_mul(&smu);
+        let x = v_t.tr_mul(&y);
+        Some(x)
+    }
 }
 
 impl<T, R, C, S> ColEnormsx<T> for Matrix<T, R, C, S>
 where
-    T: Scalar + RealField + Float + Copy,
+    T: Scalar + RealField + Float + Copy + ConstOne,
     C: Dim,
     R: Dim,
     DefaultAllocator: Allocator<C>,
@@ -280,6 +327,18 @@ where
             U1,
             self.column_iter()
                 .map(|col| crate::utility::enorm(col.iter().copied())),
+        )
+    }
+
+    fn damped_inverse_column_enorms(&self) -> Self::Output {
+        let (_, c) = self.shape_generic();
+        OVector::<T, C>::from_iterator_generic(
+            c,
+            U1,
+            self.column_iter().map(|col| {
+                let col_norm = crate::utility::enorm(col.iter().copied());
+                T::ONE / (T::ONE + col_norm)
+            }),
         )
     }
 }
@@ -412,7 +471,7 @@ where
 
 impl<T, R, S> ElementwiseReplaceLeqx<T> for Vector<T, R, S>
 where
-    T: Scalar + Copy + TotalOrder,
+    T: Float + Scalar + Copy + TotalOrder,
     R: Dim,
     S: Storage<T, R> + RawStorageMut<T, R>,
 {
@@ -421,6 +480,13 @@ where
             if !matches!(elem.total_cmp(&threshold), Ordering::Greater) {
                 *elem = replacement;
             }
+        });
+        self
+    }
+
+    fn clamp(mut self, min: T, max: T) -> Self {
+        self.iter_mut().for_each(|elem| {
+            *elem = Float::clamp(*elem, min, max);
         });
         self
     }

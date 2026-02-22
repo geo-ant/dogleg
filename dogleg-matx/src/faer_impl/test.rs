@@ -137,6 +137,7 @@ fn matrix_col_enorms() {
     let expected = faer::col!(14_f64.sqrt(), 77_f64.sqrt());
 
     col_assert_relative_eq!(ColEnormsx::column_enorms(&mat), expected);
+    todo!("test damped inverse col enorms")
 }
 
 #[test]
@@ -238,4 +239,6 @@ fn elementwise_replace_if_leq_for_vector() {
         ElementwiseReplaceLeqx::replace_if_leq(v, threshold, replacement),
         expected
     );
+
+    todo!("also test the clamp function");
 }

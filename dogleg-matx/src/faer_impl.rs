@@ -413,11 +413,15 @@ where
     fn rank(&self) -> usize {
         todo!("remove this function")
     }
+
+    fn solve_lsqr_regularized(&self, v: &V, mu: T) -> Option<Self::Output> {
+        todo!()
+    }
 }
 
 impl<T, R, C, M> ColEnormsx<T> for M
 where
-    T: RealField + Copy + Float + AddAssign,
+    T: RealField + Copy + Float + AddAssign + ConstOne,
     M: AsMatRef<T = T, Rows = R, Cols = C> + FaerType,
     C: Shape,
     R: Shape,
@@ -428,6 +432,11 @@ where
     fn column_enorms(&self) -> Self::Output {
         let this = self.as_mat_ref();
         Col::from_iter(this.col_iter().map(|col| col.enorm()))
+    }
+
+    fn damped_inverse_column_enorms(&self) -> Self::Output {
+        let this = self.as_mat_ref();
+        Col::from_iter(this.col_iter().map(|col| T::ONE / (T::ONE + col.enorm())))
     }
 }
 
@@ -585,7 +594,7 @@ where
 
 impl<T, R, V> ElementwiseReplaceLeqx<T> for V
 where
-    T: RealField + Copy + TotalOrder,
+    T: Float + RealField + Copy + TotalOrder,
     R: Shape,
     V: FaerType + AsColMut<T = T, Rows = R>,
 {
@@ -594,6 +603,13 @@ where
             if !matches!(elem.total_cmp(&threshold), Ordering::Greater) {
                 *elem = replacement;
             }
+        });
+        self
+    }
+
+    fn clamp(mut self, min: T, max: T) -> Self {
+        self.as_col_mut().iter_mut().for_each(|elem| {
+            *elem = Float::clamp(*elem, min, max);
         });
         self
     }

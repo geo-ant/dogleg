@@ -15,3 +15,5 @@ impl<P> std::fmt::Debug for Error<P> {
             .finish_non_exhaustive()
     }
 }
+
+// impl<P, T> Error<P> where P: LeastSquaresProblem<T> {}

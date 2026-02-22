@@ -54,8 +54,10 @@ version = "0.1.0"
 dependencies = [
  "argmin",
  "argmin-math",
+ "assert2",
  "dogleg-matx",
  "levenberg-marquardt",
+ "levmar-problems",
  "nalgebra",
  "num-traits",
 ]
@@ -179,6 +181,7 @@ dependencies = [
  "anyhow",
  "approx",
  "assert2",
+ "cc",
  "ceres-solver",
  "dogleg-matx",
  "levenberg-marquardt",
@@ -420,8 +423,8 @@ name = "dogleg"
 version = "0.1.0"
 dependencies = [
  "approx",
- "argmin-dogleg",
  "assert2",
+ "dogleg",
  "dogleg-matx",
  "levenberg-marquardt",
  "levmar-problems",

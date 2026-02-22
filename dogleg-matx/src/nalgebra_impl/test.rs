@@ -249,6 +249,7 @@ fn matrix_col_enorms() {
 
     assert_relative_eq!(ColEnormsx::column_enorms(&smat), sexpected);
     assert_relative_eq!(ColEnormsx::column_enorms(&dmat), dexpected);
+    todo!("test damped inverse col enorms")
 }
 
 #[test]
@@ -422,4 +423,5 @@ fn elementwise_replace_if_leq_for_vector() {
         ElementwiseReplaceLeqx::replace_if_leq(dvec, threshold, replacement),
         dexpected
     );
+    todo!("also test the clamp function");
 }

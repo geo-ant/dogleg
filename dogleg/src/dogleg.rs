@@ -666,7 +666,23 @@ where
             
             let jacobian_col_norms = jacobian.column_enorms();
 
-
+            // NOTE(geo-ant): there's a difference between the jacobi scaling (which
+            // is calculated only once and acts as preconditioning on the jacobian)
+            // and elliptical parameter scaling. The latter one is calculated
+            // every step.
+            // Note both scalings are kinds of diagonal scaling but they
+            // serve different purposes.
+            //
+            // TODO(geo-ant): all of this can be made much more efficient,
+            // because for now, I'm doing too much work by applying the
+            // column scaling twice. CERES does the jacobi scaling by
+            // actually scaling the columns, but the parameters scaling
+            // is performed in the step calculations in a way that
+            // they never have to multiply the jacobian again with the diagonal
+            // matrix. They typically perform the calculations with unscaled
+            // jacobians (except for jacobi-scaling of course) and then
+            // calculate the scaled result using diagonal-x-vector multiplications,
+            // which saves a lot of computations.
             if self.use_elliptical_parameter_scaling {
                 // see the MINPACK User guide, chapter 2.5 on scaling. In the
                 // text they mention that they arbitrarily replace a zero

@@ -288,7 +288,7 @@ where
         //@todo(geo-ant): PERF: is this the most efficient way of implementing
         // this axpy variant?
         #[allow(unused_mut)]
-        faer::zip!(this, yref).for_each(|faer::unzip!(mut this, rhs)| *this += factor * *rhs);
+        faer::zip!(this, yref).for_each(|faer::unzip!(mut this, yref)| *this += factor * *yref);
         Some(self)
     }
 }
@@ -414,8 +414,30 @@ where
         todo!("remove this function")
     }
 
-    fn solve_lsqr_regularized(&self, v: &V, mu: T) -> Option<Self::Output> {
-        todo!()
+    fn solve_lsqr_regularized(&self, b: &V, mu: T) -> Option<Self::Output> {
+        let v = self.V();
+        let u = self.U();
+        let b = b.as_col_ref();
+
+        debug_assert!(
+            mu.is_finite() && mu > T::zero(),
+            "regularization parameter must be positive"
+        );
+
+        // NOTE(geo-ant) see the nalgebra implementation for the math
+        // behind this calculation.
+
+        // the vector of sigma_j / (sigma_j^2 + mu)
+        let smu = self.S().map(|sigma| sigma / (Float::powi(*sigma, 2) + mu));
+        let z = u.transpose() * b;
+        let mut y = Col::<T>::zeros(b.nrows());
+        // y = component mul of smu and z
+        let smu_vec = smu.column_vector();
+        faer::zip!(&mut y, &z, &smu_vec).for_each(|faer::unzip!(y, z, smu_vec)| {
+            *y = (*z) * (*smu_vec);
+        });
+        let x = v * &y;
+        Some(x)
     }
 }
 
@@ -560,7 +582,7 @@ where
         let this = self.as_col_ref();
         let v = v.as_col_ref();
         faer::zip!(this, v)
-            .map(|faer::unzip!(this, rhs)| this.abs() / *rhs)
+            .map(|faer::unzip!(this, v)| this.abs() / *v)
             .max()
             .map(|val| val / s)
     }
@@ -589,9 +611,9 @@ where
             return None;
         }
 
-        faer::zip!(this, other).for_each(|faer::unzip!(this, rhs)| {
-            let max = match TotalOrder::total_cmp(this, rhs) {
-                std::cmp::Ordering::Less => *rhs,
+        faer::zip!(this, other).for_each(|faer::unzip!(this, other)| {
+            let max = match TotalOrder::total_cmp(this, other) {
+                std::cmp::Ordering::Less => *other,
                 _ => *this,
             };
             *this = max;

@@ -264,7 +264,7 @@ where
         let u = self.u.as_ref()?;
 
         debug_assert!(
-            mu.is_positive(),
+            mu.is_positive() && mu.is_finite(),
             "regularization parameter must be positive"
         );
 

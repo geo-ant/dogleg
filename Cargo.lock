@@ -439,6 +439,7 @@ version = "0.1.0"
 dependencies = [
  "approx",
  "assert2",
+ "dogleg-matx",
  "faer",
  "nalgebra",
  "num-traits",

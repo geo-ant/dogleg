@@ -14,3 +14,8 @@ levmar-problems = {path = "../levmar-problems"}
 nalgebra = "0.34"
 num-traits = "0.2"
 assert2 = "0.3"
+
+[features]
+# by default the tests are ignored, because they all fail. If you'd like
+# to see them fail, enable this feature.
+no-ignore = []

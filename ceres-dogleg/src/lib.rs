@@ -41,7 +41,7 @@ where
     P::JacobianStorage: Clone,
     DefaultAllocator: Allocator<N> + Allocator<M> + Allocator<N, M>,
 {
-    GLOGGING_INIT.call_once(|| unsafe { init_glog_for_ceres(2) });
+    GLOGGING_INIT.call_once(|| unsafe { init_glog_for_ceres(0) });
     let options = SolverOptions::builder()
         .minimizer_type(MinimizerType::TRUST_REGION)
         .trust_region_strategy_type(ceres_solver::solver::TrustRegionStrategyType::DOGLEG)

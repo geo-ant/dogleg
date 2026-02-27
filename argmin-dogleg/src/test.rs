@@ -39,6 +39,7 @@ use levmar_problems::{assert_fp_eq, problems::*, utils::differentiate_numericall
 use nalgebra::*;
 
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 fn test_linear_full_rank() {
     let mut problem = LinearFullRank::new(OVector::<f64, U5>::zeros(), 10);
     let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
@@ -79,6 +80,7 @@ fn test_linear_full_rank() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 // see MGH paper: https://www.cmor-faculty.rice.edu/~yzhang/caam454/nls/MGH.pdf
 // problem 33
 fn test_linear_rank1() {
@@ -136,6 +138,7 @@ fn test_linear_rank1() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 // #[ignore = "ceres fails here, but so does levmar"]
 // see MGH paper: https://www.cmor-faculty.rice.edu/~yzhang/caam454/nls/MGH.pdf
 // problem (34)
@@ -196,6 +199,7 @@ fn test_linear_rank1_zero_columns() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 fn test_rosenbrock() {
     let mut problem = Rosenbrock {
         params: OVector::<f64, U2>::zeros(),
@@ -239,6 +243,7 @@ fn test_rosenbrock() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 // see https://rdrr.io/github/jlmelville/funconstrain/man/helical.html
 // minimum should be f = 0 at (1,0,0)
 fn test_helical_valley() {
@@ -286,6 +291,7 @@ fn test_helical_valley() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 fn test_powell_singular() {
     let mut problem = PowellSingular {
         params: OVector::<f64, U4>::zeros(),
@@ -332,6 +338,7 @@ fn test_powell_singular() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 // this is actually a failed minimization because this is a local minimum,
 // NOT the global minimum. The global minimum should be at (5,4),
 // see https://rdrr.io/github/jlmelville/funconstrain/man/freud_roth.html.
@@ -384,6 +391,7 @@ fn test_freudenstein_roth() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 fn test_bard() {
     let mut problem = Bard {
         params: OVector::<f64, U3>::zeros(),
@@ -436,6 +444,7 @@ fn test_bard() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 // see https://rdrr.io/github/jlmelville/funconstrain/man/kow_osb.html
 // Minima: f = 3.07505...e-4; and f = 1.02734...e-3 at (Inf, -14.07..., -Inf, -Inf).
 // so we can't reasonably expect the same minima to be produced as in levmar
@@ -507,6 +516,7 @@ fn test_kowalik_osborne() {
 // > f = 87.9458.... Meyer and Roth (1972) give the optimal parameter values
 // > as (0.0056, 6181.4, 345.2), with f = 88.
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 fn test_meyer() {
     let mut problem = Meyer {
         params: OVector::<f64, U3>::zeros(),
@@ -550,6 +560,7 @@ fn test_meyer() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 // see https://rdrr.io/github/jlmelville/funconstrain/man/watson.html
 fn test_watson() {
     let mut problem = Watson::new(OVector::<f64, U6>::zeros(), 6);
@@ -786,6 +797,7 @@ fn test_watson() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "no-ignore"), ignore)]
 // #[ignore = "ceres dogleg fails here, but performs better than levmar"]
 // see https://rdrr.io/github/jlmelville/funconstrain/man/beale.html
 fn test_beale() {

@@ -581,7 +581,7 @@ where
         .overflowing_add(1);
         let (max_func_evals, overflow2) = self.patience.overflowing_mul(n_plus_one);
         if overflow || overflow2 {
-            panic!("too many parameters for dogleg solver");
+            return Err(Error { problem, failure: TerminationFailure::DimOutsideU64Bounds });
         }
 
         // actual number of function evaluations

@@ -1,7 +1,6 @@
 //@todo(geo) reinstate thsi
 // #![warn(missing_docs)]
-//@todo(geo) remove this
-// #![allow(dead_code)]
+
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]

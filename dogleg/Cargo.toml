@@ -16,6 +16,7 @@ nalgebra = {version = "0.34", optional = true}
 assert2 = {version = "0.3", optional = true}
 
 [features]
+default = ["nalgebra"]
 assert2 = ["dep:assert2","dogleg-matx/assert2"]
 nalgebra = ["dogleg-matx/nalgebra"]
 faer = ["dogleg-matx/faer"]

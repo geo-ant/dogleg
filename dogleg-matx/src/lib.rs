@@ -164,8 +164,6 @@ pub trait Svdx<T, V> {
     /// where the advantage is that `A^T A + mu* Id` is nonsingular for mu>0.
     /// For numerical reasons, mu might need to be adjusted.
     fn solve_lsqr_regularized(&self, b: &V, mu: T) -> Option<Self::Output>;
-
-    fn rank(&self) -> usize;
 }
 
 /// calculate the column norms of a matrix and put them into a vector

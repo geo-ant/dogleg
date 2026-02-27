@@ -410,10 +410,6 @@ where
         Some(x)
     }
 
-    fn rank(&self) -> usize {
-        todo!("remove this function")
-    }
-
     fn solve_lsqr_regularized(&self, b: &V, mu: T) -> Option<Self::Output> {
         let v = self.V();
         let u = self.U();

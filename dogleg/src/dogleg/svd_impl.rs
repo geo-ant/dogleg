@@ -42,8 +42,6 @@ pub struct SvdSolverCache<T, MMN, VN> {
     pb: VN,
     /// ||pb||
     pb_norm: T,
-    /// @todo remove!!
-    rank: usize,
 }
 
 impl<T, MMN, VN, VM> DoglegStepSolver<T> for SvdStepSolver<T, MMN, VM, VN>
@@ -72,7 +70,18 @@ where
     }
 
     fn update_step(self, delta: T) -> Result<(DoglegStep<T, VN>, Self), TerminationFailure> {
-        //TODO(geo) HACK: hacky regularization parameter. Todo: remove
+        // TODO NOTE(geo-ant): This regularization is something that CERES does
+        // and it turns out that this is useful for the set of test problems
+        // that we have. Ceres uses an adaptive regularization that starts with
+        // 1e-8 by default and gets increased when the matrix solution fails.
+        // However, with DenseQR decomposition in CERES, the matrix solution
+        // can never fail, so the mu never actually gets adjusted.
+        //
+        // TODO eventually we'd also want to expose this to the outside and use
+        // a similar logic to what CERES does. This would require our update_step
+        // function to differentiate between linear algebra erros (which we
+        // would tackle by increasing mu) and other errors, which might still
+        // lead to termination.
         let mu = T::EMINUS8;
         // if we haven't already cached the calculations, do them now
         let cached = match self {
@@ -89,19 +98,6 @@ where
                 let g_norm = gradient.enorm();
 
                 let jacobian_clone = jacobian.clone_owned();
-                // we need to enforce this somewhere else! My assumptions might
-                // not hold for underdetermined problems.
-                // debug_assert!(jacobian.nrows().unwrap() >= jacobian.ncols().unwrap());
-                //@todo remove
-                // let matdim = jacobian_clone
-                //     .nrows()
-                //     .unwrap()
-                //     .min(jacobian_clone.ncols().unwrap());
-                // @todo!! maybe this isn't actually true, since the number of
-                // rows can be less than the number of cols
-                // @todo also remove!!
-                // debug_assert!(gradient.dim().unwrap() == matdim);
-
                 let svd = jacobian_clone
                     .calc_svd()
                     .ok_or(TerminationFailure::Numerical("svd"))?;
@@ -120,7 +116,6 @@ where
 
                 // multiplicator for the cauchy step. pu = u*g
                 let u = -Float::powi(g_norm, 2) / Float::powi(jg_norm, 2);
-                let rank = svd.rank();
                 SvdSolverCache {
                     u,
                     g: gradient,
@@ -128,7 +123,6 @@ where
                     pb,
                     jacobian,
                     pb_norm,
-                    rank,
                 }
             }
             Self::Cached(cached) => cached,
@@ -163,12 +157,7 @@ where
 
         // @note(geo-ant) mathematically, the predicted reduction is always >= zero,
         // but due to numerical reasons, this can have very small values.
-        debug_assert!(
-            predicted_reduction >= -T::EPSMCH,
-            "rank is {} of {}",
-            cached.rank,
-            cached.g.dim().unwrap()
-        );
+        debug_assert!(predicted_reduction >= -T::EPSMCH,);
         let predicted_reduction = predicted_reduction.abs();
 
         let step = DoglegStep {

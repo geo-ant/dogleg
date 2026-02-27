@@ -255,10 +255,6 @@ where
         self.solve(b, Float::sqrt(Float::epsilon())).ok()
     }
 
-    fn rank(&self) -> usize {
-        self.rank(Float::epsilon())
-    }
-
     fn solve_lsqr_regularized(&self, b: &Vector<T, R, SV>, mu: T) -> Option<Self::Output> {
         let v_t = self.v_t.as_ref()?;
         let u = self.u.as_ref()?;

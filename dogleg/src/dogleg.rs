@@ -580,6 +580,7 @@ where
         )
         .overflowing_add(1);
         let (max_func_evals, overflow2) = self.patience.overflowing_mul(n_plus_one);
+
         if overflow || overflow2 {
             return Err(Error { problem, failure: TerminationFailure::DimOutsideU64Bounds });
         }
@@ -587,13 +588,13 @@ where
         // actual number of function evaluations
         let mut nfunc_evals: u64 = 0;
 
-        // @todo(geo-ant)
+        // NOTE(geo-ant)
         // the trust region radius. In the first iteration of the algorithm,
         // this will be set to something useful, so initializing with factor
         // zero here is fine. But we can only calculate this after having
         // calculated the jacobian (and thus the scaling matrix) and pulling
-        // this outside makes the loop diverge from the MINPACK implementation,
-        // which I'm sticking to for now.
+        // this outside makes the loop not work for the minpack impl,
+        // which is one of the possible ways of initializing the trust region
         let mut delta = T::zero();
 
         // some special case handling for the first loop iteration

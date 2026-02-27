@@ -17,9 +17,12 @@
 use num_traits::ConstOne;
 use std::ops::AddAssign;
 
-mod faer_impl;
 /// utility module for floating point constants
 pub mod magic_const;
+
+#[cfg(feature = "faer")]
+mod faer_impl;
+#[cfg(feature = "nalgebra")]
 mod nalgebra_impl;
 mod utility;
 

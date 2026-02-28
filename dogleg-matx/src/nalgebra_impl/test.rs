@@ -431,5 +431,10 @@ fn elementwise_replace_if_leq_for_vector() {
         ElementwiseReplaceLeqx::replace_if_leq(dvec, threshold, replacement),
         dexpected
     );
-    todo!("also test the clamp function");
+
+    let (svec, dvec) = sdvec![5.2, -100.1, 2., -30., 49., 99.1];
+    let (sexpected, dexpected) = sdvec![5.2, -50., 2., -30., 49., 55.];
+
+    assert_eq!(ElementwiseReplaceLeqx::clamp(svec, -50., 55.), sexpected);
+    assert_eq!(ElementwiseReplaceLeqx::clamp(dvec, -50., 55.), dexpected);
 }

@@ -245,5 +245,7 @@ fn elementwise_replace_if_leq_for_vector() {
         expected
     );
 
-    todo!("also test the clamp function");
+    let v = faer::col![5.2, -100.1, 2., -30., 49., 99.1];
+    let expected = faer::col![5.2, -50., 2., -30., 49., 55.];
+    assert_eq!(ElementwiseReplaceLeqx::clamp(v, -50., 55.), expected);
 }

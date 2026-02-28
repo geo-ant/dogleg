@@ -4,7 +4,11 @@ use crate::dogleg::report::TerminationFailure;
 #[derive(thiserror::Error)]
 #[error("Termination failed with reason {:?}", failure)]
 pub struct Error<P> {
+    /// The state of the least squares problem at termination.
+    /// This might still contain parameters that are useful in practice
+    /// even if the algorithm doesn't indicate convergence.
     pub problem: P,
+    /// the reason for termination failure
     pub failure: TerminationFailure,
 }
 

@@ -17,14 +17,16 @@ use assert2::debug_assert;
 /// and lapack-free `nalgebra`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SvdStepSolver<T, MMN, VM, VN> {
+    /// initial solver state
     Init {
-        // (scaled) Jacobian (matrix of size MxN)
+        /// (scaled) Jacobian (matrix of size MxN)
         jacobian: MMN,
-        // (not scaled) residuals (column vector with M elements)
+        /// (not scaled) residuals (column vector with M elements)
         residuals: VM,
-        // (scaled) gradient (column vector with N elements)
+        /// (scaled) gradient (column vector with N elements)
         gradient: VN,
     },
+    /// cached solver state
     Cached(SvdSolverCache<T, MMN, VN>),
 }
 

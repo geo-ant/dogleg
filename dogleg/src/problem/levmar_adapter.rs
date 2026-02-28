@@ -21,6 +21,7 @@ where
     N: nalgebra::Dim,
     M: nalgebra::Dim,
 {
+    /// the wrapped `levenberg-marquardt` problem.
     pub inner: P,
     phantom: PhantomData<(T, M, N)>,
 }

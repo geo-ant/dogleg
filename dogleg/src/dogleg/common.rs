@@ -23,8 +23,11 @@ pub struct DoglegStep<T, VN> {
 /// abstracts part of the algorithm whose responsibility it is to calculate
 /// the dogleg components.
 pub trait DoglegStepSolver<T>: Sized {
+    /// type of the Jacobian for the least squares problem (matrix-type)
     type Jacobian: Matx<T>;
+    /// type of the gradient for the problem (vector-type)
     type Gradient: OwnedColx<T>;
+    /// type of the residuals (vector type)
     type Residuals: Colx<T>;
     /// Construct a dogleg solver to initialize an internal state using the
     /// Jacobian, residuals, and the gradient at the current parameters.

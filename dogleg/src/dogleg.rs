@@ -21,6 +21,7 @@ mod qr_impl;
 mod reset_guard;
 mod svd_impl;
 
+/// stopping criteria and minimization reports
 pub mod report;
 pub use common::DoglegStep;
 pub use common::DoglegStepSolver;
@@ -110,6 +111,7 @@ pub enum GradientTolerance<T> {
     /// the algorithm terminated successfully.
     ///
     Ceres {
+        /// the value for the gradient tolerance
         gtol: T,
     },
     /// minpack style calculation of `gmax`, see section 2.3 of the
@@ -129,6 +131,7 @@ pub enum GradientTolerance<T> {
     /// MGH set of test problems. As in the `Ceres` variant, the calculated
     /// `gmax` is compared against `gtol` to check for termination.
     Minpack {
+        /// the value for the gradient tolerance
         gtol: T,
     },
 }
@@ -187,7 +190,9 @@ pub enum InitialTrusRegionRadius<T> {
     /// and a minimum of 10000, which is the default trust region radius
     /// in Ceres Solver.
     MinpackAtLeast {
+        /// same as `factor` in the `Minpack` variant
         factor: T,
+        /// the minimal initial trust region radius
         minimum: T,
     },
     /// Use this exact value for the initial trust region radius

@@ -182,6 +182,17 @@ where
     fn dim(&self) -> Option<u64> {
         self.nrows().try_into().ok()
     }
+
+    fn max_absolute(&self) -> Option<T>
+    where
+        T: TotalOrder,
+    {
+        let this = self.as_col_ref();
+        this.iter()
+            .copied()
+            .map(Float::abs)
+            .max_by(TotalOrder::total_cmp)
+    }
 }
 
 impl<'a, T, R> Colx<T> for ColMut<'a, T, R>
@@ -211,6 +222,17 @@ where
     fn dim(&self) -> Option<u64> {
         self.nrows().try_into().ok()
     }
+
+    fn max_absolute(&self) -> Option<T>
+    where
+        T: TotalOrder,
+    {
+        let this = self.as_col_ref();
+        this.iter()
+            .copied()
+            .map(Float::abs)
+            .max_by(TotalOrder::total_cmp)
+    }
 }
 
 impl<'a, T, R> Colx<T> for ColRef<'a, T, R>
@@ -239,6 +261,17 @@ where
 
     fn dim(&self) -> Option<u64> {
         self.nrows().try_into().ok()
+    }
+
+    fn max_absolute(&self) -> Option<T>
+    where
+        T: TotalOrder,
+    {
+        let this = self.as_col_ref();
+        this.iter()
+            .copied()
+            .map(Float::abs)
+            .max_by(TotalOrder::total_cmp)
     }
 }
 
@@ -581,14 +614,6 @@ where
             .map(|faer::unzip!(this, v)| this.abs() / *v)
             .max()
             .map(|val| val / s)
-    }
-
-    fn max_abs_elem(&self) -> Option<T> {
-        let this = self.as_col_ref();
-        this.iter()
-            .copied()
-            .map(Float::abs)
-            .max_by(TotalOrder::total_cmp)
     }
 }
 

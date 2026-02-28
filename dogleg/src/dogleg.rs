@@ -25,6 +25,7 @@ mod svd_impl;
 pub mod report;
 pub use common::DoglegStep;
 pub use common::DoglegStepSolver;
+use num_traits::float::TotalOrder;
 pub use report::MinimizationReport;
 pub use report::TerminationReason;
 pub use svd_impl::SvdStepSolver;
@@ -151,9 +152,9 @@ impl<T:Copy> GradientTolerance<T> {
     where
         VN1: Colx<T>,
         VN2: MaxAbsx<T, VN1> + Colx<T>,
-        T: Copy  {
+        T: Copy  + TotalOrder{
         match self {
-            GradientTolerance::Ceres {..} => gradient.max_abs_elem(),
+            GradientTolerance::Ceres {..} => gradient.max_absolute(),
             GradientTolerance::Minpack {..} => minpack_gmax_calc(jacobian_norms, gradient, residual_norm),
         }
 
@@ -466,9 +467,7 @@ where
 {
     pub fn minimize<P>(&self, problem: P) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
-        T: Float + MagicConst + std::fmt::Debug+
-        //DEBUG(geo)
-        FromPrimitive,
+        T: Float + MagicConst + std::fmt::Debug+TotalOrder,
         P: LeastSquaresProblem<T>,
         P::Residuals: Clone,
         SvdStepSolver<T, <P as LeastSquaresProblem<T>>::Jacobian, P::Residuals, GradType<T, P>>:
@@ -519,9 +518,7 @@ where
         mut problem: P,
     ) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
-        T: Float + MagicConst + std::fmt::Debug 
-        //DEBUG(geo)
-        + FromPrimitive,
+        T: Float + MagicConst + std::fmt::Debug + TotalOrder,
         P: LeastSquaresProblem<T>,
         P::Residuals: Clone,
         // see below, we require the gradient, i.e. the of J^T r to be the owned type of P.

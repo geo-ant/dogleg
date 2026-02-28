@@ -14,7 +14,7 @@
 #![deny(clippy::panic)]
 #![deny(clippy::panicking_unwrap)]
 
-use num_traits::ConstOne;
+use num_traits::{float::TotalOrder, ConstOne};
 use std::ops::AddAssign;
 
 /// utility module for floating point constants
@@ -71,6 +71,12 @@ pub trait Colx<T>: PartialEq {
     /// Return None if the number of columns doesn't fit into u64, in which
     /// case you shouldn't be using this library anyways...
     fn dim(&self) -> Option<u64>;
+    /// This is just the ||v||_inf -norm of the vector v, meaning
+    /// the maximum of the absolute values of the elements.
+    /// Returns None, if there are no elements in the vector.
+    fn max_absolute(&self) -> Option<T>
+    where
+        T: TotalOrder;
 }
 
 /// multiply a vector type by a constant factor
@@ -231,11 +237,6 @@ pub trait DiagLeftMulx<T, V>: Sized {
 /// This exposes two functionalities that could be used in the gtol-criterion,
 /// which is described elsewhere in this codebase.
 pub trait MaxAbsx<T, V> {
-    /// This is just the ||v||_inf -norm of the vector v, meaning
-    /// the maximum of the absolute values of the elements.
-    /// Returns None, if there are no elements in the vector.
-    fn max_abs_elem(&self) -> Option<T>;
-
     /// What this calculation does is this:
     /// We have two VECTORS (of same lenth) `self` and `v`, and a scalar `s`.
     /// What we now calculate is:

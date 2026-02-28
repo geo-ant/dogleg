@@ -90,6 +90,16 @@ where
     fn dim(&self) -> Option<u64> {
         self.nrows().try_into().ok()
     }
+
+    fn max_absolute(&self) -> Option<T>
+    where
+        T: TotalOrder,
+    {
+        self.iter()
+            .copied()
+            .map(Float::abs)
+            .max_by(TotalOrder::total_cmp)
+    }
 }
 
 impl<T, R, S> Scalex<T> for Vector<T, R, S>
@@ -435,13 +445,6 @@ where
             .map(|(this_i, vi)| this_i.abs() / vi)
             .max_by(TotalOrder::total_cmp)
             .map(|val| val / s)
-    }
-
-    fn max_abs_elem(&self) -> Option<T> {
-        self.iter()
-            .copied()
-            .map(Float::abs)
-            .max_by(TotalOrder::total_cmp)
     }
 }
 

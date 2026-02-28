@@ -234,6 +234,8 @@ fn matrix_to_svd_and_solve_lsqr() {
         Svdx::solve_lsqr(&dsvd, &dvec).unwrap(),
         dmat.svd(true, true).solve(&dvec, f64::EPSILON).unwrap()
     );
+
+    todo!("test solve regularized lsqr");
 }
 
 #[test]

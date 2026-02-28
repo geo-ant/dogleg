@@ -129,6 +129,8 @@ fn matrix_to_svd_and_solve_lsqr() {
         Svdx::solve_lsqr(&svd, &v).unwrap(),
         SolveLstsq::solve_lstsq(&mat.svd().unwrap(), &v)
     );
+
+    todo!("test solve regularized lsqr")
 }
 
 #[test]

@@ -2,7 +2,7 @@ use crate::{
     Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
     ElementwiseReplaceLeqx, Matx, MaxAbsx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
-use approx::{assert_abs_diff_eq, assert_relative_eq};
+use approx::assert_relative_eq;
 use nalgebra::{DMatrix, SMatrix, Vector};
 
 macro_rules! sdmat {
@@ -252,7 +252,12 @@ fn matrix_col_enorms() {
 
     assert_relative_eq!(ColEnormsx::column_enorms(&smat), sexpected);
     assert_relative_eq!(ColEnormsx::column_enorms(&dmat), dexpected);
-    todo!("test damped inverse col enorms")
+
+    let sexpected = sexpected.map(|x| 1. / (1. + x));
+    let dexpected = dexpected.map(|x| 1. / (1. + x));
+
+    assert_relative_eq!(ColEnormsx::damped_inverse_column_enorms(&smat), sexpected);
+    assert_relative_eq!(ColEnormsx::damped_inverse_column_enorms(&dmat), dexpected);
 }
 
 #[test]

@@ -140,7 +140,9 @@ fn matrix_col_enorms() {
     let expected = faer::col!(14_f64.sqrt(), 77_f64.sqrt());
 
     col_assert_relative_eq!(ColEnormsx::column_enorms(&mat), expected);
-    todo!("test damped inverse col enorms")
+
+    let expected = expected.map(|x| 1. / (1. + x));
+    col_assert_relative_eq!(ColEnormsx::damped_inverse_column_enorms(&mat), expected);
 }
 
 #[test]

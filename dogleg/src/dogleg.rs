@@ -14,7 +14,6 @@ use dogleg_matx::Invert;
 use dogleg_matx::MaxAbsx;
 use dogleg_matx::{Colx, TrMatVecMulx};
 use num_traits::Float;
-use num_traits::FromPrimitive;
 
 mod common;
 mod qr_impl;

@@ -2,7 +2,7 @@ use crate::{
     Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
     ElementwiseReplaceLeqx, Matx, MaxAbsx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
-use approx::assert_relative_eq;
+use approx::{assert_abs_diff_eq, assert_relative_eq};
 use nalgebra::{DMatrix, SMatrix, Vector};
 
 macro_rules! sdmat {
@@ -42,18 +42,20 @@ fn matx_base_functions_for_smat_and_dmatrix() {
 #[test]
 // we test everything except enorm() here
 fn colx_base_functions_for_svec_and_dvector() {
-    let svec = nalgebra::vector![1., 4., 2.];
-    let dvec = nalgebra::dvector![1., 4., 2.];
+    let svec = nalgebra::vector![1., -4., 2.];
+    let dvec = nalgebra::dvector![1., -4., 2.];
 
     assert_eq!(Colx::<_>::into_owned(svec.clone()), svec);
     assert_eq!(Colx::<_>::clone_owned(&svec), svec);
-    assert_eq!(Colx::<_>::max(&svec), Some(4.));
+    assert_eq!(Colx::<_>::max(&svec), Some(2.));
     assert_eq!(Colx::<_>::dim(&svec), Some(3));
+    assert_eq!(Colx::<_>::max_absolute(&svec), Some(4.));
 
     assert_eq!(Colx::<_>::into_owned(dvec.clone()), dvec);
     assert_eq!(Colx::<_>::clone_owned(&dvec), dvec);
-    assert_eq!(Colx::<_>::max(&dvec), Some(4.));
+    assert_eq!(Colx::<_>::max(&dvec), Some(2.));
     assert_eq!(Colx::<_>::dim(&dvec), Some(3));
+    assert_eq!(Colx::<_>::max_absolute(&dvec), Some(4.));
 }
 
 #[test]
@@ -389,7 +391,6 @@ fn max_scaled_div_for_vector() {
         MaxAbsx::max_abs_scaled_div_elem(&dvec1, scale, &dvec2).unwrap(),
         (3. / 12.)
     );
-    todo!("test max elem")
 }
 
 #[test]

@@ -20,11 +20,12 @@ fn matx_base_functions() {
 #[test]
 // we test everything except enorm() here
 fn colx_base_functions_for_svec_and_dvector() {
-    let vec = faer::col![1., 4., 2.];
+    let vec = faer::col![1., -4., 2.];
 
     assert_eq!(Colx::into_owned(vec.clone()), vec);
     assert_eq!(Colx::clone_owned(&vec), vec);
-    assert_eq!(Colx::max(&vec), Some(4.));
+    assert_eq!(Colx::max(&vec), Some(2.));
+    assert_eq!(Colx::max_absolute(&vec), Some(4.));
     assert_eq!(Colx::dim(&vec), Some(3));
 }
 
@@ -218,8 +219,6 @@ fn max_abs_scaled_div_for_vector() {
         MaxAbsx::max_abs_scaled_div_elem(&v1, scale, &v2).unwrap(),
         (3. / 12.)
     );
-
-    todo!("test max elem")
 }
 
 #[test]

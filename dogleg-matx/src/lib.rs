@@ -1,12 +1,12 @@
-//! Linear algebra abstraction that are specific to the `dogleg` crate.
-//! This crate has no affiliation with another crate named `matx` crate
-//! on crates.io.
+//! Linear algebra abstractions that are specific to the `dogleg` crate.
+//! This crate has no affiliation with another crate named `matx` on crates.io.
 //!
 //! You are free to implement the abstractions for a different matrix backend.
 //! If you do, consider submitting a PR to this repository, so that
 //! everyone can profit from this and use this crate with your
 //! favorite matrix backend.
 
+#![warn(missing_docs)]
 // if the cloudflare outage taught us one thing, it's that we want to be
 // more strict about this...
 #![deny(clippy::unwrap_used)]
@@ -106,6 +106,7 @@ pub trait Dotx<T, V = Self> {
 /// For a matrix `A` that implements this, we can calculate the matrix-vector
 /// product `A^T v` with a suitably sized vector.
 pub trait TrMatVecMulx<T, V> {
+    /// output type
     type Output: OwnedColx<T>;
     /// calculate `A^T v`. Returns `None` if there is a
     /// dimensions mismatch.
@@ -126,6 +127,7 @@ pub trait TransformedVecNorm<T, V> {
 /// For matrix `A` implementing this trait, its singular value decomposition
 /// can be calculated.
 pub trait ToSvdx<T> {
+    /// the type that actually holds the svd
     type Svd;
 
     /// calculate the SVD (singular value decomposition). Return `None` on error.
@@ -134,6 +136,7 @@ pub trait ToSvdx<T> {
 
 /// Abstracts over the singular value decomposition of a matrix `A`
 pub trait Svdx<T, V> {
+    /// output type for the least squares solution
     type Output: Colx<T>;
     /// Solve
     /// ```math
@@ -173,6 +176,7 @@ pub trait Svdx<T, V> {
 /// (indexed the same as the column, so element i of the vector will have
 /// norm of column i).
 pub trait ColEnormsx<T> {
+    /// output type for the functions
     type Output: OwnedColx<T>;
     /// the calculated column norms placed into avector
     fn column_enorms(&self) -> Self::Output;
@@ -191,7 +195,9 @@ pub trait ColEnormsx<T> {
 /// used to indicate whether to invert the diagonal matrix for
 /// multiplication.
 pub enum Invert {
+    /// yes!
     Yes,
+    /// no!
     No,
 }
 
@@ -258,6 +264,7 @@ pub trait MaxAbsx<T, V> {
 /// Then returns that modified self or None if an error occurred (dimensions
 /// mismatch).
 pub trait ElementwiseMaxx<V>: Sized {
+    /// calculate the elementwise max as described above
     fn elementwise_max(self, other: &V) -> Option<Self>;
 }
 

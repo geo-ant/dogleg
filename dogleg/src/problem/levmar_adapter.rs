@@ -14,13 +14,7 @@ use std::marker::PhantomData;
 /// Simply create an a `LevMarAdapter` from it and throw it to the dogleg
 /// minimizer and you're good to go.
 #[derive(Debug)]
-pub struct LevMarAdapter<P, T, M, N>
-where
-    T: Copy + nalgebra::ComplexField,
-    P: LevMarLeastSquaresProblem<T, M, N>,
-    N: nalgebra::Dim,
-    M: nalgebra::Dim,
-{
+pub struct LevMarAdapter<P, T, M, N> {
     /// the wrapped `levenberg-marquardt` problem.
     pub inner: P,
     phantom: PhantomData<(T, M, N)>,

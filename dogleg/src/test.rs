@@ -33,12 +33,59 @@
 // NOTE(geo-ant) see the test-problems.md readme file for additional
 // helpful references to the problems.
 
-use crate::{Dogleg, LevMarAdapter};
+use crate::{
+    test_adapters::AbstractLevMarProblemWrapper, Dogleg, LeastSquaresProblem, LevMarAdapter,
+};
+use dogleg_matx::Scalex;
 use levenberg_marquardt::LeastSquaresProblem as LevmarProblem;
 use levmar_problems::{assert_fp_eq, problems::*, utils::differentiate_numerically};
 use nalgebra::*;
+use typed_test_gen::test_with;
 
 mod debugging;
+
+fn generic_test_linear_full_rank<P>() {
+    let mut problem = LinearFullRank::new(OVector::<f64, U5>::zeros(), 10);
+    let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
+
+    // check derivative implementation
+    problem.set_params(&OVector::<f64, U5>::from_column_slice(&[
+        0.5488135039273248,
+        0.7151893663724195,
+        0.6027633760716439,
+        0.5448831829968969,
+        0.4236547993389047,
+    ]));
+    let jac_num = differentiate_numerically(&mut problem).unwrap();
+    let jac_trait = problem.jacobian().unwrap();
+    assert_fp_eq!(jac_num, jac_trait, epsilon = 1e-5);
+
+    problem.set_params(&initial.clone());
+
+    let (problem, report) = Dogleg::new().minimize(P::from(problem)).unwrap();
+    let problem = problem.inner();
+    assert_fp_eq!(report.objective_function, 2.5, epsilon = 1e-6);
+    assert_fp_eq!(
+        problem.params,
+        OVector::<f64, U5>::from_column_slice(&[-1., -1., -1., -1., -1.]),
+        epsilon = 1e-6
+    );
+
+    let mut problem = LinearFullRank::new(OVector::<f64, U5>::zeros(), 50);
+    let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
+
+    problem.set_params(&initial.clone());
+    let (problem, report) = Dogleg::new()
+        .minimize(LevMarAdapter::from(problem))
+        .unwrap();
+    let problem = problem.inner();
+    assert_fp_eq!(report.objective_function, 22.5, epsilon = 1e-6);
+    assert_fp_eq!(
+        problem.params,
+        OVector::<f64, U5>::from_column_slice(&[-1., -1., -1., -1., -1.,]),
+        epsilon = 1e-6
+    );
+}
 
 #[test]
 fn test_linear_full_rank() {

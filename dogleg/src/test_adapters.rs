@@ -1,7 +1,23 @@
-use crate::levenberg_marquardt::LeastSquaresProblem as LevMarLeastSquaresProblem;
+use crate::{levenberg_marquardt::LeastSquaresProblem as LevMarLeastSquaresProblem, LevMarAdapter};
 use nalgebra::{allocator::Allocator, OVector, Owned, RawStorage, Scalar, U1};
 use num_traits::{Float, Zero};
 use std::marker::PhantomData;
+
+pub trait AbstractLevMarProblemWrapper<P> {
+    fn inner(self) -> P;
+}
+
+impl<P, T, M, N> AbstractLevMarProblemWrapper<P> for TestOnlyFaerLevMarAdapter<P, T, M, N> {
+    fn inner(self) -> P {
+        self.inner
+    }
+}
+
+impl<P, T, M, N> AbstractLevMarProblemWrapper<P> for LevMarAdapter<P, T, M, N> {
+    fn inner(self) -> P {
+        self.inner
+    }
+}
 
 #[derive(Debug)]
 // WARN PERF not for benchmarking

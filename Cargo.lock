@@ -432,6 +432,7 @@ dependencies = [
  "nalgebra",
  "num-traits",
  "thiserror 2.0.18",
+ "typed_test_gen",
 ]
 
 [[package]]
@@ -1783,6 +1784,17 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "typed_test_gen"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6408bb51862a4c623dcedca850940db955e1c1d25a9194170ee31a08dc896ad7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]

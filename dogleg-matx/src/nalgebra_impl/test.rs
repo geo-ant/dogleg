@@ -3,7 +3,7 @@ use crate::{
     ElementwiseReplaceLeqx, Matx, MaxAbsx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
-use nalgebra::{DMatrix, SMatrix, Vector};
+use nalgebra::{DMatrix, Matrix3, MatrixSlice4x3, SMatrix, Vector};
 
 macro_rules! sdmat {
     ( $($($elem:expr),*);*) => {
@@ -216,6 +216,7 @@ fn transformed_vec_norm_for_matrix() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn matrix_to_svd_and_solve_lsqr() {
     let (svec, dvec) = sdvec![3., 1919., 0.1];
     let (smat, dmat) = sdmat![
@@ -237,7 +238,31 @@ fn matrix_to_svd_and_solve_lsqr() {
         dmat.svd(true, true).solve(&dvec, f64::EPSILON).unwrap()
     );
 
-    todo!("test solve regularized lsqr");
+    // this is a rank 2 matrix, since col 0 = 2 * col 1
+    let A = nalgebra::matrix![
+        7.2 ,  3.6000,  1.9000;
+        10.8,  5.4000,  0.7000;
+        10.2,  5.1000,  9.7000;
+        1.8 ,  0.9000,  4.0000;
+    ];
+
+    let b = nalgebra::vector![4.6f64, 9.3, 0.2, 1.4];
+
+    let mu = 1.456f64;
+
+    // we explicitly solve the regularized normal equation here (A^T A + mu I) = A^T b
+    let expected = (A.transpose() * A + mu * Matrix3::identity())
+        .try_inverse()
+        .unwrap()
+        * A.transpose()
+        * b;
+
+    let svd = ToSvdx::calc_svd(A).unwrap();
+    assert_relative_eq!(
+        Svdx::solve_lsqr_regularized(&svd, &b, mu).unwrap(),
+        expected,
+        epsilon = 1e-6
+    );
 }
 
 #[test]

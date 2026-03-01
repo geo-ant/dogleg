@@ -37,3 +37,4 @@ dogleg-matx = {version = "0.1", path = "../dogleg-matx", features = ["nalgebra",
 levmar-problems = {path = "../levmar-problems"}
 levenberg-marquardt = {version = "0.15"}
 typed_test_gen = "0.1"
+templated-tests = {path = "../templated-tests"}

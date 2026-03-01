@@ -72,6 +72,19 @@ where
     }
 }
 
+impl<P, T, M, N> TestOnlyFaerLevMarAdapter<P, T, M, N>
+where
+    T: Copy + nalgebra::ComplexField,
+    P: LevMarLeastSquaresProblem<T, M, N>,
+    N: nalgebra::Dim,
+    M: nalgebra::Dim,
+{
+    /// same as `from`
+    pub fn new(problem: P) -> Self {
+        Self::from(problem)
+    }
+}
+
 impl<T, P, M, N> crate::LeastSquaresProblem<T> for TestOnlyFaerLevMarAdapter<P, T, M, N>
 where
     T: Copy + nalgebra::ComplexField + Float + faer::traits::RealField,

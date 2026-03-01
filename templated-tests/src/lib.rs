@@ -6,8 +6,16 @@ use crate::template::FunctionTemplateInstantiation;
 mod template;
 
 #[proc_macro_attribute]
-/// The principal macro attribute in this crate that lets us keep function
-/// documentation in sync with the function signature.
+/// This macro makes a test into a more C++ style template. The test can
+/// have ONE generic parameter and we can then give different instantiations
+/// for this generic parameter. It's similar in spirit to the
+/// [`typed_test_gen`](https://crates.io/crates/typed_test_gen) crate,
+/// but while that crate enforces the generic bounds, this one does not
+/// and does a C++ style replacement of the generic argument. In general
+/// the `typed_test_gen` crate is better, because it helps us enforce
+/// the generic bounds and code correctness. But for some crates it's just
+/// incredibly hard to talk about the generic bounds of something in the
+/// test and we just want it to work...
 pub fn test_template(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
@@ -75,6 +83,7 @@ pub fn test_template(
     quote::quote! {
         #(
             #[test]
+            #[allow(non_snake_case)]
             #template_instantiations
         )*
     }

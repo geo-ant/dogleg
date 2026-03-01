@@ -33,21 +33,17 @@
 // NOTE(geo-ant) see the test-problems.md readme file for additional
 // helpful references to the problems.
 
-use crate::{
-    dogleg::SvdStepSolver, test_adapters::AbstractLevMarProblemWrapper, Dogleg,
-    LeastSquaresProblem, LevMarAdapter,
-};
-use dogleg_matx::{magic_const::MagicConst, ColEnormsx, DiagRightMulx, Scalex, TrMatVecMulx};
+use crate::test_adapters::TestOnlyFaerLevMarAdapter;
+use crate::{Dogleg, LeastSquaresProblem, LevMarAdapter};
 use levenberg_marquardt::LeastSquaresProblem as LevmarProblem;
 use levmar_problems::{assert_fp_eq, problems::*, utils::differentiate_numerically};
 use nalgebra::*;
-use num_traits::{float::TotalOrder, Float};
 use templated_tests::test_template;
-use typed_test_gen::test_with;
 
 mod debugging;
-#[test]
-fn test_linear_full_rank() {
+
+#[test_template(LevMarAdapter, TestOnlyFaerLevMarAdapter)]
+fn test_linear_full_rank<T>() {
     let mut problem = LinearFullRank::new(OVector::<f64, U5>::zeros(), 10);
     let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
 
@@ -65,7 +61,7 @@ fn test_linear_full_rank() {
 
     problem.set_params(&initial.clone());
 
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let problem = problem.inner;
     assert_fp_eq!(report.objective_function, 2.5, epsilon = 1e-6);
     assert_fp_eq!(
@@ -78,7 +74,7 @@ fn test_linear_full_rank() {
     let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
 
     problem.set_params(&initial.clone());
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let problem = problem.inner;
     assert_fp_eq!(report.objective_function, 22.5, epsilon = 1e-6);
     assert_fp_eq!(
@@ -88,10 +84,10 @@ fn test_linear_full_rank() {
     );
 }
 
-#[test]
+#[test_template(LevMarAdapter, TestOnlyFaerLevMarAdapter)]
 // see MGH paper: https://www.cmor-faculty.rice.edu/~yzhang/caam454/nls/MGH.pdf
 // problem 33
-fn test_linear_rank1() {
+fn test_linear_rank1<T>() {
     let mut problem = LinearRank1::new(OVector::<f64, U5>::zeros(), 10);
     let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
 
@@ -108,7 +104,7 @@ fn test_linear_rank1() {
     assert_fp_eq!(jac_num, jac_trait, epsilon = 1e-5);
 
     problem.set_params(&initial.clone());
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let problem = problem.inner;
     let m = problem.m as f64;
     // NOTE: expected minimum as given in the MGH paper must be scaled by 0.5
@@ -129,7 +125,7 @@ fn test_linear_rank1() {
     let initial = OVector::<f64, U5>::from_column_slice(&[1., 1., 1., 1., 1.]);
 
     problem.set_params(&initial.clone());
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let problem = problem.inner;
     let m = problem.m as f64;
     // NOTE: expected minimum as given in the MGH paper must be scaled by 0.5
@@ -207,8 +203,8 @@ fn test_linear_rank1() {
 //     assert_fp_eq!(sum_jxj, 3. / (2. * m - 3.), epsilon = 1e-6);
 // }
 
-#[test]
-fn test_rosenbrock() {
+#[test_template(LevMarAdapter, TestOnlyFaerLevMarAdapter)]
+fn test_rosenbrock<T>() {
     let mut problem = Rosenbrock {
         params: OVector::<f64, U2>::zeros(),
     };
@@ -224,7 +220,7 @@ fn test_rosenbrock() {
     assert_fp_eq!(jac_num, jac_trait, epsilon = 1e-5);
 
     problem.set_params(&initial.clone());
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let mut problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
@@ -233,7 +229,7 @@ fn test_rosenbrock() {
         epsilon = 1e-6
     );
     problem.set_params(&initial.map(|x| 10. * x));
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let mut problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
@@ -242,7 +238,7 @@ fn test_rosenbrock() {
         epsilon = 1e-6
     );
     problem.set_params(&initial.map(|x| x * 100.));
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(report.objective_function, 0.0);
@@ -253,10 +249,10 @@ fn test_rosenbrock() {
     );
 }
 
-#[test]
+#[test_template(LevMarAdapter, TestOnlyFaerLevMarAdapter)]
 // see https://rdrr.io/github/jlmelville/funconstrain/man/helical.html
 // minimum should be f = 0 at (1,0,0)
-fn test_helical_valley() {
+fn test_helical_valley<T>() {
     let mut problem = HelicalValley {
         params: OVector::<f64, U3>::zeros(),
     };
@@ -273,7 +269,7 @@ fn test_helical_valley() {
     assert_fp_eq!(jac_num, jac_trait, epsilon = 1e-5);
 
     problem.set_params(&initial.clone());
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let mut problem = problem.inner;
     assert_fp_eq!(
         problem.params,
@@ -283,7 +279,7 @@ fn test_helical_valley() {
     assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
 
     problem.set_params(&initial.map(|x| x * 10.));
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let problem = problem.inner;
     assert_fp_eq!(
         problem.params,
@@ -302,8 +298,8 @@ fn test_helical_valley() {
     // );
 }
 
-#[test]
-fn test_powell_singular() {
+#[test_template(LevMarAdapter, TestOnlyFaerLevMarAdapter)]
+fn test_powell_singular<T>() {
     let mut problem = PowellSingular {
         params: OVector::<f64, U4>::zeros(),
     };
@@ -321,7 +317,7 @@ fn test_powell_singular() {
     assert_fp_eq!(jac_num, jac_trait, epsilon = 1e-5);
 
     problem.set_params(&initial.clone());
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let mut problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
@@ -331,7 +327,7 @@ fn test_powell_singular() {
     );
 
     problem.set_params(&initial.map(|x| x * 10.));
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let mut problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(
@@ -343,7 +339,7 @@ fn test_powell_singular() {
     // this is to allow a failed solver here. The solver won't converge, but still
     // the objective function is good enough
     problem.set_params(&initial.map(|x| x * 100.));
-    let (problem, report) = Dogleg::new().minimize(LevMarAdapter::new(problem)).unwrap();
+    let (problem, report) = Dogleg::new().minimize(T::new(problem)).unwrap();
     let problem = problem.inner;
     assert_fp_eq!(report.objective_function, 0.0, epsilon = 1e-6);
     assert_fp_eq!(

@@ -40,7 +40,7 @@ pub fn test_template(
     let mut type_params = function.sig.generics.type_params();
     let Some(type_param) = type_params.next() else {
         return syn::Error::new_spanned(
-            function.sig.generics,
+            function.sig,
             "The test function must have exactly one generic type paramter",
         )
         .to_compile_error()

@@ -120,6 +120,7 @@ fn transformed_vec_norm_for_matrix() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn matrix_to_svd_and_solve_lsqr() {
     let v = faer::col![3., 1919., 0.1];
     let mat = faer::mat![[999.88, 0.1], [1.3, 5.], [12.34, 0.12]];
@@ -131,7 +132,25 @@ fn matrix_to_svd_and_solve_lsqr() {
         SolveLstsq::solve_lstsq(&mat.svd().unwrap(), &v)
     );
 
-    todo!("test solve regularized lsqr")
+    // this is a rank 2 matrix, since col 0 = 2 * col 1
+    let A = faer::mat![
+        [7.2f64, 3.6000, 1.9000],
+        [10.8, 5.4000, 0.7000],
+        [10.2, 5.1000, 9.7000],
+        [1.8, 0.9000, 4.0000],
+    ];
+
+    let b = faer::col![4.6f64, 9.3, 0.2, 1.4];
+
+    let mu = 1.456f64;
+
+    // we explicitly solve the regularized normal equation here (A^T A + mu I) = A^T b
+    // (solved this with GNU octave)
+    let expected = faer::col![0.66179148, 0.33089574, -0.71410813,];
+    let svd = ToSvdx::calc_svd(A).unwrap();
+    let actual = Svdx::solve_lsqr_regularized(&svd, &b, mu).unwrap();
+
+    col_assert_relative_eq!(actual, expected, epsilon = 1e-6);
 }
 
 #[test]

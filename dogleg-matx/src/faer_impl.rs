@@ -459,7 +459,7 @@ where
         // the vector of sigma_j / (sigma_j^2 + mu)
         let smu = self.S().map(|sigma| sigma / (Float::powi(*sigma, 2) + mu));
         let z = u.transpose() * b;
-        let mut y = Col::<T>::zeros(b.nrows());
+        let mut y = Col::<T>::zeros(z.nrows());
         // y = component mul of smu and z
         let smu_vec = smu.column_vector();
         faer::zip!(&mut y, &z, &smu_vec).for_each(|faer::unzip!(y, z, smu_vec)| {

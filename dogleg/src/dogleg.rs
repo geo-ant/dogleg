@@ -447,19 +447,6 @@ type ColNormsType<T, J> = <J as ColEnormsx<T>>::Output;
 type DiagonalWeightsType<T, P> =
     <ColNormsType<T, <P as LeastSquaresProblem<T>>::Jacobian> as Colx<T>>::Owned;
 
-// use crate::dogleg::svd_impl::SvdStepSolver;
-// use crate::LevMarAdapter;
-// use nalgebra::constraint::AreMultipliable;
-// use nalgebra::constraint::ShapeConstraint;
-// use nalgebra::ClosedAddAssign;
-// use nalgebra::Const;
-// use nalgebra::Dim;
-// use nalgebra::DimMin;
-// use nalgebra::DimSub;
-// use nalgebra::RealField;
-// use nalgebra::Scalar;
-// use nalgebra::U1;
-// use num_traits::ConstOne;
 impl<T> Dogleg<T>
 where
     T: std::ops::AddAssign,

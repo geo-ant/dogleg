@@ -426,6 +426,7 @@ dependencies = [
  "assert2",
  "dogleg",
  "dogleg-matx",
+ "faer",
  "levenberg-marquardt",
  "levmar-problems",
  "nalgebra",

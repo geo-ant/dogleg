@@ -28,6 +28,7 @@ assert2 = "0.3"
 nalgebra = "0.34"
 # this is wild, but it works! Enable features of my own crate for testing purposes
 dogleg = {path = ".", features = ["levenberg-marquardt"]}
+faer = "0.24"
 dogleg-matx = {version = "0.1", path = "../dogleg-matx", features = ["nalgebra","faer"]}
 # argmin-dogleg = {path = "../argmin-dogleg"}
 # ceres-dogleg = {path = "../ceres-dogleg"}

@@ -97,6 +97,8 @@ where
     type Parameters = Vector<T, N, P::ParameterStorage>;
     // we always return the owned type here due to implementation details in the
     // dogleg crate.
+    // NOTE PERF(geo-ant) I want to change that, but I'll due that when I refactor
+    // the ownership in the minimization logic.
     type Jacobian = Matrix<T, M, N, Owned<T, M, N>>;
 
     fn set_params(&mut self, x: Self::Parameters) {

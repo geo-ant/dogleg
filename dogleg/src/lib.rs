@@ -10,6 +10,9 @@
 #[cfg(test)]
 mod test;
 
+#[cfg(test)]
+mod test_adapters;
+
 /// solver implementations
 pub mod dogleg;
 /// error types

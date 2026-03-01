@@ -1,4 +1,4 @@
-use syn::{Ident, ItemFn};
+use syn::Ident;
 
 pub struct FunctionTemplateInstantiation {
     template_ident: Ident,

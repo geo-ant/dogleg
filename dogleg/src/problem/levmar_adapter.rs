@@ -124,18 +124,22 @@ where
     // the ownership in the minimization logic.
     type Jacobian = Matrix<T, M, N, Owned<T, M, N>>;
 
+    #[inline(always)]
     fn set_params(&mut self, x: Self::Parameters) {
         self.inner.set_params(&x)
     }
 
+    #[inline(always)]
     fn params(&self) -> Self::Parameters {
         self.inner.params()
     }
 
+    #[inline(always)]
     fn residuals(&self) -> Option<Self::Residuals> {
         self.inner.residuals()
     }
 
+    #[inline(always)]
     fn jacobian(&self) -> Option<Self::Jacobian> {
         self.inner.jacobian().map(|m| m.into_owned())
     }

@@ -1,6 +1,5 @@
 use quote::format_ident;
 use syn::{GenericParam, ItemFn, Token, fold::Fold, parse_macro_input, punctuated::Punctuated};
-
 use crate::template::FunctionTemplateInstantiation;
 
 mod template;

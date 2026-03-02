@@ -1,11 +1,10 @@
-//! TODO
-
 //@todo(geo) reinstate thsi
 // #![warn(missing_docs)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 #![deny(clippy::panic)]
 #![deny(clippy::panicking_unwrap)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(test)]
 mod test;

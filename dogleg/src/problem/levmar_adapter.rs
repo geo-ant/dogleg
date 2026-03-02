@@ -9,10 +9,39 @@ use std::marker::PhantomData;
 
 /// An adapter type so that any type that implements the
 /// [`LeastSquaresProblem`](https://docs.rs/levenberg-marquardt/latest/levenberg_marquardt/trait.LeastSquaresProblem.html)
-/// trait can be immediately used with the dogleg minimizer.
+/// trait from the [`levenberg-marquardt`](https://crates.io/crates/levenberg-marquardt)
+/// crate can be immediately used with the dogleg minimizer.
 ///
-/// Simply create an a `LevMarAdapter` from it and throw it to the dogleg
-/// minimizer and you're good to go.
+/// Simply create a `LevMarAdapter` from the problem and use that in the
+/// [`Dogleg`](crate::Dogleg) minimizer function.
+///
+/// **NOTE Performance**: The adapter returns an owned Jacobian matrix, which
+/// which _is not_ a problem if the original problem also returns an owned
+/// Jacobian, which is a very typical use case. Otherwise, this will incure
+/// a performance hit due to the memory being copied.
+///
+/// ## Example
+///
+/// ```rust
+/// # use nalgebra::U1;
+/// # use nalgebra::Owned;
+/// # fn foo(
+/// #     lm_problem: impl levenberg_marquardt::LeastSquaresProblem<
+/// #         f64,
+/// #         U1,
+/// #         U1,
+/// #         ResidualStorage = nalgebra::Owned<f64, U1, U1>,
+/// #         ParameterStorage = Owned<f64, U1>,
+/// #         ResidualStorage = Owned<f64, U1>,
+/// #     >,
+/// # ) {
+/// # use dogleg::Dogleg;
+/// # use dogleg::LevMarAdapter;
+/// // lm_problem implements levenberg_marquardt::LeastSquaresProblem
+///
+/// let result = Dogleg::new().minimize(LevMarAdapter::from(lm_problem));
+/// # }
+/// ```
 #[derive(Debug)]
 pub struct LevMarAdapter<P, T, M, N> {
     /// the wrapped `levenberg-marquardt` problem.

@@ -4,6 +4,18 @@
 //! >
 //! > -- Jeffrey "The Dude" Lebowski
 //!
+//! This crate implements [Powell's Dogleg Algorithm](https://en.wikipedia.org/wiki/Powell%27s_dog_leg_method)
+//! to solve a least squares problem of the form:
+//!
+//! ```math
+//! \min_{x} \frac{1}{2}\lVert\boldsymbol{r}(\boldsymbol{x})\rVert_2^2,
+//! ```
+//!
+//! where `$$ $$`
+//!
+//!
+//!
+//!
 //! TODO
 //! TODO
 //! TODO
@@ -26,19 +38,41 @@
 //!   * [ ] Fewer allocations internally
 //!   * [ ] Faster matrix decompositions
 //!   * [ ] Some algebraic optimizations
-//! * [ ] `no_std`. This one should be easy.
+//! * [ ] `no_std`. This one should be easy, I just haven't explicitly done it yet.
 //!
 //! However, there are things that this crate **is not** and will never be:
 //!
-//! * `dogleg` is not a minimization _framework_. It's only ever supposed to
-//!   do one thing well, which is least squares minimization using the Dogleg
-//!   Algorithm.
+//! * A minimization _framework_. `dogleg` is only ever supposed to do one thing
+//!   well, which is least squares minimization using the Dogleg Algorithm.
+//!   If you are looking for an optimization framework, try e.g.
+//!   [`argmin`](https://crates.io/crates/argmin).
+//! * _Safe_ Rust _only_. The `dogleg` crate itself will probably not have
+//!   to use unsafe code outright, but the downstream `dogleg-matx` does use
+//!   it (sparingly) and the downstream linear algebra crates use it, too.
+//!   If someone were willing to implement all the linear algebra abstractions
+//!   using only safe Rust all the way to the bottom, I'd be willing to
+//!   commit myself to `dogleg` itself not using `unsafe`.
 //!
 //! ## (Almost) Drop-in Compatibility with `levenberg-marquardt`
 //!
-//! As stated above, TODO TODO TODO.
+//! Since this crate is heavily inspired by the
+//! [`levenberg-marquardt`](https://crates.io/crates/levenberg-marquardt) crate,
+//! I thought it'd be nice to have a low entry barrier
+//! for folks already using that crate. In that case, you've already implemented
+//! [`levenberg-marquardt::LeastSquaresProblem`](https://docs.rs/levenberg-marquardt/latest/levenberg_marquardt/trait.LeastSquaresProblem.html)
+//! and you can just use [`LevMarAdapter`](crate::LevMarAdapter) to turn
+//! that into a [`dogleg::LeastSquaresProblem`](crate::LeastSquaresProblem) that can
+//! be minimized with a [`Dogleg`](crate::Dogleg) instance.
 //!
-//! ## Acknowledgments
+//! The `Dogleg` and `LevenbergMarquardt` interface is very similar, so there's
+//! a good chance you can just replace `LevenbergMarquardt` with `Dogleg`
+//! and be almost good to go. However, `dogleg` uses a `Result`-based approach
+//! to communicate success or failure of the minimization, whereas
+//! the `levenberg-marquardt` crate wants you to check the termination reason
+//! manually. Still, it should be very easy to plug in `dogleg` and just try
+//! it out.
+//!
+//! ## Acknowledgments & References
 //!
 //! This crate wouldn't exist without many other projects and resources for
 //! which I'm very grateful:
@@ -74,6 +108,7 @@
 //! _is_. And then there's [The Big Lebowski](https://en.wikipedia.org/wiki/The_Big_Lebowski),
 //! a cult classic, from which the quote is taken.
 
+#![deny(unsafe_code)]
 //@todo(geo) reinstate thsi
 #![warn(missing_docs)]
 #![deny(clippy::unwrap_used)]

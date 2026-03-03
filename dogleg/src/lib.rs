@@ -11,7 +11,7 @@
 //! \min_{x} \frac{1}{2}\lVert\boldsymbol{r}(\boldsymbol{x})\rVert_2^2,
 //! ```
 //!
-//! where `$$ $$`
+//! where `$$`
 //!
 //!
 //!

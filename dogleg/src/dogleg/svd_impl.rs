@@ -16,7 +16,7 @@ use assert2::debug_assert;
 /// the cheapest way to calculate the step, but it's available on both `faer`
 /// and lapack-free `nalgebra`.
 #[derive(Debug, Clone, PartialEq)]
-pub enum SvdStepSolver<T, MMN, VM, VN> {
+pub(crate) enum SvdStepSolver<T, MMN, VM, VN> {
     /// initial solver state
     Init {
         /// (scaled) Jacobian (matrix of size MxN)
@@ -31,7 +31,7 @@ pub enum SvdStepSolver<T, MMN, VM, VN> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct SvdSolverCache<T, MMN, VN> {
+pub(crate) struct SvdSolverCache<T, MMN, VN> {
     /// Jacobian of the problem, an MxN matrix
     jacobian: MMN,
     /// we don't save pu explicitly, but `u` such that `u*g = pu`

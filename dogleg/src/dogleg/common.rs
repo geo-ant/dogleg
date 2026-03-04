@@ -10,7 +10,7 @@ use assert2::debug_assert;
 // MMN: means Matrix of Size MxN
 // VM: column vector with M elements
 // VN: column vector with N elemens
-pub struct DoglegStep<T, VN> {
+pub(crate) struct DoglegStep<T, VN> {
     /// optimal next step `p` to take in this iteration
     pub p: VN,
     /// euclidean norm of this step
@@ -22,7 +22,7 @@ pub struct DoglegStep<T, VN> {
 
 /// abstracts part of the algorithm whose responsibility it is to calculate
 /// the dogleg components.
-pub trait DoglegStepSolver<T>: Sized {
+pub(crate) trait DoglegStepSolver<T>: Sized {
     /// type of the Jacobian for the least squares problem (matrix-type)
     type Jacobian: Matx<T>;
     /// type of the gradient for the problem (vector-type)

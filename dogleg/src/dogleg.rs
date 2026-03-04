@@ -1,8 +1,11 @@
+use crate::dogleg::common::DoglegStep;
+use crate::dogleg::common::DoglegStepSolver;
 use crate::dogleg::common::minpack_gmax_calc;
 use crate::Error;
 use crate::LeastSquaresProblem;
 use crate::MagicConst;
 use crate::TerminationFailure;
+use crate::dogleg::svd_impl::SvdStepSolver;
 // use assert2::debug_assert;
 use dogleg_matx::Addx;
 use dogleg_matx::ColEnormsx;
@@ -22,12 +25,10 @@ mod svd_impl;
 
 /// stopping criteria and minimization reports
 pub mod report;
-pub use common::DoglegStep;
-pub use common::DoglegStepSolver;
+// pub use common::DoglegStep;
 use num_traits::float::TotalOrder;
 pub use report::MinimizationReport;
 pub use report::TerminationReason;
-pub use svd_impl::SvdStepSolver;
 
 // /// like debug_assert_eq, but doesn't require lhs, rhs to implement the Debug
 // /// trait.
@@ -499,7 +500,7 @@ where
         self.minimize_generic::<SvdStepSolver<_, _, _, _>, _>(problem)
     }
 
-    pub fn minimize_generic<S, P>(
+    fn minimize_generic<S, P>(
         &self,
         mut problem: P,
     ) -> Result<(P, MinimizationReport<T>), Error<P>>

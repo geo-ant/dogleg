@@ -3,7 +3,7 @@ use crate::{
     ElementwiseReplaceLeqx, Matx, MaxAbsx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
-use nalgebra::{DMatrix, Matrix3, MatrixSlice4x3, SMatrix, Vector};
+use nalgebra::{DMatrix, Matrix3, SMatrix, Vector};
 
 macro_rules! sdmat {
     ( $($($elem:expr),*);*) => {

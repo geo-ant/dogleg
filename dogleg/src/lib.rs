@@ -26,24 +26,92 @@
 //! ```math
 //! \boldsymbol{J}=
 //! \left(\begin{matrix}
-//! \vert &  & \vert \\
-//! \nabla r_1(\boldsymbol{x}) & \dots & \nabla r_n(\boldsymbol{x}) \\
-//! \vert &  & \vert \\
+//! \nabla^T r_1(\boldsymbol{x}) \\[0.75em]
+//! \vdots  \\[0.75em]
+//! \nabla^T r_n(\boldsymbol{x}) \\
 //! \end{matrix}\right)
 //! =
 //! \left(\begin{matrix}
-//! \frac{\partial}{\partial x_1} r_1(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_1} r_n(\boldsymbol{x})  \\[0.75em]
-//! \frac{\partial}{\partial x_2} r_1(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_2} r_n(\boldsymbol{x})  \\
+//! \frac{\partial}{\partial x_1} r_1(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_m} r_1(\boldsymbol{x})  \\[0.75em]
+//! \frac{\partial}{\partial x_1} r_2(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_m} r_2(\boldsymbol{x})  \\
 //! \vdots & \ddots & \vdots \\
-//! \frac{\partial}{\partial x_m} r_1(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_m} r_n(\boldsymbol{x})  \\
+//! \frac{\partial}{\partial x_1} r_n(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_m} r_n(\boldsymbol{x})  \\
 //! \end{matrix}\right)
 //! ```
 //!
-//! Let's see how to do that with an example.
-//!
 //! ## Example
 //!
-//! TODO TODO TODO
+//! Let's say you want to minimize the following residual `$\boldsymbol{r}$`,
+//! which depends on parameters `$x_1$` and `$x_2$`, which form the parameter
+//! vector `$\boldsymbol{x} = (x_1,x_2)^T$`:
+//!
+//! ```math
+//! \boldsymbol{r}(\boldsymbol{x}) =
+//! \left(\begin{matrix}
+//! r_1(\boldsymbol{x}) \\[0.75em]
+//! r_2(\boldsymbol{x})
+//! \end{matrix}\right)
+//! =
+//! \left(\begin{matrix}
+//! x_1 \, x_2 -1 \\[0.75em]
+//! (x_1 - 1)^2 + (x_2 -1)^2
+//! \end{matrix}\right)
+//! ```
+//!
+//! That means the Jacobian is:
+//!
+//! ```math
+//! \boldsymbol{J}=
+//! \left(\begin{matrix}
+//! \frac{\partial}{\partial x_1} r_1(\boldsymbol{x}) & \frac{\partial}{\partial x_2} r_1(\boldsymbol{x})  \\[0.75em]
+//! \frac{\partial}{\partial x_1} r_2(\boldsymbol{x}) & \frac{\partial}{\partial x_2} r_2(\boldsymbol{x})  \\
+//! \end{matrix}\right)
+//! =
+//! \left(\begin{matrix}
+//! x_2       & x_1 \\[0.75em]
+//! 2 (x_1-1) & 2 (x_2 -1) \\        
+//! \end{matrix}\right)
+//! ```
+//!
+//! For the implementation, we assume you're using the default linear algebra
+//! backend, which is [`nalgebra`](https://crates.io/crates/nalgebra). That's why
+//! we'll express our matrices and vectors using the types from the `nalgebra`
+//! crate. If you prefer a differnet linear algebra backend, please see the
+//! section on choosing a linear algebra backend.
+//!
+//! ```rust
+#![doc = include_str!("../examples/simple.rs")]
+//! ```
+//!
+//! ### Optimizing Your Problem Implementation for Computational Efficiency
+//!
+//! In the example above, the only state that we've kept in the problem are
+//! the parameters themselves, but we can do more than that.
+//! Note, that [`LeastSquaresProblem::set_params`] is the only trait method that takes
+//! self by _mutable_ (exclusive) reference. That means any call to calculate
+//! the residuals or Jacobian uses those same parameters. That enables us to
+//! perform some shared calculations during `set_params` and reuse them
+//! in both the residual and the Jacobian calculations.
+//!
+//! This can significantly speed up the solver if you pay attention to the
+//! following details:
+//!
+//! 1. Always, always, always _measure_ when trying to optimize performance!
+//! 2. If at all possible, only share calculations that are reused by _both_ the residuals
+//!   _and_ the Jacobian. All other calculations should go into the respective
+//!   methods.
+//!
+//! If you're having trouble figuring out _which_ shared calculations to factor out,
+//! consider this: the residuals will be calculated more often, typically _much_
+//! more often, than the Jacobian itself. Take that into account when
+//! deciding what to cache.
+//!
+//! ## Choosing A Linear Algebra Backend
+//!
+//! By default this crate comes with [`nalgebra`](https://crates.io/crates/nalgebra)
+//! as the matrix backend. This means
+//!
+//!
 //!
 //! ## Goals And Non-Goals
 //!
@@ -84,9 +152,9 @@
 //! I thought it'd be nice to have a low entry barrier
 //! for folks already using that crate. In that case, you've already implemented
 //! [`levenberg-marquardt::LeastSquaresProblem`](https://docs.rs/levenberg-marquardt/latest/levenberg_marquardt/trait.LeastSquaresProblem.html)
-//! and you can just use [`LevMarAdapter`](crate::LevMarAdapter) to turn
+//! and you can just use [`LevMarAdapter`] to turn
 //! that into a [`dogleg::LeastSquaresProblem`](crate::LeastSquaresProblem) that can
-//! be minimized with a [`Dogleg`](crate::Dogleg) instance.
+//! be minimized with a [`Dogleg`] instance.
 //!
 //! The `Dogleg` and `LevenbergMarquardt` interface is very similar, so there's
 //! a good chance you can just replace `LevenbergMarquardt` with `Dogleg`
@@ -120,6 +188,29 @@
 //!   _2nd ed._ by Nocedal&Wright as well as the paper
 //!   [Methods for Non-Linear Least Squares Problems](https://www2.imm.dtu.dk/pubdb/edoc/imm3215.pdf)
 //!   by Madsen, Nielsen, and Tingleff.
+//!
+//! ## Contributing
+//!
+//! Contributions are very welcome. If you submit a contribution, you'll have to
+//! do so under the license that this project is under. That implies that you must
+//! have the right to do so, which won't be a problem a problem if you're doing
+//! this in your free time.
+//!
+//! ### Generative AI Policy
+//!
+//! This project follows the [brainmade.org](https://brainmade.org/) idea of
+//! AI usage. Quoting:
+//!
+//! > _"There’s something transcendent and magical in knowing a human made the_
+//! > _artwork I’m consuming, knowing they tried hard is part of the experience._
+//! > _It doesn’t have to be 100% human made (what would that even MEAN these_
+//! > _days?), perhaps 90% human made."_
+//!
+//! There are some examples and clarifications on that page, which I find useful.
+//! There's one sentence I disagree with, but that's a difference in opinion between
+//! me and the valued author of that page. That sentence is _"I’m [...] a software developer,
+//! I’ll re-use 100 libraries to avoid writing 10 lines of code"_. We don't do
+//! that here.
 //!
 //! ## What on Earth Does "Obviously You're Not a Golfer" Mean??
 //!

@@ -175,7 +175,7 @@ pub enum InitialTrusRegionRadius<T> {
     /// This strategy uses the minpack approach. The default value for
     /// factor in MINPACK is 100.
     Minpack {
-        /// see `lmder` function in the minpack code (https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90)
+        /// see `lmder` function in the minpack code (<https://github.com/fortran-lang/minpack/blob/main/src/minpack.f90>)
         /// >> a positive input variable used in determining the
         /// >> initial step bound. this bound is set to the product of
         /// >> factor and the euclidean norm of diag*x if nonzero, or else
@@ -239,11 +239,11 @@ impl<T:Float> InitialTrusRegionRadius<T> {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Dogleg<T> {
     /// Relative error criterion on the residual values.
-    /// See section 2.3 in the MINPACK user guide: https://cds.cern.ch/record/126569/files/CM-P00068642.pdf
+    /// See section 2.3 in the MINPACK user guide: <https://cds.cern.ch/record/126569/files/CM-P00068642.pdf>
     ftol: T,
     /// Attempt to guarantee that x is in the vicinity of a true solution, by
     /// estimating the distance of the true and current x by
-    /// See section 2.3 in the MINPACK user guide: https://cds.cern.ch/record/126569/files/CM-P00068642.pdf
+    /// See section 2.3 in the MINPACK user guide: <https://cds.cern.ch/record/126569/files/CM-P00068642.pdf>
     xtol: T,
     /// gradient tolerance criterion, which allows CERES style and MINPACK
     /// style tests.
@@ -255,7 +255,7 @@ pub struct Dogleg<T> {
     use_elliptical_parameter_scaling: bool,
     /// whether to apply Jacobi-scaling, which is different from the elliptical
     /// parameter scaling. This is something that CERES solver does,
-    /// see e.g.: https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_minimizer.cc#L263.
+    /// see e.g.: <https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_minimizer.cc#L263>.
     /// This is also a type of diagonal scaling, but it's calculated differently
     /// from the elliptical parameter scaling. This is only calculated once,
     /// based on the initial jacobian and acts as a "pre-conditioner" on the
@@ -770,6 +770,17 @@ where
                 ));
             }
 
+            // repeat the tests for the convergence criteria with the machine
+            // epsilon. If those conditions are hit, it means no improvements
+            // are possible and the tolerances must be made bigger.
+            if gmax <= T::EPSMCH {
+                return Err(Error {
+                    problem,
+                    failure: TerminationFailure::NoImprovementPossible(
+                        report::StoppingCriterion::Gtol,
+                    ),
+                });
+            }
 
             // initialize the step solver with the given (unscaled) residuals, and the
             // (possibly scaled) gradient and (possibly scaled) jacobian.
@@ -1010,19 +1021,6 @@ where
                         return Err(Error {
                             problem,
                             failure: TerminationFailure::LostPatience,
-                        });
-                    }
-
-                    // repeat the tests for the convergence criteria with the machine
-                    // epsilon. If those conditions are hit, it means no improvements
-                    // are possible and the tolerances must be made bigger.
-                    if gmax <= T::EPSMCH {
-                        drop(problem_guard);
-                        return Err(Error {
-                            problem,
-                            failure: TerminationFailure::NoImprovementPossible(
-                                report::StoppingCriterion::Gtol,
-                            ),
                         });
                     }
 

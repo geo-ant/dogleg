@@ -38,7 +38,6 @@ levmar-problems = {path = "../levmar-problems"}
 levenberg-marquardt = {version = "0.15"}
 templated-tests = {path = "../templated-tests"}
 
-
 [package.metadata.docs.rs]
 # To build locally use
 #   RUSTDOCFLAGS="--html-in-header $PWD/katex-header.html --cfg docsrs" cargo +nightly doc --no-deps --open --features levenberg-marquardt

@@ -11,15 +11,39 @@
 //! \min_{x} \frac{1}{2}\lVert\boldsymbol{r}(\boldsymbol{x})\rVert_2^2,
 //! ```
 //!
-//! where `$$`
+//! where `$\boldsymbol{r}\in\mathbb{R}^n$` is called the _residual(s)_,
+//! `$\boldsymbol{x}\in\mathbb{R}^m$` is called the _parameter(s)_. We typically
+//! call `$f(\boldsymbol{x}):=\frac{1}{2}\lVert\boldsymbol{r}(\boldsymbol{x})\rVert_2^2$`
+//! the _objective function_ to minimize. Finally, and this will surprise nobody,
+//! `$\lVert.\rVert_2$` is the [Euclidean norm](https://en.wikipedia.org/wiki/Norm_(mathematics)#Euclidean_norm).
 //!
+//! To use the algorithm in the dogleg crate, you'll need to be able to calculate
+//! both the residual vector `$\boldsymbol{r}$`, as well as its
+//! [Jacobian](https://en.wikipedia.org/wiki/Jacobian_matrix_and_determinant)
+//! `$\boldsymbol{J}$` for a given parameter `$\boldsymbol{x}$`.
+//! The Jacobian is defined as
 //!
+//! ```math
+//! \boldsymbol{J}=
+//! \left(\begin{matrix}
+//! \vert &  & \vert \\
+//! \nabla r_1(\boldsymbol{x}) & \dots & \nabla r_n(\boldsymbol{x}) \\
+//! \vert &  & \vert \\
+//! \end{matrix}\right)
+//! =
+//! \left(\begin{matrix}
+//! \frac{\partial}{\partial x_1} r_1(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_1} r_n(\boldsymbol{x})  \\[0.75em]
+//! \frac{\partial}{\partial x_2} r_1(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_2} r_n(\boldsymbol{x})  \\
+//! \vdots & \ddots & \vdots \\
+//! \frac{\partial}{\partial x_m} r_1(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_m} r_n(\boldsymbol{x})  \\
+//! \end{matrix}\right)
+//! ```
 //!
+//! Let's see how to do that with an example.
 //!
-//! TODO
-//! TODO
-//! TODO
-//! TODO
+//! ## Example
+//!
+//! TODO TODO TODO
 //!
 //! ## Goals And Non-Goals
 //!

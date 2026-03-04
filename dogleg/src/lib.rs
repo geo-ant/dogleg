@@ -11,8 +11,8 @@
 //! \min_{x} \frac{1}{2}\lVert\boldsymbol{r}(\boldsymbol{x})\rVert_2^2,
 //! ```
 //!
-//! where `$\boldsymbol{r}\in\mathbb{R}^n$` is called the _residual(s)_,
-//! `$\boldsymbol{x}\in\mathbb{R}^m$` is called the _parameter(s)_. We typically
+//! where `$\boldsymbol{r}\in\mathbb{R}^m$` is called the _residual(s)_,
+//! `$\boldsymbol{x}\in\mathbb{R}^n$` is called the _parameter(s)_. We typically
 //! call `$f(\boldsymbol{x}):=\frac{1}{2}\lVert\boldsymbol{r}(\boldsymbol{x})\rVert_2^2$`
 //! the _objective function_ to minimize. Finally, and this will surprise nobody,
 //! `$\lVert.\rVert_2$` is the [Euclidean norm](https://en.wikipedia.org/wiki/Norm_(mathematics)#Euclidean_norm).
@@ -28,14 +28,14 @@
 //! \left(\begin{matrix}
 //! \nabla^T r_1(\boldsymbol{x}) \\[0.75em]
 //! \vdots  \\[0.75em]
-//! \nabla^T r_n(\boldsymbol{x}) \\
+//! \nabla^T r_m(\boldsymbol{x}) \\
 //! \end{matrix}\right)
 //! =
 //! \left(\begin{matrix}
-//! \frac{\partial}{\partial x_1} r_1(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_m} r_1(\boldsymbol{x})  \\[0.75em]
-//! \frac{\partial}{\partial x_1} r_2(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_m} r_2(\boldsymbol{x})  \\
+//! \frac{\partial}{\partial x_1} r_1(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_n} r_1(\boldsymbol{x})  \\[0.75em]
+//! \frac{\partial}{\partial x_1} r_2(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_n} r_2(\boldsymbol{x})  \\
 //! \vdots & \ddots & \vdots \\
-//! \frac{\partial}{\partial x_1} r_n(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_m} r_n(\boldsymbol{x})  \\
+//! \frac{\partial}{\partial x_1} r_m(\boldsymbol{x}) & \dots & \frac{\partial}{\partial x_n} r_m(\boldsymbol{x})  \\
 //! \end{matrix}\right)
 //! ```
 //!

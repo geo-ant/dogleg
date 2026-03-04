@@ -452,6 +452,11 @@ impl<T> Dogleg<T>
 where
     T: std::ops::AddAssign,
 {
+    /// Try to solve the least squares problem.
+    ///
+    /// The parameters of the problem which are set when this function is
+    /// called are used as the initial guess.
+    #[allow(private_bounds)]
     pub fn minimize<P>(&self, problem: P) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
         T: Float + MagicConst + std::fmt::Debug+TotalOrder,

@@ -76,7 +76,7 @@
 //! For the implementation, we assume you're using the default linear algebra
 //! backend, which is [`nalgebra`](https://crates.io/crates/nalgebra). That's why
 //! we'll express our matrices and vectors using the types from the `nalgebra`
-//! crate. If you prefer a differnet linear algebra backend, please see the
+//! crate. If you prefer a different linear algebra backend, please see the
 //! section on choosing a linear algebra backend.
 //!
 //! ```rust
@@ -117,7 +117,7 @@
 //!
 //! This crate has the following **goals**:
 //!
-//! * [x] Rust-native least-squares minimiztion with a simple, yet powerful interface.
+//! * [x] Rust-native least-squares minimization with a simple, yet powerful interface.
 //! * [x] Support different linear algebra backends. Contributions very welcome.
 //!   * [x] `faer-rs`
 //!   * [x] `nalgebra`
@@ -193,7 +193,7 @@
 //!
 //! Contributions are very welcome. If you submit a contribution, you'll have to
 //! do so under the license that this project is under. That implies that you must
-//! have the right to do so, which won't be a problem a problem if you're doing
+//! have the right to do so, which won't be a problem if you're doing
 //! this in your free time.
 //!
 //! ### Generative AI Policy

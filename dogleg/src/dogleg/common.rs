@@ -44,7 +44,7 @@ pub(crate) trait DoglegStepSolver<T>: Sized {
     ///
     /// See Nocedal and Wright, pp. 73 - 74 (for the dogleg part) and
     /// p. 246 for important notes that are particular for least squares, namely
-    /// g = J^T r and B = J^T J (approx.), which togehter with the formulas
+    /// g = J^T r and B = J^T J (approx.), which together with the formulas
     /// on pp. 73 give the following:
     ///
     /// p_u is calculated as
@@ -131,7 +131,7 @@ where
 ///          { p_u + (tau-1) * (p_b - p_u) ; in (1,2]
 /// ```
 ///
-/// We return the largest step for which p(tau) <= detla
+/// We return the largest step for which p(tau) <= delta
 //@note(geo) we can also make this for different types PB, PU, in which case
 // we have to use into_ownedx() for the return types and Option<PU::Ownedx> and
 // constrain the PU : Colx<T, Ownedx= PB::Ownedx>. But I won't do it unless I

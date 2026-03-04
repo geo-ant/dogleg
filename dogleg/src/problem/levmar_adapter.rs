@@ -17,7 +17,7 @@ use std::marker::PhantomData;
 ///
 /// **NOTE Performance**: The adapter returns an owned Jacobian matrix, which
 /// which _is not_ a problem if the original problem also returns an owned
-/// Jacobian, which is a very typical use case. Otherwise, this will incure
+/// Jacobian, which is a very typical use case. Otherwise, this will incur
 /// a performance hit due to the memory being copied.
 ///
 /// ## Example

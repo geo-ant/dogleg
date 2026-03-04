@@ -139,7 +139,7 @@ pub enum GradientTolerance<T> {
 
 /// the CERES style of gradient tolerance calculation with the default
 /// threshold for gradient tolerance from ceres, see the
-/// [Cere source here](https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/include/ceres/solver.h#L315).
+/// [Ceres source here](https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/include/ceres/solver.h#L315).
 impl<T: MagicConst>  Default for GradientTolerance<T> {
     fn default() -> Self {
         Self::Ceres { gtol: MagicConst::ONE_E_MINUS10 }
@@ -299,7 +299,7 @@ where
             xtol: T::ONE_E_MINUS8,
             // the min and max diagonal default values are taken from
             // CERES solver, see: https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_strategy.h#L67
-            // but note that the values in the ceres score are applied to the
+            // but note that the values in the ceres source are applied to the
             // squared norms for clipping, so we have to take the square roots.
             min_diagonal : MagicConst::ONE_E_MINUS3,
             max_diagonal : MagicConst::ONE_E16,
@@ -383,11 +383,11 @@ where
     }
 
     #[must_use]
-    #[deprecated = "use with_diagional_scaling(...)"]
+    #[deprecated = "use with_diagonal_scaling(...)"]
     /// Whether to apply diagonal rescaling of variables, see e.g.
     /// Nocedal & Wright p 95-97.
     ///
-    /// **Deprectated**, but for better drop-in compatibility
+    /// **Deprecated**, but for better drop-in compatibility
     /// with the `levenberg_marquardt` crate.
     pub fn with_scale_diag(self, use_scaling: bool) -> Self {
         Self { use_elliptical_parameter_scaling: use_scaling, ..self }

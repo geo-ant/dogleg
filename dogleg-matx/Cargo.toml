@@ -2,6 +2,14 @@
 name = "dogleg-matx"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Matrix algebra abstractions for the dogleg crate"
+homepage = "https://github.com/geo-ant/dogleg"
+repository = "https://github.com/geo-ant/dogleg"
+authors = ["geo-ant"]
+readme = "Readme.md"
+categories = ["mathematics", "science", "algorithms"]
+keywords = ["nonlinear", "regression", "function", "fitting", "least-squares"]
 
 [dependencies]
 nalgebra = {version = "0.34", optional = true}

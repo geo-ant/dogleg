@@ -39,7 +39,7 @@
 //! \end{matrix}\right)
 //! ```
 //!
-//! ## Example
+//! ## 1 Example
 //!
 //! Let's say you want to minimize the following residual `$\boldsymbol{r}$`,
 //! which depends on parameters `$x_1$` and `$x_2$`, which form the parameter
@@ -83,7 +83,7 @@
 #![doc = include_str!("../examples/simple.rs")]
 //! ```
 //!
-//! ### Optimizing Your Problem Implementation for Computational Efficiency
+//! ### 1.1 Optimizing Your Problem Implementation for Computational Efficiency
 //!
 //! In the example above, the only state that we've kept in the problem are
 //! the parameters themselves, but we can do more than that.
@@ -106,14 +106,32 @@
 //! more often, than the Jacobian itself. Take that into account when
 //! deciding what to cache.
 //!
-//! ## Choosing A Linear Algebra Backend
+//! ## 2 Choosing A Linear Algebra Backend
 //!
 //! By default this crate comes with [`nalgebra`](https://crates.io/crates/nalgebra)
-//! as the matrix backend. This means
+//! as the linear algebra backend. All supported linear algebra backends are
+//! enabled with features:
 //!
+//! * `nalgebra` (**default**): enable `nalgebra` support.
+//! * `faer`: enable faer support.
 //!
+//! It's fine to enable multiple nalgebra backends. Note, however, that just
+//! enabling the `faer` feature will also leave `nalgebra` enabled. That might
+//! not be what you intended. To enable exclusively enable `faer` support, just
+//! switch the default features off.
 //!
-//! ## Goals And Non-Goals
+//! ### 2.1 Using Your Own Matrix Backend
+//!
+//! The linear algebra backend is abstracted in the [`dogleg-matx`](https://docs.rs/dogleg-matx/)
+//! crate. The exposed traits are very dogleg-specific, but they are well
+//! documented. If you implement those traits for a different backend, consider
+//! contributing the implementations upstream such that everyone can profit.
+//!
+//! ```toml
+//! # disable default features to use faer support exclusively
+//! dogleg = {version = "...", default-features = false, features = ["faer"]}
+//! ```
+//! ## 3 Goals And Non-Goals
 //!
 //! This crate has the following **goals**:
 //!
@@ -145,7 +163,7 @@
 //!   using only safe Rust all the way to the bottom, I'd be willing to
 //!   commit myself to `dogleg` itself not using `unsafe`.
 //!
-//! ## (Almost) Drop-in Compatibility with `levenberg-marquardt`
+//! ## 4 (Almost) Drop-in Compatibility with `levenberg-marquardt`
 //!
 //! Since this crate is heavily inspired by the
 //! [`levenberg-marquardt`](https://crates.io/crates/levenberg-marquardt) crate,
@@ -164,7 +182,38 @@
 //! manually. Still, it should be very easy to plug in `dogleg` and just try
 //! it out.
 //!
-//! ## Acknowledgments & References
+//! ## 5 Why I Wrote This Crate
+//!
+//! You've heard me harp on about the `levenberg-marquardt` crate and you
+//! might be wondering why I felt the need to write another least squares
+//! minimization crate. The heart of the matter is that I wanted to work
+//! against the fragmentation of the scientific Rust ecosystem, which
+//! is a problem I care deeply about.
+//!
+//! Many scientific crates are tied to a specific linear algebra backend, which
+//! either forces users to pull in multiple linear algebra dependencies
+//! (which aren't small dependencies) or lock themselves in to one backend as well.
+//! This isn't so much of a problem for an application, but as a _library author_,
+//! I'd like to offer my users their choice of backend. I've got that exact problem
+//! with my [`varpro`](https://crates.io/crates/varpro) crate. Huge shoutout to
+//! the `argmin` crate, which has been doing that forever and has been a huge
+//! inspiration for `dogleg` in that regard.
+//!
+//! However, `argmin` is an optimization _framework_, with a much broader scope
+//! than `dogleg`, with the latter being exclusively focused on least squares
+//! minimization. That means `argmin` can't take advantages of least squares
+//! specific implementation details, which make this crate's Dogleg Algorithm
+//! implementation much more stable.
+//!
+//! This answers why I didn't just use or contribute to `argmin`. I also did that btw,
+//! I contributed the complete [`faer-rs` backend](https://github.com/argmin-rs/argmin/pull/549)
+//! from scratch. So then why didn't I just contribute to the `levenberg-marquardt` crate and
+//! make it backend-agnostic? The honest answer is: I tried and failed.
+//! It's just very hard to bolt on this abstraction layer to an existing crate.
+//! Writing `dogleg` from scratch allows me to understand every aspect of the
+//! algorithm itself in minute detail, which in turn informs the abstraction layer.
+//!
+//! ## 6 Acknowledgments & References
 //!
 //! This crate wouldn't exist without many other projects and resources for
 //! which I'm very grateful:
@@ -189,17 +238,28 @@
 //!   [Methods for Non-Linear Least Squares Problems](https://www2.imm.dtu.dk/pubdb/edoc/imm3215.pdf)
 //!   by Madsen, Nielsen, and Tingleff.
 //!
-//! ## Contributing
+//! ## 7 Contributing
 //!
 //! Contributions are very welcome. If you submit a contribution, you'll have to
 //! do so under the license that this project is under. That implies that you must
 //! have the right to do so, which won't be a problem if you're doing
 //! this in your free time.
 //!
-//! ### Generative AI Policy
+//! ### 7.1 Generative AI Policy
 //!
-//! This project follows the [brainmade.org](https://brainmade.org/) idea of
-//! AI usage. Quoting:
+//! With every project I put out there, I am doing two things: Firstly, **I am
+//! doing this in my free time** and I'm not getting paid a dime to do so.
+//! Understanding math deeply and writing high quality code brings me joy,
+//! which is the primary reason I've spent countless hours writing and debugging
+//! this and my other projects. Prompting an AI to write my code doesn't spark joy and I
+//! don't learn anything in the process. Secondly, I am
+//! staking **my personal reputation** on this. Errors are mine and they will
+//! be fixed by me, because I **actually care about this project** and my reputation
+//! which isn't something that an AI can do in the foreseeable future. On the
+//! other hand, I find that using LLMs as glorified search engines, text replacers,
+//! spell/grammar checkers, and for writing throwaway, non-production code is
+//! fine and useful. That's why I've adopted the [brainmade.org](https://brainmade.org/)
+//! philosophy of AI usage:
 //!
 //! > _"There’s something transcendent and magical in knowing a human made the_
 //! > _artwork I’m consuming, knowing they tried hard is part of the experience._
@@ -212,7 +272,7 @@
 //! I’ll re-use 100 libraries to avoid writing 10 lines of code"_. We don't do
 //! that here.
 //!
-//! ## What on Earth Does "Obviously You're Not a Golfer" Mean??
+//! ## 8 What on Earth Does _"Obviously You're Not a Golfer"_ Mean??
 //!
 //! Have you, like me, ever wondered where the Dogleg Algorithm got its name?
 //! Apparently its inventor [Michael JD Powell](https://en.wikipedia.org/wiki/Michael_J._D._Powell),
@@ -224,7 +284,6 @@
 //! a cult classic, from which the quote is taken.
 
 #![deny(unsafe_code)]
-//@todo(geo) reinstate thsi
 #![warn(missing_docs)]
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]

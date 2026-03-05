@@ -115,9 +115,9 @@
 //! * `nalgebra` (**default**): enable `nalgebra` support.
 //! * `faer`: enable faer support.
 //!
-//! It's fine to enable multiple nalgebra backends. Note, however, that just
+//! It's fine to enable multiple backends. Note, however, that just
 //! enabling the `faer` feature will also leave `nalgebra` enabled. That might
-//! not be what you intended. To enable exclusively enable `faer` support, just
+//! not be what you intended. To exclusively enable `faer` support, just
 //! switch the default features off.
 //!
 //! ### 2.1 Using Your Own Matrix Backend
@@ -157,8 +157,8 @@
 //!   If you are looking for an optimization framework, try e.g.
 //!   [`argmin`](https://crates.io/crates/argmin).
 //! * _Safe_ Rust _only_. The `dogleg` crate itself will probably not have
-//!   to use unsafe code outright, but the downstream `dogleg-matx` does use
-//!   it (sparingly) and the downstream linear algebra crates use it, too.
+//!   to use unsafe code outright, but the upstream `dogleg-matx` does use
+//!   it (sparingly) and the upstream linear algebra crates use it, too.
 //!   If someone were willing to implement all the linear algebra abstractions
 //!   using only safe Rust all the way to the bottom, I'd be willing to
 //!   commit myself to `dogleg` itself not using `unsafe`.
@@ -279,7 +279,7 @@
 //! unlike me, was an avid golfer. Turns out, you can visualize the step construction in the algorithm
 //! such that it looks like a [_dogleg hole_](https://en.wikipedia.org/wiki/Golf_course#Fairway_and_rough)
 //! in golf. The illustration of the dogleg step in Wikipedia is actually not
-//! very helpful to see this similarity, but the illustation in Nocedal&Wright
+//! very helpful to see this similarity, but the illustration in Nocedal&Wright
 //! _is_. And then there's [The Big Lebowski](https://en.wikipedia.org/wiki/The_Big_Lebowski),
 //! a cult classic, from which the quote is taken.
 

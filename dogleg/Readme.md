@@ -21,7 +21,7 @@ the Dogleg Algorithm on the same problems.
 
 Please see the [documentation](https://docs.rs/dogleg/) for detailed explanations
 and examples. If you know the excellent [`levenberg-marquardt`](https://crates.io/crates/levenberg-marquardt)
-crate, you'll notice that the interface is very similar. This is on purpose
+crate, you'll notice that the interface is very similar. This is on purpose.
 
 ```rust
 impl LeastSquaresProblem<f64> for Problem {
@@ -31,7 +31,7 @@ impl LeastSquaresProblem<f64> for Problem {
 
 let problem = Problem::new(initial_params);
 let (problem, report) = Dogleg::new().minimize(problem).unwrap();
-let minimum = problem.params()
+let minimum = problem.params();
 ```
 
 ## Why Dogleg?

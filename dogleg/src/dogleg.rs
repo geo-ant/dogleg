@@ -1,11 +1,11 @@
+use crate::dogleg::common::minpack_gmax_calc;
 use crate::dogleg::common::DoglegStep;
 use crate::dogleg::common::DoglegStepSolver;
-use crate::dogleg::common::minpack_gmax_calc;
+use crate::dogleg::svd_impl::SvdStepSolver;
 use crate::Error;
 use crate::LeastSquaresProblem;
 use crate::MagicConst;
 use crate::TerminationFailure;
-use crate::dogleg::svd_impl::SvdStepSolver;
 // use assert2::debug_assert;
 use dogleg_matx::Addx;
 use dogleg_matx::ColEnormsx;
@@ -19,7 +19,6 @@ use dogleg_matx::{Colx, TrMatVecMulx};
 use num_traits::Float;
 
 mod common;
-mod qr_impl;
 mod reset_guard;
 mod svd_impl;
 
@@ -102,10 +101,9 @@ macro_rules! try2 {
     };
 }
 
-
 /// Describes different ways of selecting different gradient tolerance
 /// calculation strategies.
-#[derive(Debug,Copy,Clone,PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum GradientTolerance<T> {
     /// Use the max absolute value `gmax` of the gradient for calculation
     /// and compare it against `gtol`. If it's smaller or equal, consider
@@ -117,7 +115,7 @@ pub enum GradientTolerance<T> {
     },
     /// minpack style calculation of `gmax`, see section 2.3 of the
     /// MINPACK User Guide.
-    /// 
+    ///
     /// > termination occurs when the cosine of the angle between
     /// > \[the residuals\] and any column of the jacobian is at most `gtol` in absolute
     /// > value. therefore, gtol measures the orthogonality
@@ -140,24 +138,33 @@ pub enum GradientTolerance<T> {
 /// the CERES style of gradient tolerance calculation with the default
 /// threshold for gradient tolerance from ceres, see the
 /// [Ceres source here](https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/include/ceres/solver.h#L315).
-impl<T: MagicConst>  Default for GradientTolerance<T> {
+impl<T: MagicConst> Default for GradientTolerance<T> {
     fn default() -> Self {
-        Self::Ceres { gtol: MagicConst::ONE_E_MINUS10 }
+        Self::Ceres {
+            gtol: MagicConst::ONE_E_MINUS10,
+        }
     }
 }
 
-impl<T:Copy> GradientTolerance<T> {
+impl<T: Copy> GradientTolerance<T> {
     /// the gmax value is calculate depending on the strategy.
-    pub(crate) fn calc_gmax<VN1,VN2>(&self, jacobian_norms: &VN1, gradient: &VN2, residual_norm: T) -> Option<T>
+    pub(crate) fn calc_gmax<VN1, VN2>(
+        &self,
+        jacobian_norms: &VN1,
+        gradient: &VN2,
+        residual_norm: T,
+    ) -> Option<T>
     where
         VN1: Colx<T>,
         VN2: MaxAbsx<T, VN1> + Colx<T>,
-        T: Copy  + TotalOrder{
+        T: Copy + TotalOrder,
+    {
         match self {
-            GradientTolerance::Ceres {..} => gradient.max_absolute(),
-            GradientTolerance::Minpack {..} => minpack_gmax_calc(jacobian_norms, gradient, residual_norm),
+            GradientTolerance::Ceres { .. } => gradient.max_absolute(),
+            GradientTolerance::Minpack { .. } => {
+                minpack_gmax_calc(jacobian_norms, gradient, residual_norm)
+            }
         }
-
     }
 
     /// the tolerance value gtol
@@ -167,11 +174,10 @@ impl<T:Copy> GradientTolerance<T> {
             GradientTolerance::Minpack { gtol } => *gtol,
         }
     }
-
 }
 
 /// Describes different ways of selecting for an initial trust region radius
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum InitialTrusRegionRadius<T> {
     /// This strategy uses the minpack approach. The default value for
     /// factor in MINPACK is 100.
@@ -186,7 +192,7 @@ pub enum InitialTrusRegionRadius<T> {
     },
     /// **Default** Use the larger value between the MINPACK initial trust region
     /// calculation or the given `minimum`.
-    /// 
+    ///
     /// This is the default strategy, with factor 100 (from MINPACK)
     /// and a minimum of 10000, which is the default trust region radius
     /// in Ceres Solver.
@@ -200,29 +206,31 @@ pub enum InitialTrusRegionRadius<T> {
     Exact(T),
 }
 
-impl<T:MagicConst> Default for InitialTrusRegionRadius<T> {
+impl<T: MagicConst> Default for InitialTrusRegionRadius<T> {
     fn default() -> Self {
-        Self::MinpackAtLeast { factor: T::ONE_E2, minimum:T::ONE_E4}
+        Self::MinpackAtLeast {
+            factor: T::ONE_E2,
+            minimum: T::ONE_E4,
+        }
     }
 }
 
-impl<T:Float> InitialTrusRegionRadius<T> {
-    fn calculate(&self, initial_param_norm: T) -> T{
+impl<T: Float> InitialTrusRegionRadius<T> {
+    fn calculate(&self, initial_param_norm: T) -> T {
         match *self {
             InitialTrusRegionRadius::Minpack { factor } => {
-                let radius = initial_param_norm*factor;
+                let radius = initial_param_norm * factor;
                 if radius.is_zero() {
                     factor
                 } else {
                     radius
                 }
-            },
-            InitialTrusRegionRadius::MinpackAtLeast { factor, minimum } => {
-                Self::Minpack { factor }.calculate(initial_param_norm).max(minimum)
-            },
+            }
+            InitialTrusRegionRadius::MinpackAtLeast { factor, minimum } => Self::Minpack { factor }
+                .calculate(initial_param_norm)
+                .max(minimum),
             InitialTrusRegionRadius::Exact(radius) => radius,
         }
-
     }
 }
 
@@ -262,16 +270,16 @@ pub struct Dogleg<T> {
     /// based on the initial jacobian and acts as a "pre-conditioner" on the
     /// jacobian using, where scaling = diag( (J^T J)^-1). Of course, it
     /// must always be accounted when calculating the unscaled parameters.
-    use_jacobi_scaling: bool, 
+    use_jacobi_scaling: bool,
     /// Used to calculate the maximum number of function evals (a stopping
     /// criterion) based on the problem
     patience: u64,
     /// minimum value for the diagonal scaling matrix. If used, the diagonal
     /// values will be clamped to the min and maximum values.
-    min_diagonal : T,
+    min_diagonal: T,
     /// maximum value for the diagonal scaling matrix. If used, the diagonal
     /// values will be clamped to the min and maximum values.
-    max_diagonal : T
+    max_diagonal: T,
 }
 
 impl<T> Default for Dogleg<T>
@@ -301,12 +309,12 @@ where
             // CERES solver, see: https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_strategy.h#L67
             // but note that the values in the ceres source are applied to the
             // squared norms for clipping, so we have to take the square roots.
-            min_diagonal : MagicConst::ONE_E_MINUS3,
-            max_diagonal : MagicConst::ONE_E16,
+            min_diagonal: MagicConst::ONE_E_MINUS3,
+            max_diagonal: MagicConst::ONE_E16,
             use_elliptical_parameter_scaling: true,
             patience: 100,
             use_jacobi_scaling: true,
-            initial_delta: InitialTrusRegionRadius::default()
+            initial_delta: InitialTrusRegionRadius::default(),
         }
     }
 
@@ -352,12 +360,15 @@ where
     ///
     ///
     /// # Panics
-    /// 
+    ///
     /// If `gtol` is negative.
     pub fn with_gtol(self, gradient_tolerance: GradientTolerance<T>) -> Self {
-        let gtol= gradient_tolerance.gtol();
+        let gtol = gradient_tolerance.gtol();
         assert!(gtol.is_finite() && gtol >= T::ZERO, "gtol < 0 not allowed");
-        Self { gradient_tolerance, ..self }
+        Self {
+            gradient_tolerance,
+            ..self
+        }
     }
 
     #[must_use]
@@ -375,11 +386,8 @@ where
     ///
     /// # Panics if patience is zero
     pub fn with_patience(self, patience: u64) -> Self {
-        assert_ne!(patience,0);
-        Self {
-            patience,
-            ..self
-        }
+        assert_ne!(patience, 0);
+        Self { patience, ..self }
     }
 
     #[must_use]
@@ -390,14 +398,20 @@ where
     /// **Deprecated**, but for better drop-in compatibility
     /// with the `levenberg_marquardt` crate.
     pub fn with_scale_diag(self, use_scaling: bool) -> Self {
-        Self { use_elliptical_parameter_scaling: use_scaling, ..self }
+        Self {
+            use_elliptical_parameter_scaling: use_scaling,
+            ..self
+        }
     }
 
     #[must_use]
     /// Whether to apply diagonal rescaling of variables, see e.g.
     /// Nocedal & Wright p 95-97
     pub fn with_diagonal_scaling(self, scale_diag: bool) -> Self {
-        Self { use_elliptical_parameter_scaling: scale_diag, ..self }
+        Self {
+            use_elliptical_parameter_scaling: scale_diag,
+            ..self
+        }
     }
 
     #[must_use]
@@ -406,31 +420,40 @@ where
     /// used.
     ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the given value is not positive.
     pub fn with_min_diag(self, min: T) -> Self {
         assert!(min.is_finite() && min > T::zero());
-        Self {min_diagonal : min, ..self}
+        Self {
+            min_diagonal: min,
+            ..self
+        }
     }
 
     #[must_use]
     /// the maximum value to which the diagonal scaling values will be clamped,
     /// which must be positive. Only has an effect if diagonal scaling is
     /// used.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the given value is not positive.
     pub fn with_max_diag(self, max: T) -> Self {
         assert!(max.is_finite() && max > T::zero());
-        Self {max_diagonal: max, ..self}
+        Self {
+            max_diagonal: max,
+            ..self
+        }
     }
 
     /// whether to use jacobian scaling to try and improve the conditioning
     /// of the Jacobian. While this also acts as a form of diagonal scaling,
     /// this is different from the elliptical parameter scaling.
     pub fn with_jacobi_scaling(self, use_scaling: bool) -> Self {
-        Self {use_jacobi_scaling : use_scaling, ..self}
+        Self {
+            use_jacobi_scaling: use_scaling,
+            ..self
+        }
     }
 }
 
@@ -459,7 +482,7 @@ where
     #[allow(private_bounds)]
     pub fn minimize<P>(&self, problem: P) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
-        T: Float + MagicConst + std::fmt::Debug+TotalOrder,
+        T: Float + MagicConst + std::fmt::Debug + TotalOrder,
         P: LeastSquaresProblem<T>,
         P::Residuals: Clone,
         SvdStepSolver<T, <P as LeastSquaresProblem<T>>::Jacobian, P::Residuals, GradType<T, P>>:
@@ -505,10 +528,7 @@ where
         self.minimize_generic::<SvdStepSolver<_, _, _, _>, _>(problem)
     }
 
-    fn minimize_generic<S, P>(
-        &self,
-        mut problem: P,
-    ) -> Result<(P, MinimizationReport<T>), Error<P>>
+    fn minimize_generic<S, P>(&self, mut problem: P) -> Result<(P, MinimizationReport<T>), Error<P>>
     where
         T: Float + MagicConst + std::fmt::Debug + TotalOrder,
         P: LeastSquaresProblem<T>,
@@ -576,7 +596,10 @@ where
         let (max_func_evals, overflow2) = self.patience.overflowing_mul(n_plus_one);
 
         if overflow || overflow2 {
-            return Err(Error { problem, failure: TerminationFailure::DimOutsideU64Bounds });
+            return Err(Error {
+                problem,
+                failure: TerminationFailure::DimOutsideU64Bounds,
+            });
         }
 
         // actual number of function evaluations
@@ -657,7 +680,7 @@ where
                             problem = problem
                     );
             }
-            
+
             let jacobian_col_norms = jacobian.column_enorms();
 
             // NOTE(geo-ant): there's a difference between the jacobi scaling (which
@@ -685,7 +708,7 @@ where
                     jacobian_col_norms
                         .clone_owned()
                         // .replace_if_leq(T::ZERO, T::ONE),
-                        .clamp(self.min_diagonal, self.max_diagonal)
+                        .clamp(self.min_diagonal, self.max_diagonal),
                 );
             }
 
@@ -706,7 +729,7 @@ where
                         params.enorm()
                     }
                 };
-                // this is a hybrid of the 
+                // this is a hybrid of the
                 delta = self.initial_delta.calculate(param_norm);
                 // DEBUG(georgios)
                 // delta = FromPrimitive::from_u16(10000).unwrap();
@@ -757,13 +780,17 @@ where
             );
 
             let gmax = {
-                let calc = self.gradient_tolerance.calc_gmax(&jacobian_col_norms, &gradient, rnorm);
+                let calc = self
+                    .gradient_tolerance
+                    .calc_gmax(&jacobian_col_norms, &gradient, rnorm);
                 try_opt!(
-                calc,
-                on_none =
-                    TerminationFailure::WrongDimensions("zero dimension for residuals or jacobian"),
-                problem = problem
-            )};
+                    calc,
+                    on_none = TerminationFailure::WrongDimensions(
+                        "zero dimension for residuals or jacobian"
+                    ),
+                    problem = problem
+                )
+            };
 
             if gmax <= self.gradient_tolerance.gtol() {
                 return Ok((
@@ -848,11 +875,14 @@ where
                 };
 
                 // inverse the jacobi scaling here, if it was applied
-                let step =  
-                if let Some(jacobi_scaling) = jacobi_scaling.as_ref() {
-                    try_opt!(step.diag_mul_left(jacobi_scaling, Invert::No),
-                        on_none = TerminationFailure::WrongDimensions("jacobi scaling and parameters have incompatible dimensions"),
-                        problem = problem)
+                let step = if let Some(jacobi_scaling) = jacobi_scaling.as_ref() {
+                    try_opt!(
+                        step.diag_mul_left(jacobi_scaling, Invert::No),
+                        on_none = TerminationFailure::WrongDimensions(
+                            "jacobi scaling and parameters have incompatible dimensions"
+                        ),
+                        problem = problem
+                    )
                 } else {
                     step
                 };
@@ -884,9 +914,7 @@ where
                     let new_rnorm = new_residuals.enorm();
 
                     // this is the same as in the minpack implementation
-                    let actual_reduction = 
-                        // this is WRONG because I'm not using the relative predicted
-                        // T::ONE - Float::powi(new_rnorm / rnorm, 2)
+                    let actual_reduction =
                         T::P5 * (Float::powi(rnorm, 2) - Float::powi(new_rnorm, 2));
 
                     // this is also the same as in MINPACK
@@ -916,7 +944,7 @@ where
                         // is only the correct thing to do if the parameters
                         // are not accepted.
                         problem_guard.defuse();
-                    } 
+                    }
 
                     // step expansion or shrinking logic. This is how the
                     // CERES solver does it in its dogleg implementation.
@@ -926,10 +954,10 @@ where
                         }
 
                         if ratio >= T::P75 {
-                            delta = Float::max(delta, T::THREE* p_scaled_norm);
+                            delta = Float::max(delta, T::THREE * p_scaled_norm);
                         }
                     } else {
-                        delta = delta*T::P5;
+                        delta = delta * T::P5;
                     }
 
                     is_first_iteration = false;
@@ -973,23 +1001,23 @@ where
                     };
 
                     // # Xtol Criterion
-                    // 
+                    //
                     // This deserves some elaboration because there are significant
                     // differences between both the MINPACK implementation, the
                     // Madsen, Tingleff et al paper and the actual CERES implementation.
-                    // 
-                    // The minpack xtol check is 
-                    // 
+                    //
+                    // The minpack xtol check is
+                    //
                     // ```
                     // let xtol_check = delta <= self.xtol * xnorm;
                     // ```
                     // see: https://github.com/fortran-lang/minpack/blob/c0b5aea9fcd2b83865af921a7a7e881904f8d3c2/src/minpack.f90#L1810
-                    // 
+                    //
                     // However, this gives us bad stopping criteria for Dogleg,
                     // since there might very well be cases where the trust
                     // region is still very large although the steps are very
-                    // small. 
-                    // 
+                    // small.
+                    //
                     // Instead we use a criterion that is inspired by CERES, see
                     // https://github.com/ceres-solver/ceres-solver/blob/a2bab5af5131d52a756b1fa7b7cff83821541449/internal/ceres/trust_region_minimizer.cc#L726,
                     // which again is somewhat similar to the Madsen et al
@@ -1006,7 +1034,7 @@ where
                     // to trace which scaling CERES gets applied when and what
                     // the state actually contains.
 
-                    let xtol_check = p_scaled_norm <= self.xtol * (scaled_xnorm+self.xtol);
+                    let xtol_check = p_scaled_norm <= self.xtol * (scaled_xnorm + self.xtol);
 
                     if xtol_check {
                         drop(problem_guard);
@@ -1078,8 +1106,8 @@ struct FtolCheck<T> {
 
 impl<T: Float + MagicConst> FtolCheck<T> {
     fn check(self) -> bool {
-        self.predicted_reduction <= self.tol * self.objective_function &&
-            Float::abs(self.actual_reduction) <= self.tol * self.objective_function
+        self.predicted_reduction <= self.tol * self.objective_function
+            && Float::abs(self.actual_reduction) <= self.tol * self.objective_function
         // NOTE(geo-ant): this is part of the original MINPACK check, but
         // seems overly strict to me.
         // TODO(geo-ant): decide whether to keep this...

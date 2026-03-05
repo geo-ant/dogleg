@@ -2,6 +2,14 @@
 name = "dogleg"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = ""
+homepage = "https://github.com/geo-ant/dogleg"
+repository = "https://github.com/geo-ant/dogleg"
+authors = ["geo-ant"]
+readme = "Readme.md"
+categories = ["optimization","math", "science"]
+keywords = ["optimization", "nonlinear",  "least-squares", "regression", "fitting"]
 
 [dependencies]
 num-traits = "0.2"

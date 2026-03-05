@@ -24,8 +24,8 @@ jobs:
 
       - name: Generate code coverage
         run: |
-          cargo tarpaulin --force-clean --verbose --features lapack-netlib --engine llvm --timeout 120 --out Lcov --exclude-files "benches/*"
-
+           cargo tarpaulin --package dogleg --force-clean --verbose --engine llvm --timeout 300 --out Lcov --exclude-files "levmar-problems/**" --exclude-files "templated-tests/**" --exclude-files "ceres-dogleg/**" --exclude-files "argmin-dogleg/**"
+          
       - name: upload to Coveralls
         uses: coverallsapp/github-action@v2
         with:

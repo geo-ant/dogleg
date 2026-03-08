@@ -25,9 +25,15 @@ pub struct CeresReport {
 #[cfg(test)]
 mod test;
 
+#[cfg(feature = "debugging")]
 // binding for cpp/glogging.cpp
 unsafe extern "C" {
     fn init_glog_for_ceres(verbosity: i32);
+}
+
+#[cfg(not(feature = "debugging"))]
+unsafe fn init_glog_for_ceres(_verbosity: i32) {
+    eprintln!("enable 'debugging' feature to configure ceres logging");
 }
 
 static GLOGGING_INIT: Once = Once::new();

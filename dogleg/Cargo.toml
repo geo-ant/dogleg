@@ -10,6 +10,7 @@ authors = ["geo-ant"]
 readme = "Readme.md"
 categories = ["algorithms","mathematics", "science"]
 keywords = ["optimization", "nonlinear",  "least-squares", "regression", "fitting"]
+description = "Backend-agnostic high-quality Rust-native unconstrained least-squares minimization"
 
 [dependencies]
 num-traits = "0.2"

@@ -25,7 +25,7 @@ the Dogleg Algorithm on the same problems.
 
 ## Usage
 
-Please see the [documentation](https://docs.rs/dogleg/) for detailed explanations
+Please see the [documentation](https://docs.rs/dogleg/latest/dogleg/) for detailed explanations
 and examples. If you know the excellent [`levenberg-marquardt`](https://crates.io/crates/levenberg-marquardt)
 crate, you'll notice that the interface is very similar. This is on purpose.
 
@@ -43,7 +43,7 @@ let minimum = problem.params();
 ## Why Dogleg?
 
 There are two parts to this answer, why did I write this and why would you use
-it? I've relegated the answer to the first question [to the docs](https://docs.rs/dogleg/).
+it? I've relegated the answer to the first question [to the docs](https://docs.rs/dogleg/latest/dogleg/).
 So why might you want to use it?
 
 * **High Numerical Quality**: The quality of the numerical results is on par
@@ -60,7 +60,7 @@ significant speedups in the next releases.
 
 ## More Information
 
-I've written answers to all of the following questions [in the docs](https://docs.rs/dogleg/),
+I've written answers to all of the following questions [in the docs](https://docs.rs/dogleg/latest/dogleg/),
 so please check them out if you're curious:
 
 * Can I see an actual example?

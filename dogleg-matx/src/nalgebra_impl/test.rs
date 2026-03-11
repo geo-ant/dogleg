@@ -1,10 +1,9 @@
 use crate::{
     Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
-    ElementwiseReplaceLeqx, Matx, MaxScaledDivx, Scalex, Svdx, ToSvdx, TrMatVecMulx,
-    TransformedVecNorm,
+    ElementwiseReplaceLeqx, Matx, MaxAbsx, Scalex, Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
-use nalgebra::{DMatrix, SMatrix, Vector};
+use nalgebra::{DMatrix, Matrix3, SMatrix, Vector};
 
 macro_rules! sdmat {
     ( $($($elem:expr),*);*) => {
@@ -43,18 +42,20 @@ fn matx_base_functions_for_smat_and_dmatrix() {
 #[test]
 // we test everything except enorm() here
 fn colx_base_functions_for_svec_and_dvector() {
-    let svec = nalgebra::vector![1., 4., 2.];
-    let dvec = nalgebra::dvector![1., 4., 2.];
+    let svec = nalgebra::vector![1., -4., 2.];
+    let dvec = nalgebra::dvector![1., -4., 2.];
 
     assert_eq!(Colx::<_>::into_owned(svec.clone()), svec);
     assert_eq!(Colx::<_>::clone_owned(&svec), svec);
-    assert_eq!(Colx::<_>::max(&svec), Some(4.));
+    assert_eq!(Colx::<_>::max(&svec), Some(2.));
     assert_eq!(Colx::<_>::dim(&svec), Some(3));
+    assert_eq!(Colx::<_>::max_absolute(&svec), Some(4.));
 
     assert_eq!(Colx::<_>::into_owned(dvec.clone()), dvec);
     assert_eq!(Colx::<_>::clone_owned(&dvec), dvec);
-    assert_eq!(Colx::<_>::max(&dvec), Some(4.));
+    assert_eq!(Colx::<_>::max(&dvec), Some(2.));
     assert_eq!(Colx::<_>::dim(&dvec), Some(3));
+    assert_eq!(Colx::<_>::max_absolute(&dvec), Some(4.));
 }
 
 #[test]
@@ -215,6 +216,7 @@ fn transformed_vec_norm_for_matrix() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn matrix_to_svd_and_solve_lsqr() {
     let (svec, dvec) = sdvec![3., 1919., 0.1];
     let (smat, dmat) = sdmat![
@@ -235,6 +237,32 @@ fn matrix_to_svd_and_solve_lsqr() {
         Svdx::solve_lsqr(&dsvd, &dvec).unwrap(),
         dmat.svd(true, true).solve(&dvec, f64::EPSILON).unwrap()
     );
+
+    // this is a rank 2 matrix, since col 0 = 2 * col 1
+    let A = nalgebra::matrix![
+        7.2 ,  3.6000,  1.9000;
+        10.8,  5.4000,  0.7000;
+        10.2,  5.1000,  9.7000;
+        1.8 ,  0.9000,  4.0000;
+    ];
+
+    let b = nalgebra::vector![4.6f64, 9.3, 0.2, 1.4];
+
+    let mu = 1.456f64;
+
+    // we explicitly solve the regularized normal equation here (A^T A + mu I) = A^T b
+    let expected = (A.transpose() * A + mu * Matrix3::identity())
+        .try_inverse()
+        .unwrap()
+        * A.transpose()
+        * b;
+
+    let svd = ToSvdx::calc_svd(A).unwrap();
+    assert_relative_eq!(
+        Svdx::solve_lsqr_regularized(&svd, &b, mu).unwrap(),
+        expected,
+        epsilon = 1e-6
+    );
 }
 
 #[test]
@@ -249,7 +277,12 @@ fn matrix_col_enorms() {
 
     assert_relative_eq!(ColEnormsx::column_enorms(&smat), sexpected);
     assert_relative_eq!(ColEnormsx::column_enorms(&dmat), dexpected);
-    todo!("test damped inverse col enorms")
+
+    let sexpected = sexpected.map(|x| 1. / (1. + x));
+    let dexpected = dexpected.map(|x| 1. / (1. + x));
+
+    assert_relative_eq!(ColEnormsx::damped_inverse_column_enorms(&smat), sexpected);
+    assert_relative_eq!(ColEnormsx::damped_inverse_column_enorms(&dmat), dexpected);
 }
 
 #[test]
@@ -368,11 +401,11 @@ fn max_scaled_div_for_vector() {
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&svec1, scale, &svec2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&svec1, scale, &svec2).unwrap(),
         (3. / 12.)
     );
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&dvec1, scale, &dvec2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&dvec1, scale, &dvec2).unwrap(),
         (3. / 12.)
     );
 
@@ -381,11 +414,11 @@ fn max_scaled_div_for_vector() {
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&svec1, scale, &svec2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&svec1, scale, &svec2).unwrap(),
         (3. / 12.)
     );
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&dvec1, scale, &dvec2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&dvec1, scale, &dvec2).unwrap(),
         (3. / 12.)
     );
 }
@@ -423,5 +456,10 @@ fn elementwise_replace_if_leq_for_vector() {
         ElementwiseReplaceLeqx::replace_if_leq(dvec, threshold, replacement),
         dexpected
     );
-    todo!("also test the clamp function");
+
+    let (svec, dvec) = sdvec![5.2, -100.1, 2., -30., 49., 99.1];
+    let (sexpected, dexpected) = sdvec![5.2, -50., 2., -30., 49., 55.];
+
+    assert_eq!(ElementwiseReplaceLeqx::clamp(svec, -50., 55.), sexpected);
+    assert_eq!(ElementwiseReplaceLeqx::clamp(dvec, -50., 55.), dexpected);
 }

@@ -1,8 +1,8 @@
 use crate::utility::enorm;
 use crate::{
     Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
-    ElementwiseReplaceLeqx, Invert, Matx, MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx,
-    TrMatVecMulx, TransformedVecNorm,
+    ElementwiseReplaceLeqx, Invert, Matx, MaxAbsx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx,
+    TransformedVecNorm,
 };
 use faer::col::AsColMut;
 use faer::linalg::solvers::Svd;
@@ -182,6 +182,17 @@ where
     fn dim(&self) -> Option<u64> {
         self.nrows().try_into().ok()
     }
+
+    fn max_absolute(&self) -> Option<T>
+    where
+        T: TotalOrder,
+    {
+        let this = self.as_col_ref();
+        this.iter()
+            .copied()
+            .map(Float::abs)
+            .max_by(TotalOrder::total_cmp)
+    }
 }
 
 impl<'a, T, R> Colx<T> for ColMut<'a, T, R>
@@ -211,6 +222,17 @@ where
     fn dim(&self) -> Option<u64> {
         self.nrows().try_into().ok()
     }
+
+    fn max_absolute(&self) -> Option<T>
+    where
+        T: TotalOrder,
+    {
+        let this = self.as_col_ref();
+        this.iter()
+            .copied()
+            .map(Float::abs)
+            .max_by(TotalOrder::total_cmp)
+    }
 }
 
 impl<'a, T, R> Colx<T> for ColRef<'a, T, R>
@@ -239,6 +261,17 @@ where
 
     fn dim(&self) -> Option<u64> {
         self.nrows().try_into().ok()
+    }
+
+    fn max_absolute(&self) -> Option<T>
+    where
+        T: TotalOrder,
+    {
+        let this = self.as_col_ref();
+        this.iter()
+            .copied()
+            .map(Float::abs)
+            .max_by(TotalOrder::total_cmp)
     }
 }
 
@@ -288,7 +321,7 @@ where
         //@todo(geo-ant): PERF: is this the most efficient way of implementing
         // this axpy variant?
         #[allow(unused_mut)]
-        faer::zip!(this, yref).for_each(|faer::unzip!(mut this, rhs)| *this += factor * *rhs);
+        faer::zip!(this, yref).for_each(|faer::unzip!(mut this, yref)| *this += factor * *yref);
         Some(self)
     }
 }
@@ -410,12 +443,30 @@ where
         Some(x)
     }
 
-    fn rank(&self) -> usize {
-        todo!("remove this function")
-    }
+    fn solve_lsqr_regularized(&self, b: &V, mu: T) -> Option<Self::Output> {
+        let v = self.V();
+        let u = self.U();
+        let b = b.as_col_ref();
 
-    fn solve_lsqr_regularized(&self, v: &V, mu: T) -> Option<Self::Output> {
-        todo!()
+        debug_assert!(
+            mu.is_finite() && mu > T::zero(),
+            "regularization parameter must be positive"
+        );
+
+        // NOTE(geo-ant) see the nalgebra implementation for the math
+        // behind this calculation.
+
+        // the vector of sigma_j / (sigma_j^2 + mu)
+        let smu = self.S().map(|sigma| sigma / (Float::powi(*sigma, 2) + mu));
+        let z = u.transpose() * b;
+        let mut y = Col::<T>::zeros(z.nrows());
+        // y = component mul of smu and z
+        let smu_vec = smu.column_vector();
+        faer::zip!(&mut y, &z, &smu_vec).for_each(|faer::unzip!(y, z, smu_vec)| {
+            *y = (*z) * (*smu_vec);
+        });
+        let x = v * &y;
+        Some(x)
     }
 }
 
@@ -549,18 +600,18 @@ where
     }
 }
 
-impl<T, R, V1, V2> MaxScaledDivx<T, V2> for V1
+impl<T, R, V1, V2> MaxAbsx<T, V2> for V1
 where
-    T: Float + RealField + Copy,
+    T: Float + RealField + Copy + TotalOrder,
     R: Shape,
     V1: FaerType + AsColRef<T = T, Rows = R>,
     V2: FaerType + AsColRef<T = T, Rows = R>,
 {
-    fn max_abs_scaled_div(&self, s: T, v: &V2) -> Option<T> {
+    fn max_abs_scaled_div_elem(&self, s: T, v: &V2) -> Option<T> {
         let this = self.as_col_ref();
         let v = v.as_col_ref();
         faer::zip!(this, v)
-            .map(|faer::unzip!(this, rhs)| this.abs() / *rhs)
+            .map(|faer::unzip!(this, v)| this.abs() / *v)
             .max()
             .map(|val| val / s)
     }
@@ -581,9 +632,9 @@ where
             return None;
         }
 
-        faer::zip!(this, other).for_each(|faer::unzip!(this, rhs)| {
-            let max = match TotalOrder::total_cmp(this, rhs) {
-                std::cmp::Ordering::Less => *rhs,
+        faer::zip!(this, other).for_each(|faer::unzip!(this, other)| {
+            let max = match TotalOrder::total_cmp(this, other) {
+                std::cmp::Ordering::Less => *other,
                 _ => *this,
             };
             *this = max;

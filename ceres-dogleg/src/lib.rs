@@ -25,9 +25,15 @@ pub struct CeresReport {
 #[cfg(test)]
 mod test;
 
+#[cfg(feature = "debugging")]
 // binding for cpp/glogging.cpp
 unsafe extern "C" {
     fn init_glog_for_ceres(verbosity: i32);
+}
+
+#[cfg(not(feature = "debugging"))]
+unsafe fn init_glog_for_ceres(_verbosity: i32) {
+    eprintln!("enable 'debugging' feature to configure ceres logging");
 }
 
 static GLOGGING_INIT: Once = Once::new();
@@ -41,7 +47,7 @@ where
     P::JacobianStorage: Clone,
     DefaultAllocator: Allocator<N> + Allocator<M> + Allocator<N, M>,
 {
-    GLOGGING_INIT.call_once(|| unsafe { init_glog_for_ceres(2) });
+    GLOGGING_INIT.call_once(|| unsafe { init_glog_for_ceres(0) });
     let options = SolverOptions::builder()
         .minimizer_type(MinimizerType::TRUST_REGION)
         .trust_region_strategy_type(ceres_solver::solver::TrustRegionStrategyType::DOGLEG)

@@ -9,8 +9,13 @@ license = "MIT OR Apache-2.0"
 argmin = "0.11"
 levenberg-marquardt = "0.15"
 argmin-math = { version = "0.5", features = ["nalgebra_v0_34"] }
-dogleg-matx = { version = "0.1", path = "../dogleg-matx" }
+dogleg-matx = { version = "0.1", path = "../dogleg-matx", features = ["nalgebra"] }
 levmar-problems = {path = "../levmar-problems"}
 nalgebra = "0.34"
 num-traits = "0.2"
 assert2 = "0.3"
+
+[features]
+# by default the tests are ignored, because they all fail. If you'd like
+# to see them fail, enable this feature.
+no-ignore = []

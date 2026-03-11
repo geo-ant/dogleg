@@ -1,8 +1,8 @@
 use crate::utility::enorm;
 use crate::{
     Addx, ColEnormsx, Colx, DiagLeftMulx, DiagRightMulx, Dotx, ElementwiseMaxx,
-    ElementwiseReplaceLeqx, Invert, Matx, MaxScaledDivx, Ownedx, Scalex, Svdx, ToSvdx,
-    TrMatVecMulx, TransformedVecNorm,
+    ElementwiseReplaceLeqx, Invert, Matx, MaxAbsx, Ownedx, Scalex, Svdx, ToSvdx, TrMatVecMulx,
+    TransformedVecNorm,
 };
 #[cfg(feature = "assert2")]
 use assert2::debug_assert;
@@ -89,6 +89,16 @@ where
 
     fn dim(&self) -> Option<u64> {
         self.nrows().try_into().ok()
+    }
+
+    fn max_absolute(&self) -> Option<T>
+    where
+        T: TotalOrder,
+    {
+        self.iter()
+            .copied()
+            .map(Float::abs)
+            .max_by(TotalOrder::total_cmp)
     }
 }
 
@@ -255,16 +265,12 @@ where
         self.solve(b, Float::sqrt(Float::epsilon())).ok()
     }
 
-    fn rank(&self) -> usize {
-        self.rank(Float::epsilon())
-    }
-
     fn solve_lsqr_regularized(&self, b: &Vector<T, R, SV>, mu: T) -> Option<Self::Output> {
         let v_t = self.v_t.as_ref()?;
         let u = self.u.as_ref()?;
 
         debug_assert!(
-            mu.is_positive(),
+            mu.is_positive() && mu.is_finite(),
             "regularization parameter must be positive"
         );
 
@@ -424,7 +430,7 @@ where
     }
 }
 
-impl<T, R1, R2, S1, S2> MaxScaledDivx<T, Vector<T, R2, S2>> for Vector<T, R1, S1>
+impl<T, R1, R2, S1, S2> MaxAbsx<T, Vector<T, R2, S2>> for Vector<T, R1, S1>
 where
     T: Float + Scalar + Copy + Mul<Output = T> + Div<Output = T> + TotalOrder,
     R1: Dim,
@@ -432,7 +438,7 @@ where
     S1: Storage<T, R1> + RawStorage<T, R1>,
     S2: Storage<T, R2>,
 {
-    fn max_abs_scaled_div(&self, s: T, v: &Vector<T, R2, S2>) -> Option<T> {
+    fn max_abs_scaled_div_elem(&self, s: T, v: &Vector<T, R2, S2>) -> Option<T> {
         self.iter()
             .copied()
             .zip(v.iter().copied())

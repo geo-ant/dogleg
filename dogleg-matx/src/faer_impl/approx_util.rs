@@ -28,6 +28,7 @@ macro_rules! col_relative_eq {
 }
 
 #[macro_export]
+/// helper macro to compare to matrices for approximate equality
 macro_rules! mat_assert_relative_eq {
     ($lhs:expr,$rhs:expr $(, epsilon = $eps:literal)? $(,)?) => {
         ::approx::assert_relative_eq!(

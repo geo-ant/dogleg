@@ -1,0 +1,23 @@
+name: tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main, dev ]
+  schedule:
+  # Runs the workflow at 00:00 on the first day of every month
+  - cron: '0 0 1 * *'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt install -y libceres-dev
+      - run: cargo test --workspace

@@ -2,6 +2,14 @@
 name = "dogleg"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = ""
+homepage = "https://github.com/geo-ant/dogleg"
+repository = "https://github.com/geo-ant/dogleg"
+authors = ["geo-ant"]
+readme = "Readme.md"
+categories = ["optimization","math", "science"]
+keywords = ["optimization", "nonlinear",  "least-squares", "regression", "fitting"]
 
 [dependencies]
 num-traits = "0.2"
@@ -12,15 +20,15 @@ thiserror = "2.0"
 # via feature flags. However, this complicates nalgebra (and nalgebra-lapack)
 # dependencies.
 levenberg-marquardt = {version = "0.15", optional = true}
-# todo remove
-nalgebra = "0.34"
+nalgebra = {version = "0.34", optional = true}
 assert2 = {version = "0.3", optional = true}
 
 [features]
-# TODO remove this
-# default = ["levenberg-marquardt"]
-default = []
+default = ["nalgebra"]
 assert2 = ["dep:assert2","dogleg-matx/assert2"]
+nalgebra = ["dogleg-matx/nalgebra"]
+faer = ["dogleg-matx/faer"]
+levenberg-marquardt = ["dep:levenberg-marquardt", "dep:nalgebra", "nalgebra"]
 
 [dev-dependencies]
 approx = "0.5"
@@ -28,9 +36,19 @@ assert2 = "0.3"
 nalgebra = "0.34"
 # this is wild, but it works! Enable features of my own crate for testing purposes
 dogleg = {path = ".", features = ["levenberg-marquardt"]}
+faer = "0.24"
+dogleg-matx = {version = "0.1", path = "../dogleg-matx", features = ["nalgebra","faer"]}
 # argmin-dogleg = {path = "../argmin-dogleg"}
 # ceres-dogleg = {path = "../ceres-dogleg"}
 # ceres-solver-sys = {version = "0.5", default-features = false, features = ["source"]}
 # ceres-solver = {version = "0.5", default-features = false, features = ["source"]}
 levmar-problems = {path = "../levmar-problems"}
 levenberg-marquardt = {version = "0.15"}
+templated-tests = {path = "../templated-tests"}
+
+[package.metadata.docs.rs]
+# To build locally use
+#   RUSTDOCFLAGS="--html-in-header $PWD/katex-header.html --cfg docsrs" cargo +nightly doc --no-deps --open --features levenberg-marquardt
+rustdoc-args = ["--html-in-header", "katex-header.html", "--cfg", "docsrs"]
+# Enable LAPACK features for documentation (using netlib as it's most common)
+features = ["levenberg-marquardt"]

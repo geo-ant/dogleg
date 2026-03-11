@@ -2,10 +2,18 @@
 name = "dogleg-matx"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Matrix algebra abstractions for the dogleg crate"
+homepage = "https://github.com/geo-ant/dogleg"
+repository = "https://github.com/geo-ant/dogleg"
+authors = ["geo-ant"]
+readme = "Readme.md"
+categories = ["optimization","math", "science"]
+keywords = ["nonlinear", "regression", "function", "fitting", "least-squares"]
 
 [dependencies]
-nalgebra = "0.34"
-faer = "0.23"
+nalgebra = {version = "0.34", optional = true}
+faer = {version = "0.24", optional = true}
 num-traits = "0.2"
 rayon = "1.11"
 assert2 = {version = "0.3", optional = true}
@@ -13,5 +21,6 @@ assert2 = {version = "0.3", optional = true}
 [dev-dependencies]
 approx = "0.5"
 nalgebra = "0.34"
-faer = "0.23"
-
+faer = "0.24"
+# this is a trick to enable extra features for my crate in test 
+dogleg-matx = {path = ".", features = ["nalgebra","faer","assert2"]}

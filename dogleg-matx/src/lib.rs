@@ -1,12 +1,12 @@
-//! Linear algebra abstraction that are specific to the `dogleg` crate.
-//! This crate has no affiliation with another crate named `matx` crate
-//! on crates.io.
+//! Linear algebra abstractions that are specific to the `dogleg` crate.
+//! This crate has no affiliation with another crate named `matx` on crates.io.
 //!
 //! You are free to implement the abstractions for a different matrix backend.
 //! If you do, consider submitting a PR to this repository, so that
 //! everyone can profit from this and use this crate with your
 //! favorite matrix backend.
 
+#![warn(missing_docs)]
 // if the cloudflare outage taught us one thing, it's that we want to be
 // more strict about this...
 #![deny(clippy::unwrap_used)]
@@ -14,12 +14,15 @@
 #![deny(clippy::panic)]
 #![deny(clippy::panicking_unwrap)]
 
-use num_traits::ConstOne;
+use num_traits::{float::TotalOrder, ConstOne};
 use std::ops::AddAssign;
 
-mod faer_impl;
 /// utility module for floating point constants
 pub mod magic_const;
+
+#[cfg(feature = "faer")]
+mod faer_impl;
+#[cfg(feature = "nalgebra")]
 mod nalgebra_impl;
 mod utility;
 
@@ -68,6 +71,12 @@ pub trait Colx<T>: PartialEq {
     /// Return None if the number of columns doesn't fit into u64, in which
     /// case you shouldn't be using this library anyways...
     fn dim(&self) -> Option<u64>;
+    /// This is just the ||v||_inf -norm of the vector v, meaning
+    /// the maximum of the absolute values of the elements.
+    /// Returns None, if there are no elements in the vector.
+    fn max_absolute(&self) -> Option<T>
+    where
+        T: TotalOrder;
 }
 
 /// multiply a vector type by a constant factor
@@ -103,6 +112,7 @@ pub trait Dotx<T, V = Self> {
 /// For a matrix `A` that implements this, we can calculate the matrix-vector
 /// product `A^T v` with a suitably sized vector.
 pub trait TrMatVecMulx<T, V> {
+    /// output type
     type Output: OwnedColx<T>;
     /// calculate `A^T v`. Returns `None` if there is a
     /// dimensions mismatch.
@@ -123,6 +133,7 @@ pub trait TransformedVecNorm<T, V> {
 /// For matrix `A` implementing this trait, its singular value decomposition
 /// can be calculated.
 pub trait ToSvdx<T> {
+    /// the type that actually holds the svd
     type Svd;
 
     /// calculate the SVD (singular value decomposition). Return `None` on error.
@@ -131,6 +142,7 @@ pub trait ToSvdx<T> {
 
 /// Abstracts over the singular value decomposition of a matrix `A`
 pub trait Svdx<T, V> {
+    /// output type for the least squares solution
     type Output: Colx<T>;
     /// Solve
     /// ```math
@@ -164,14 +176,13 @@ pub trait Svdx<T, V> {
     /// where the advantage is that `A^T A + mu* Id` is nonsingular for mu>0.
     /// For numerical reasons, mu might need to be adjusted.
     fn solve_lsqr_regularized(&self, b: &V, mu: T) -> Option<Self::Output>;
-
-    fn rank(&self) -> usize;
 }
 
 /// calculate the column norms of a matrix and put them into a vector
 /// (indexed the same as the column, so element i of the vector will have
 /// norm of column i).
 pub trait ColEnormsx<T> {
+    /// output type for the functions
     type Output: OwnedColx<T>;
     /// the calculated column norms placed into avector
     fn column_enorms(&self) -> Self::Output;
@@ -190,7 +201,9 @@ pub trait ColEnormsx<T> {
 /// used to indicate whether to invert the diagonal matrix for
 /// multiplication.
 pub enum Invert {
+    /// yes!
     Yes,
+    /// no!
     No,
 }
 
@@ -221,30 +234,26 @@ pub trait DiagLeftMulx<T, V>: Sized {
 }
 
 /// a calculation that is pretty specific to the trust region problem.
-/// This is used in the gtol-criterion, which is described elsewhere in
-/// this codebase.
-///
-/// What this calculation does is this:
-/// We have two VECTORS (of same lenth) `self` and `v`, and a scalar `s`.
-/// What we now calculate is:
-///
-/// ```math
-///            self_i
-/// max_i  ------------
-///           s * v_i
-/// ```
-///
-/// This seems a bit weird, but it's only used when `self` is the gradient
-/// of the problem self = J^T r (such that `self_i` = `g_i` = `j_i^T r`),
-/// and `v` = the column norms of `J`, and `s = ||r||` (the residual norm).
-/// This is how this gets used for the gtol criterion, see also
-/// MINPACK user guide p.22. We can assume `s!=0`, because we'll have checked
-/// earlier if the residuals vanished (in which case iteration is successful).
-pub trait MaxScaledDivx<T, V> {
-    /// calculation as described above where None means the vectors
-    /// had no elements. The implementation is free to assume that the
-    /// vectors have same length.
-    fn max_abs_scaled_div(&self, s: T, v: &V) -> Option<T>;
+/// This exposes two functionalities that could be used in the gtol-criterion,
+/// which is described elsewhere in this codebase.
+pub trait MaxAbsx<T, V> {
+    /// What this calculation does is this:
+    /// We have two VECTORS (of same lenth) `self` and `v`, and a scalar `s`.
+    /// What we now calculate is:
+    ///
+    /// ```math
+    ///            self_i
+    /// max_i  ------------
+    ///           s * v_i
+    /// ```
+    ///
+    /// This seems a bit weird, but it's only used when `self` is the gradient
+    /// of the problem self = J^T r (such that `self_i` = `g_i` = `j_i^T r`),
+    /// and `v` = the column norms of `J`, and `s = ||r||` (the residual norm).
+    /// This is how this gets used for the gtol criterion, see also
+    /// MINPACK user guide p.22. We can assume `s!=0`, because we'll have checked
+    /// earlier if the residuals vanished (in which case iteration is successful).
+    fn max_abs_scaled_div_elem(&self, s: T, v: &V) -> Option<T>;
 }
 
 /// a very dogleg specific trait that is used when assigning the diagonal
@@ -256,6 +265,7 @@ pub trait MaxScaledDivx<T, V> {
 /// Then returns that modified self or None if an error occurred (dimensions
 /// mismatch).
 pub trait ElementwiseMaxx<V>: Sized {
+    /// calculate the elementwise max as described above
     fn elementwise_max(self, other: &V) -> Option<Self>;
 }
 

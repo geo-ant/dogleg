@@ -1,19 +1,16 @@
 use crate::{dogleg::report::TerminationFailure, MagicConst};
-use dogleg_matx::{Addx, Colx, Dotx, Matx, MaxScaledDivx, OwnedColx, Scalex};
+use dogleg_matx::{Addx, Colx, Dotx, Matx, MaxAbsx, OwnedColx, Scalex};
 use num_traits::Float;
 
 #[cfg(feature = "assert2")]
 use assert2::debug_assert;
-
-#[cfg(test)]
-mod test;
 
 #[derive(Debug, Clone, PartialEq)]
 //@note(geo-ant) why do these generic have those weird names?
 // MMN: means Matrix of Size MxN
 // VM: column vector with M elements
 // VN: column vector with N elemens
-pub struct DoglegStep<T, VN> {
+pub(crate) struct DoglegStep<T, VN> {
     /// optimal next step `p` to take in this iteration
     pub p: VN,
     /// euclidean norm of this step
@@ -25,9 +22,12 @@ pub struct DoglegStep<T, VN> {
 
 /// abstracts part of the algorithm whose responsibility it is to calculate
 /// the dogleg components.
-pub trait DoglegStepSolver<T>: Sized {
+pub(crate) trait DoglegStepSolver<T>: Sized {
+    /// type of the Jacobian for the least squares problem (matrix-type)
     type Jacobian: Matx<T>;
+    /// type of the gradient for the problem (vector-type)
     type Gradient: OwnedColx<T>;
+    /// type of the residuals (vector type)
     type Residuals: Colx<T>;
     /// Construct a dogleg solver to initialize an internal state using the
     /// Jacobian, residuals, and the gradient at the current parameters.
@@ -44,7 +44,7 @@ pub trait DoglegStepSolver<T>: Sized {
     ///
     /// See Nocedal and Wright, pp. 73 - 74 (for the dogleg part) and
     /// p. 246 for important notes that are particular for least squares, namely
-    /// g = J^T r and B = J^T J (approx.), which togehter with the formulas
+    /// g = J^T r and B = J^T J (approx.), which together with the formulas
     /// on pp. 73 give the following:
     ///
     /// p_u is calculated as
@@ -103,17 +103,21 @@ pub trait DoglegStepSolver<T>: Sized {
 /// where j_i (vec) is the i-th column of the jacobian and r (vec) is the
 /// residual vector. g_i (scalar) is the i-th element of the gradient,
 /// since g = J^T r.
-pub fn gtol_calc<T, VN1, VN2>(jacobian_norms: &VN1, gradient: &VN2, residual_norm: T) -> Option<T>
+pub(crate) fn minpack_gmax_calc<T, VN1, VN2>(
+    jacobian_norms: &VN1,
+    gradient: &VN2,
+    residual_norm: T,
+) -> Option<T>
 where
     VN1: Colx<T>,
-    VN2: MaxScaledDivx<T, VN1> + Colx<T>,
+    VN2: MaxAbsx<T, VN1> + Colx<T>,
 {
     assert_eq!(
         jacobian_norms.dim(),
         gradient.dim(),
         "jacobian must have same number of columns as gradient"
     );
-    gradient.max_abs_scaled_div(residual_norm, jacobian_norms)
+    gradient.max_abs_scaled_div_elem(residual_norm, jacobian_norms)
 }
 
 /// this calculates the dogleg step from the component vectors p_b, p_u,
@@ -127,7 +131,7 @@ where
 ///          { p_u + (tau-1) * (p_b - p_u) ; in (1,2]
 /// ```
 ///
-/// We return the largest step for which p(tau) <= detla
+/// We return the largest step for which p(tau) <= delta
 //@note(geo) we can also make this for different types PB, PU, in which case
 // we have to use into_ownedx() for the return types and Option<PU::Ownedx> and
 // constrain the PU : Colx<T, Ownedx= PB::Ownedx>. But I won't do it unless I

@@ -1,7 +1,7 @@
 use crate::{
     col_assert_relative_eq, mat_assert_relative_eq, Addx, ColEnormsx, Colx, DiagLeftMulx,
-    DiagRightMulx, Dotx, ElementwiseMaxx, ElementwiseReplaceLeqx, Matx, MaxScaledDivx, Scalex,
-    Svdx, ToSvdx, TrMatVecMulx, TransformedVecNorm,
+    DiagRightMulx, Dotx, ElementwiseMaxx, ElementwiseReplaceLeqx, Matx, MaxAbsx, Scalex, Svdx,
+    ToSvdx, TrMatVecMulx, TransformedVecNorm,
 };
 use approx::assert_relative_eq;
 use faer::{mat::AsMatRef, prelude::SolveLstsq};
@@ -20,11 +20,12 @@ fn matx_base_functions() {
 #[test]
 // we test everything except enorm() here
 fn colx_base_functions_for_svec_and_dvector() {
-    let vec = faer::col![1., 4., 2.];
+    let vec = faer::col![1., -4., 2.];
 
     assert_eq!(Colx::into_owned(vec.clone()), vec);
     assert_eq!(Colx::clone_owned(&vec), vec);
-    assert_eq!(Colx::max(&vec), Some(4.));
+    assert_eq!(Colx::max(&vec), Some(2.));
+    assert_eq!(Colx::max_absolute(&vec), Some(4.));
     assert_eq!(Colx::dim(&vec), Some(3));
 }
 
@@ -119,6 +120,7 @@ fn transformed_vec_norm_for_matrix() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn matrix_to_svd_and_solve_lsqr() {
     let v = faer::col![3., 1919., 0.1];
     let mat = faer::mat![[999.88, 0.1], [1.3, 5.], [12.34, 0.12]];
@@ -129,6 +131,26 @@ fn matrix_to_svd_and_solve_lsqr() {
         Svdx::solve_lsqr(&svd, &v).unwrap(),
         SolveLstsq::solve_lstsq(&mat.svd().unwrap(), &v)
     );
+
+    // this is a rank 2 matrix, since col 0 = 2 * col 1
+    let A = faer::mat![
+        [7.2f64, 3.6000, 1.9000],
+        [10.8, 5.4000, 0.7000],
+        [10.2, 5.1000, 9.7000],
+        [1.8, 0.9000, 4.0000],
+    ];
+
+    let b = faer::col![4.6f64, 9.3, 0.2, 1.4];
+
+    let mu = 1.456f64;
+
+    // we explicitly solve the regularized normal equation here (A^T A + mu I) = A^T b
+    // (solved this with GNU octave)
+    let expected = faer::col![0.66179148, 0.33089574, -0.71410813,];
+    let svd = ToSvdx::calc_svd(A).unwrap();
+    let actual = Svdx::solve_lsqr_regularized(&svd, &b, mu).unwrap();
+
+    col_assert_relative_eq!(actual, expected, epsilon = 1e-6);
 }
 
 #[test]
@@ -137,7 +159,9 @@ fn matrix_col_enorms() {
     let expected = faer::col!(14_f64.sqrt(), 77_f64.sqrt());
 
     col_assert_relative_eq!(ColEnormsx::column_enorms(&mat), expected);
-    todo!("test damped inverse col enorms")
+
+    let expected = expected.map(|x| 1. / (1. + x));
+    col_assert_relative_eq!(ColEnormsx::damped_inverse_column_enorms(&mat), expected);
 }
 
 #[test]
@@ -204,7 +228,7 @@ fn max_abs_scaled_div_for_vector() {
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&v1, scale, &v2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&v1, scale, &v2).unwrap(),
         (3. / 12.)
     );
 
@@ -213,7 +237,7 @@ fn max_abs_scaled_div_for_vector() {
     let scale = 2.;
 
     assert_eq!(
-        MaxScaledDivx::max_abs_scaled_div(&v1, scale, &v2).unwrap(),
+        MaxAbsx::max_abs_scaled_div_elem(&v1, scale, &v2).unwrap(),
         (3. / 12.)
     );
 }
@@ -240,5 +264,7 @@ fn elementwise_replace_if_leq_for_vector() {
         expected
     );
 
-    todo!("also test the clamp function");
+    let v = faer::col![5.2, -100.1, 2., -30., 49., 99.1];
+    let expected = faer::col![5.2, -50., 2., -30., 49., 55.];
+    assert_eq!(ElementwiseReplaceLeqx::clamp(v, -50., 55.), expected);
 }

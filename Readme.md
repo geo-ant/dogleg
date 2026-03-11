@@ -9,7 +9,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/geo-ant/dogleg/badge.svg?branch=main)](https://coveralls.io/github/geo-ant/dogleg?branch=main)
 ![maintenance-status](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)
 [![ko-fi](https://raw.githubusercontent.com/geo-ant/user-content/refs/heads/main/ko-fi-support.svg)](https://ko-fi.com/geoant)
-![brainmade](https://raw.githubusercontent.com/geo-ant/dogleg/main/images/brainmade-88x31-dark.png)
+[![brainmade](https://raw.githubusercontent.com/geo-ant/dogleg/main/images/brainmade-88x31-dark.png)](https://brainmade.org/)
 
 > _"Obviously you're not a golfer"_
 >

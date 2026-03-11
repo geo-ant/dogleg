@@ -1,7 +1,5 @@
 # dogleg 
 
-**Backend-agnostic high-quality Rust-native unconstrained least-squares minimization**
-
 ![build](https://github.com/geo-ant/dogleg/actions/workflows/build.yml/badge.svg?branch=main)
 ![tests](https://github.com/geo-ant/dogleg/actions/workflows/tests.yml/badge.svg?branch=main)
 ![lints](https://github.com/geo-ant/dogleg/actions/workflows/lints.yml/badge.svg?branch=main)
@@ -10,6 +8,8 @@
 ![maintenance-status](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)
 [![ko-fi](https://raw.githubusercontent.com/geo-ant/user-content/refs/heads/main/ko-fi-support.svg)](https://ko-fi.com/geoant)
 [![brainmade](https://raw.githubusercontent.com/geo-ant/dogleg/main/images/brainmade-88x31-dark.png)](https://brainmade.org/)
+
+**Backend-agnostic high-quality Rust-native unconstrained least-squares minimization**
 
 > _"Obviously you're not a golfer"_
 >

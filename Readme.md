@@ -2,8 +2,13 @@
 
 **Backend-agnostic high-quality Rust-native unconstrained least-squares minimization**
 
-// ADD THE BADGES
-
+![build](https://github.com/geo-ant/dogleg/actions/workflows/build.yml/badge.svg?branch=main)
+![tests](https://github.com/geo-ant/dogleg/actions/workflows/tests.yml/badge.svg?branch=main)
+![lints](https://github.com/geo-ant/dogleg/actions/workflows/lints.yml/badge.svg?branch=main)
+[![crates](https://img.shields.io/crates/v/dogleg)](https://crates.io/crates/dogleg)
+[![Coverage Status](https://coveralls.io/repos/github/geo-ant/dogleg/badge.svg?branch=main)](https://coveralls.io/github/geo-ant/dogleg?branch=main)
+![maintenance-status](https://img.shields.io/badge/maintenance-actively--developed-brightgreen.svg)
+[![ko-fi](https://raw.githubusercontent.com/geo-ant/user-content/refs/heads/main/ko-fi-support.svg)](https://ko-fi.com/geoant)
 
 > _"Obviously you're not a golfer"_
 >

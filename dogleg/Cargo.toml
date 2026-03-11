@@ -3,7 +3,6 @@ name = "dogleg"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-description = ""
 homepage = "https://github.com/geo-ant/dogleg"
 repository = "https://github.com/geo-ant/dogleg"
 authors = ["geo-ant"]

@@ -8,7 +8,7 @@ homepage = "https://github.com/geo-ant/dogleg"
 repository = "https://github.com/geo-ant/dogleg"
 authors = ["geo-ant"]
 readme = "Readme.md"
-categories = ["optimization","math", "science"]
+categories = ["algorithms","mathematics", "science"]
 keywords = ["nonlinear", "regression", "function", "fitting", "least-squares"]
 
 [dependencies]

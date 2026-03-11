@@ -31,4 +31,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: cargo clippy --workspace
+      - run: cargo clippy -p dogleg -p dogleg-matx --features faer,nalgebra,levenberg-marquardt

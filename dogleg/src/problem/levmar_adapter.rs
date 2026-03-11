@@ -59,7 +59,7 @@ where
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
-            phantom: self.phantom.clone(),
+            phantom: self.phantom,
         }
     }
 }

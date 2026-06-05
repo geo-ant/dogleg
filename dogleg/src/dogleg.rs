@@ -708,6 +708,9 @@ where
                     jacobian_col_norms
                         .clone_owned()
                         // .replace_if_leq(T::ZERO, T::ONE),
+                        //
+                        // this is how ceres does it, see:
+                        // https://github.com/ceres-solver/ceres-solver/blob/0ba987acaf9e8674070f116ed624edf017d2b630/internal/ceres/dogleg_strategy.cc#L117
                         .clamp(self.min_diagonal, self.max_diagonal),
                 );
             }
@@ -739,13 +742,17 @@ where
             // compute new scaling matrix (if scaling is requested) and perform the scaling
             // note: if scaling is requested, the diagonal weights will be Some(...)
             if let Some(diag) = diagonal_weights.take() {
-                let diag = try_opt!(
-                    diag.elementwise_max(&jacobian_col_norms),
-                    on_none = TerminationFailure::WrongDimensions(
-                        "jacobian changed shape between iterations"
-                    ),
-                    problem = problem
-                );
+                // NOTE(geo): this is minpack style, see:
+                // https://github.com/fortran-lang/minpack/blob/c0b5aea9fcd2b83865af921a7a7e881904f8d3c2/src/minpack.f90#L1718-L1722
+                // but ceres just uses the diagonal weights as calculated above
+                //
+                // let diag = try_opt!(
+                //     diag.elementwise_max(&jacobian_col_norms),
+                //     on_none = TerminationFailure::WrongDimensions(
+                //         "jacobian changed shape between iterations"
+                //     ),
+                //     problem = problem
+                // );
 
                 // scaled jacobian is J' = J D^-1
                 let scaled_jac = try_opt!(

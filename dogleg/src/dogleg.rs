@@ -11,7 +11,6 @@ use dogleg_matx::Addx;
 use dogleg_matx::ColEnormsx;
 use dogleg_matx::DiagLeftMulx;
 use dogleg_matx::DiagRightMulx;
-use dogleg_matx::ElementwiseMaxx;
 use dogleg_matx::ElementwiseReplaceLeqx;
 use dogleg_matx::Invert;
 use dogleg_matx::MaxAbsx;
@@ -508,8 +507,7 @@ where
         // for calculating the diagonal weights and replacing them
         // @note(geo-ant) this assumes that they are the same as the gradient
         // type, i.e. the result of J^T *r.
-        DiagonalWeightsType<T, P>:
-            ElementwiseReplaceLeqx<T> + ElementwiseMaxx<DiagonalWeightsType<T, P>>,
+        DiagonalWeightsType<T, P>: ElementwiseReplaceLeqx<T>,
         // for scaling the jacobian
         P::Jacobian: DiagRightMulx<DiagonalWeightsType<T, P>>,
         // for scaling the gradient and the parameters
@@ -556,8 +554,7 @@ where
         // for calculating the diagonal weights and replacing them
         // @note(geo-ant) this assumes that they are the same as the gradient
         // type, i.e. the result of J^T *r.
-        DiagonalWeightsType<T, P>:
-            ElementwiseReplaceLeqx<T> + ElementwiseMaxx<DiagonalWeightsType<T, P>>,
+        DiagonalWeightsType<T, P>: ElementwiseReplaceLeqx<T>,
         // for scaling the jacobian
         P::Jacobian: DiagRightMulx<DiagonalWeightsType<T, P>>,
         // for scaling the gradient and the parameters

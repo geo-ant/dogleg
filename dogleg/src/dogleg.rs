@@ -737,7 +737,7 @@ where
             }
 
             // compute new scaling matrix (if scaling is requested) and perform the scaling
-            // note: if scaling is requested, the diagonal weights will be Some(...)
+            // NOTE(geo): if scaling is requested, the diagonal weights will be Some(...)
             if let Some(diag) = diagonal_weights.take() {
                 // NOTE(geo): this is minpack style, see:
                 // https://github.com/fortran-lang/minpack/blob/c0b5aea9fcd2b83865af921a7a7e881904f8d3c2/src/minpack.f90#L1718-L1722
@@ -752,6 +752,9 @@ where
                 // );
 
                 // scaled jacobian is J' = J D^-1
+                // scaling the jacobian here will produce the appropriately
+                // scaled gradient without the need to explicitly scale
+                // the gradient.
                 let scaled_jac = try_opt!(
                     jacobian.mul_diag_right(&diag, Invert::Yes),
                     on_none = TerminationFailure::WrongDimensions(
@@ -761,22 +764,11 @@ where
                 );
                 jacobian = scaled_jac;
 
-                //TODO WARN: is that true ??? FIX??? No I think it's true
-                // we're doing the gradient calculation afterwards with the
-                // scaled or unscaled jacobian, which should give the correct
-                // results
-                // // scaled gradient is g' = D^-1 g
-                // let scaled_grad = try_opt!(
-                //     gradient.diag_mul_left(&diag, Invert::Yes),
-                //     on_none = TerminationFailure::WrongDimensions(
-                //         "gradient and weights have incompatible dimensions"
-                //     ),
-                //     problem = problem
-                // );
-                // gradient = scaled_grad;
                 diagonal_weights = Some(diag);
             }
 
+            // if any type of scaling was applied, then this gradient will
+            // have that scaling applied as well.
             let gradient = try_opt!(
                 jacobian.tr_mulv(&residuals),
                 on_none = TerminationFailure::WrongDimensions("J^T r"),
